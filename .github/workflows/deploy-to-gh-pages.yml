@@ -1,0 +1,67 @@
+---
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Change this to your main branch name if different
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run
+# in-progress and latest queued. However, do NOT cancel in-progress runs as
+# we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # COPILOT INSTRUCTION: Always validate YAML workflow files before deployment
+  # This job ensures all YAML files in .github/workflows are syntactically valid
+  validate-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate YAML files
+        run: |
+          # Install yamllint for YAML validation
+          pip install yamllint
+
+          # Validate all YAML files in .github/workflows
+          echo "Validating YAML workflow files..."
+          yamllint -c .yamllint.yml .github/workflows/
+
+          # Additional check: Validate this workflow file specifically
+          echo "Validating current workflow syntax..."
+          python -c "import yaml; \
+            yaml.safe_load(open('.github/workflows/deploy-to-gh-pages.yml'))"
+
+          echo "✅ All YAML files are valid"
+
+  deploy:
+    needs: validate-yaml  # Only deploy if YAML validation passes
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './game-of-life-ancestry'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

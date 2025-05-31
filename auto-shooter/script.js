@@ -45,6 +45,7 @@ class Player {
         this.bulletDamage = 20;
         this.bulletCount = 1;
         this.bulletPiercing = false;
+        this.explosive = false;
         this.range = 200;
     }
     
@@ -138,8 +139,12 @@ class Player {
                     bulletDirection,
                     this.bulletSpeed,
                     this.bulletDamage,
-                    this.bulletPiercing
+                    this.bulletPiercing,
+                    this.explosive
                 ));
+                
+                // Add muzzle flash
+                game.particles.push(new Particle(this.position.x, this.position.y, 'muzzleFlash'));
             }
             
             this.lastShotTime = currentTime;
@@ -260,11 +265,12 @@ class Enemy {
 }
 
 class Bullet {
-    constructor(x, y, direction, speed, damage, piercing = false) {
+    constructor(x, y, direction, speed, damage, piercing = false, explosive = false) {
         this.position = new Vector2(x, y);
         this.velocity = direction.multiply(speed);
         this.damage = damage;
         this.piercing = piercing;
+        this.explosive = explosive;
         this.radius = 3;
         this.life = 2; // seconds
         this.age = 0;
@@ -278,10 +284,26 @@ class Bullet {
     
     draw(ctx) {
         ctx.save();
-        ctx.fillStyle = '#ffeb3b';
+        ctx.fillStyle = this.explosive ? '#ff6b6b' : '#ffeb3b';
         ctx.beginPath();
         ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Add glow effect for explosive bullets
+        if (this.explosive) {
+            const gradient = ctx.createRadialGradient(
+                this.position.x, this.position.y, 0,
+                this.position.x, this.position.y, this.radius * 3
+            );
+            gradient.addColorStop(0, 'rgba(255, 107, 107, 0.6)');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.position.x, this.position.y, this.radius * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         ctx.restore();
     }
 }
@@ -329,6 +351,84 @@ class XPOrb {
     }
 }
 
+class Particle {
+    constructor(x, y, type = 'explosion') {
+        this.position = new Vector2(x, y);
+        this.type = type;
+        this.age = 0;
+        
+        switch(type) {
+            case 'explosion':
+                this.velocity = new Vector2(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200
+                );
+                this.life = 0.5;
+                this.startSize = 8;
+                this.color = ['#ff6b6b', '#ffeb3b', '#ff9800'][Math.floor(Math.random() * 3)];
+                break;
+            case 'muzzleFlash':
+                this.velocity = new Vector2(0, 0);
+                this.life = 0.1;
+                this.startSize = 12;
+                this.color = '#ffeb3b';
+                break;
+            case 'sparks':
+                this.velocity = new Vector2(
+                    (Math.random() - 0.5) * 150,
+                    (Math.random() - 0.5) * 150
+                );
+                this.life = 0.3;
+                this.startSize = 3;
+                this.color = '#ffffff';
+                break;
+        }
+    }
+    
+    update(deltaTime) {
+        this.age += deltaTime;
+        this.position = this.position.add(this.velocity.multiply(deltaTime));
+        
+        // Apply gravity to sparks
+        if (this.type === 'sparks') {
+            this.velocity.y += 300 * deltaTime;
+        }
+        
+        return this.age < this.life;
+    }
+    
+    draw(ctx) {
+        const lifePercent = 1 - (this.age / this.life);
+        const alpha = lifePercent;
+        const size = this.startSize * lifePercent;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        
+        if (this.type === 'muzzleFlash') {
+            // Draw a bright flash
+            const gradient = ctx.createRadialGradient(
+                this.position.x, this.position.y, 0,
+                this.position.x, this.position.y, size * 2
+            );
+            gradient.addColorStop(0, this.color);
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.position.x, this.position.y, size * 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.position.x, this.position.y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+}
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -353,6 +453,9 @@ class Game {
         this.lastTime = 0;
         this.running = true;
         
+        this.screenShake = 0;
+        this.screenShakeDecay = 0.9;
+        
         this.upgrades = {
             bulletSpeed: 0,
             bulletDamage: 0,
@@ -361,7 +464,9 @@ class Game {
             playerSpeed: 0,
             health: 0,
             range: 0,
-            piercing: false
+            piercing: false,
+            explosive: false,
+            screenClear: false
         };
         
         this.startWave();
@@ -441,6 +546,9 @@ class Game {
     }
     
     update(deltaTime) {
+        // Update screen shake
+        this.screenShake *= this.screenShakeDecay;
+        
         // Update player
         this.player.update(deltaTime, this.enemies, this.xpOrbs, this.canvas.width, this.canvas.height);
         
@@ -476,15 +584,63 @@ class Game {
                 const enemy = this.enemies[j];
                 
                 if (bullet.position.distance(enemy.position) < bullet.radius + enemy.radius) {
-                    if (enemy.takeDamage(bullet.damage)) {
-                        // Enemy died
-                        this.xpOrbs.push(new XPOrb(enemy.position.x, enemy.position.y, enemy.xpValue));
-                        this.enemies.splice(j, 1);
-                        this.waveEnemiesRemaining--;
-                    }
-                    
-                    if (!bullet.piercing) {
+                    // Handle explosive bullets
+                    if (bullet.explosive) {
+                        const explosionRadius = 80;
+                        
+                        // Add screen shake
+                        this.screenShake = Math.max(this.screenShake, 15);
+                        
+                        // Create explosion particles
+                        for (let k = 0; k < 12; k++) {
+                            this.particles.push(new Particle(bullet.position.x, bullet.position.y, 'explosion'));
+                        }
+                        
+                        // Damage all enemies in explosion radius
+                        for (let k = this.enemies.length - 1; k >= 0; k--) {
+                            const explosionTarget = this.enemies[k];
+                            const distance = bullet.position.distance(explosionTarget.position);
+                            
+                            if (distance <= explosionRadius) {
+                                const damageMultiplier = 1 - (distance / explosionRadius);
+                                const explosionDamage = bullet.damage * damageMultiplier;
+                                
+                                if (explosionTarget.takeDamage(explosionDamage)) {
+                                    // Enemy died from explosion
+                                    for (let m = 0; m < 5; m++) {
+                                        this.particles.push(new Particle(explosionTarget.position.x, explosionTarget.position.y, 'sparks'));
+                                    }
+                                    
+                                    this.xpOrbs.push(new XPOrb(explosionTarget.position.x, explosionTarget.position.y, explosionTarget.xpValue));
+                                    this.enemies.splice(k, 1);
+                                    this.waveEnemiesRemaining--;
+                                    
+                                    // Adjust j if needed
+                                    if (k <= j) j--;
+                                }
+                            }
+                        }
+                        
                         hit = true;
+                    } else {
+                        // Regular bullet hit
+                        if (enemy.takeDamage(bullet.damage)) {
+                            // Enemy died - add explosion effects
+                            for (let k = 0; k < 8; k++) {
+                                this.particles.push(new Particle(enemy.position.x, enemy.position.y, 'explosion'));
+                            }
+                            for (let k = 0; k < 5; k++) {
+                                this.particles.push(new Particle(enemy.position.x, enemy.position.y, 'sparks'));
+                            }
+                            
+                            this.xpOrbs.push(new XPOrb(enemy.position.x, enemy.position.y, enemy.xpValue));
+                            this.enemies.splice(j, 1);
+                            this.waveEnemiesRemaining--;
+                        }
+                        
+                        if (!bullet.piercing) {
+                            hit = true;
+                        }
                     }
                     break;
                 }
@@ -504,6 +660,14 @@ class Game {
             if (this.player.position.distance(orb.position) < this.player.radius + orb.radius) {
                 this.addXP(orb.value);
                 this.xpOrbs.splice(i, 1);
+            }
+        }
+        
+        // Update particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
+            if (!particle.update(deltaTime)) {
+                this.particles.splice(i, 1);
             }
         }
         
@@ -651,6 +815,43 @@ class Game {
             });
         }
         
+        // Add explosive upgrade if not already taken
+        if (!this.upgrades.explosive) {
+            options.push({
+                name: 'Explosive Bullets',
+                description: 'Bullets explode on impact, dealing area damage',
+                cost: 4,
+                apply: () => {
+                    this.player.explosive = true;
+                    this.upgrades.explosive = true;
+                }
+            });
+        }
+        
+        // Add screen clear upgrade (high cost, powerful effect)
+        if (this.wave >= 10 && !this.upgrades.screenClear) {
+            options.push({
+                name: 'Nova Blast',
+                description: 'Clear all enemies on screen (one-time use)',
+                cost: 5,
+                apply: () => {
+                    // Add massive screen shake
+                    this.screenShake = 30;
+                    
+                    // Create massive explosion effect
+                    for (const enemy of this.enemies) {
+                        for (let k = 0; k < 15; k++) {
+                            this.particles.push(new Particle(enemy.position.x, enemy.position.y, 'explosion'));
+                        }
+                        this.xpOrbs.push(new XPOrb(enemy.position.x, enemy.position.y, enemy.xpValue));
+                    }
+                    this.enemies = [];
+                    this.waveEnemiesRemaining = 0;
+                    this.upgrades.screenClear = true;
+                }
+            });
+        }
+        
         // Shuffle and return 3 random options that we can afford
         const affordableOptions = options.filter(opt => opt.cost <= this.upgradePoints);
         const shuffled = affordableOptions.sort(() => Math.random() - 0.5);
@@ -686,6 +887,14 @@ class Game {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Apply screen shake
+        this.ctx.save();
+        if (this.screenShake > 0) {
+            const shakeX = (Math.random() - 0.5) * this.screenShake;
+            const shakeY = (Math.random() - 0.5) * this.screenShake;
+            this.ctx.translate(shakeX, shakeY);
+        }
+        
         // Draw XP orbs
         this.xpOrbs.forEach(orb => orb.draw(this.ctx));
         
@@ -695,10 +904,15 @@ class Game {
         // Draw enemies
         this.enemies.forEach(enemy => enemy.draw(this.ctx));
         
+        // Draw particles
+        this.particles.forEach(particle => particle.draw(this.ctx));
+        
         // Draw player
         this.player.draw(this.ctx);
         
-        // Draw wave info if between waves
+        this.ctx.restore();
+        
+        // Draw wave info if between waves (without shake)
         if (this.betweenWaves) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';

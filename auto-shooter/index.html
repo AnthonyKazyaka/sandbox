@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Shooter: Chaos Arena</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            text-align: center;
+        }
+        
+        h1 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .description {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 2px solid #444;
+            margin: 20px 0;
+            background-color: #000;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .ui {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .upgrade-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(20, 20, 20, 0.95);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+            z-index: 1000;
+            max-width: 600px;
+        }
+        
+        .upgrade-panel h2 {
+            color: #ff6b6b;
+            margin-top: 0;
+        }
+        
+        .upgrade-option {
+            background-color: #333;
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upgrade-option:hover {
+            background-color: #444;
+            border-color: #ff6b6b;
+        }
+        
+        .upgrade-option h3 {
+            margin: 0 0 5px 0;
+            color: #ff6b6b;
+        }
+        
+        .upgrade-option p {
+            margin: 0;
+            color: #ccc;
+            font-size: 12px;
+        }
+        
+        .upgrade-cost {
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #ccc;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Auto-Shooter: Chaos Arena</h1>
+        <div class="description">
+            Survive the waves! Your character moves and shoots automatically. Choose upgrades wisely!
+        </div>
+        
+        <canvas id="gameCanvas" width="1200" height="800"></canvas>
+        
+        <div class="ui">
+            <div>Wave: <span id="wave">1</span></div>
+            <div>Level: <span id="level">1</span></div>
+            <div>XP: <span id="xp">0</span>/<span id="xpNext">10</span></div>
+            <div>Health: <span id="health">100</span>/100</div>
+            <div>Upgrade Points: <span id="upgradePoints">0</span></div>
+        </div>
+        
+        <div class="upgrade-panel" id="upgradePanel">
+            <h2>Choose Your Upgrade</h2>
+            <div id="upgradeOptions"></div>
+        </div>
+        
+        <div class="controls">
+            Game starts automatically. The chaos grows with each upgrade!
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

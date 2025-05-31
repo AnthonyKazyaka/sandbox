@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game of Life - Ancestry & Age Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            margin: 20px 0;
+            background-color: white;
+            cursor: crosshair;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .stop-btn {
+            background-color: #f44336;
+        }
+        
+        .stop-btn:hover {
+            background-color: #da190b;
+        }
+        
+        .clear-btn {
+            background-color: #ff9800;
+        }
+        
+        .clear-btn:hover {
+            background-color: #e68900;
+        }
+        
+        .legend {
+            margin-top: 20px;
+            text-align: left;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .legend h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .legend ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .legend li {
+            margin: 5px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Game of Life - Ancestry & Age Visualization</h1>
+        
+        <div class="description">
+            Click cells to toggle them. Colors represent ancestry (hue) and age (darkness).
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" class="stop-btn" disabled>Stop</button>
+            <button id="stepBtn">Step</button>
+            <button id="clearBtn" class="clear-btn">Clear</button>
+            <button id="randomBtn">Randomize</button>
+        </div>
+        
+        <div class="legend">
+            <h3>How it works:</h3>
+            <ul>
+                <li><strong>Ancestry:</strong> Each cell's hue represents its lineage, inherited from a random living neighbor when born</li>
+                <li><strong>Age:</strong> Cells get darker as they age (older cells are darker, minimum 20% lightness)</li>
+                <li><strong>Rules:</strong> Standard Conway's Game of Life (B3/S23) - birth with 3 neighbors, survive with 2-3 neighbors</li>
+                <li><strong>Interaction:</strong> Click cells to toggle them alive/dead</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

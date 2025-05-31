@@ -49,12 +49,12 @@ class Player {
         this.range = 200;
     }
     
-    update(deltaTime, enemies, xpOrbs, canvasWidth, canvasHeight) {
+    update(deltaTime, enemies, xpOrbs, canvasWidth, canvasHeight, bullets, particles) {
         // Auto-movement AI
         this.updateMovement(enemies, xpOrbs, canvasWidth, canvasHeight);
         
         // Auto-firing
-        this.updateFiring(deltaTime, enemies);
+        this.updateFiring(deltaTime, enemies, bullets, particles);
         
         // Update position
         this.position = this.position.add(this.velocity.multiply(deltaTime));
@@ -108,7 +108,7 @@ class Player {
         this.velocity = moveDirection.normalize().multiply(this.maxSpeed);
     }
     
-    updateFiring(deltaTime, enemies) {
+    updateFiring(deltaTime, enemies, bullets, particles) {
         const currentTime = Date.now() / 1000;
         if (currentTime - this.lastShotTime < this.fireRate) return;
         
@@ -133,7 +133,7 @@ class Player {
                 const angle = Math.atan2(direction.y, direction.x) + spread;
                 const bulletDirection = new Vector2(Math.cos(angle), Math.sin(angle));
                 
-                game.bullets.push(new Bullet(
+                bullets.push(new Bullet(
                     this.position.x,
                     this.position.y,
                     bulletDirection,
@@ -144,7 +144,7 @@ class Player {
                 ));
                 
                 // Add muzzle flash
-                game.particles.push(new Particle(this.position.x, this.position.y, 'muzzleFlash'));
+                particles.push(new Particle(this.position.x, this.position.y, 'muzzleFlash'));
             }
             
             this.lastShotTime = currentTime;
@@ -550,7 +550,7 @@ class Game {
         this.screenShake *= this.screenShakeDecay;
         
         // Update player
-        this.player.update(deltaTime, this.enemies, this.xpOrbs, this.canvas.width, this.canvas.height);
+        this.player.update(deltaTime, this.enemies, this.xpOrbs, this.canvas.width, this.canvas.height, this.bullets, this.particles);
         
         // Update enemies
         for (let i = this.enemies.length - 1; i >= 0; i--) {

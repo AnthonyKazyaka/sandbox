@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family To-Do Tracker</title>
+    <meta name="description" content="A visual, customizable family to-do tracker with real-time collaboration">
+    
+    <!-- Progressive Web App -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Loading Family Tracker...</h2>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="app-title">
+                        <span class="title-icon">📋</span>
+                        Family Tracker
+                    </h1>
+                </div>
+                <div class="header-center">
+                    <nav class="main-nav">
+                        <button class="nav-btn active" data-view="dashboard">
+                            <span class="nav-icon">🏠</span>
+                            Dashboard
+                        </button>
+                        <button class="nav-btn" data-view="tasks">
+                            <span class="nav-icon">✅</span>
+                            Tasks
+                        </button>
+                        <button class="nav-btn" data-view="family">
+                            <span class="nav-icon">👥</span>
+                            Family
+                        </button>
+                        <button class="nav-btn" data-view="analytics">
+                            <span class="nav-icon">📊</span>
+                            Analytics
+                        </button>
+                    </nav>
+                </div>
+                <div class="header-right">
+                    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                    <button class="settings-btn" id="settingsBtn" title="Settings">
+                        <span class="settings-icon">⚙️</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Dashboard View -->
+            <section id="dashboardView" class="view active">
+                <div class="view-header">
+                    <h2>Dashboard</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-primary" id="addTaskBtn">
+                            <span class="btn-icon">➕</span>
+                            Add Task
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <!-- Quick Stats -->
+                    <div class="stats-card">
+                        <h3>Today's Progress</h3>
+                        <div class="progress-circle" data-progress="0">
+                            <svg class="progress-ring" width="120" height="120">
+                                <circle class="progress-ring-circle" cx="60" cy="60" r="54"></circle>
+                            </svg>
+                            <div class="progress-text">
+                                <span class="progress-number">0</span>
+                                <span class="progress-label">tasks</span>
+                            </div>
+                        </div>
+                        <div class="stats-details">
+                            <div class="stat-item">
+                                <span class="stat-label">Completed</span>
+                                <span class="stat-value" id="completedToday">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Remaining</span>
+                                <span class="stat-value" id="remainingToday">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Urgent Tasks -->
+                    <div class="urgent-tasks-card">
+                        <h3>🔥 Urgent Tasks</h3>
+                        <div class="urgent-tasks-list" id="urgentTasksList">
+                            <div class="empty-state">
+                                <span class="empty-icon">✨</span>
+                                <p>No urgent tasks - you're doing great!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Family Activity -->
+                    <div class="activity-card">
+                        <h3>👨‍👩‍👧‍👦 Family Activity</h3>
+                        <div class="activity-list" id="familyActivity">
+                            <div class="empty-state">
+                                <span class="empty-icon">👋</span>
+                                <p>Welcome to your family tracker!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task Categories -->
+                    <div class="categories-card">
+                        <h3>📂 Categories</h3>
+                        <div class="categories-grid" id="categoriesGrid">
+                            <!-- Categories will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks View -->
+            <section id="tasksView" class="view">
+                <div class="view-header">
+                    <h2>All Tasks</h2>
+                    <div class="view-filters">
+                        <select class="filter-select" id="categoryFilter">
+                            <option value="all">All Categories</option>
+                        </select>
+                        <select class="filter-select" id="statusFilter">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <select class="filter-select" id="assigneeFilter">
+                            <option value="all">All Members</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="tasks-container">
+                    <div class="tasks-list" id="tasksList">
+                        <!-- Tasks will be populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Family View -->
+            <section id="familyView" class="view">
+                <div class="view-header">
+                    <h2>Family Members</h2>
+                    <div class="view-actions">
+                        <button class="btn btn-secondary" id="addMemberBtn">
+                            <span class="btn-icon">👥</span>
+                            Add Member
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="family-grid" id="familyGrid">
+                    <!-- Family members will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section id="analyticsView" class="view">
+                <div class="view-header">
+                    <h2>Analytics & Insights</h2>
+                </div>
+                
+                <div class="analytics-grid">
+                    <div class="chart-card">
+                        <h3>Weekly Progress</h3>
+                        <div class="chart-placeholder">
+                            <p>📈 Charts coming soon!</p>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Category Breakdown</h3>
+                        <div class="chart-placeholder">
+                            <p>🥧 Pie chart coming soon!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Add/Edit Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">Add New Task</h3>
+                <button class="modal-close" id="taskModalClose">&times;</button>
+            </div>
+            <form id="taskForm" class="modal-body">
+                <div class="form-group">
+                    <label for="taskTitle">Task Title *</label>
+                    <input type="text" id="taskTitle" name="title" required 
+                           placeholder="What needs to be done?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="taskDescription">Description</label>
+                    <textarea id="taskDescription" name="description" 
+                              placeholder="Add more details..."></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskCategory">Category</label>
+                        <select id="taskCategory" name="category">
+                            <option value="household">🏠 Household</option>
+                            <option value="personal">👤 Personal</option>
+                            <option value="work">💼 Work</option>
+                            <option value="health">💪 Health</option>
+                            <option value="learning">📚 Learning</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taskPriority">Priority</label>
+                        <select id="taskPriority" name="priority">
+                            <option value="low">🟢 Low</option>
+                            <option value="medium" selected>🟡 Medium</option>
+                            <option value="high">🟠 High</option>
+                            <option value="urgent">🔴 Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDueDate">Due Date</label>
+                        <input type="date" id="taskDueDate" name="dueDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taskAssignee">Assign To</label>
+                        <select id="taskAssignee" name="assignee">
+                            <option value="self">Myself</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="taskRecurring" name="recurring">
+                        <span class="checkbox-custom"></span>
+                        Recurring Task
+                    </label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelTaskBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="settingsModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>Appearance</h4>
+                    <div class="setting-item">
+                        <label for="themeSelect">Theme</label>
+                        <select id="themeSelect">
+                            <option value="auto">Auto</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="colorScheme">Color Scheme</label>
+                        <div class="color-schemes" id="colorSchemes">
+                            <button class="color-scheme active" data-scheme="blue">🔵</button>
+                            <button class="color-scheme" data-scheme="green">🟢</button>
+                            <button class="color-scheme" data-scheme="purple">🟣</button>
+                            <button class="color-scheme" data-scheme="orange">🟠</button>
+                            <button class="color-scheme" data-scheme="pink">🩷</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Notifications</h4>
+                    <div class="setting-item">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="enableNotifications" checked>
+                            <span class="toggle-slider"></span>
+                            Enable notifications
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Data</h4>
+                    <div class="setting-item">
+                        <button class="btn btn-secondary" id="exportDataBtn">Export Data</button>
+                        <button class="btn btn-secondary" id="importDataBtn">Import Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Toast -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <span class="toast-icon" id="toastIcon">✅</span>
+            <span class="toast-message" id="toastMessage">Success!</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>

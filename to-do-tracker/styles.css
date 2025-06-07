@@ -1356,3 +1356,29 @@ textarea:focus {
 .chart-card h3[title] {
     cursor: help;
 }
+
+.complete-by-selector {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%) translateX(8px);
+    z-index: 10;
+    font-size: 0.95em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--surface-elevated, #fff);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    outline: none;
+    min-width: 120px;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.complete-by-selector:focus {
+    box-shadow: 0 0 0 2px var(--primary-300, #93c5fd);
+}
+
+.task-checkbox {
+    position: relative;
+}

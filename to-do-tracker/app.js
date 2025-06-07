@@ -420,7 +420,7 @@ class FamilyTracker {
         container.innerHTML = filteredTasks.map(task => `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                 <div class="task-checkbox ${task.completed ? 'completed' : ''}" 
-                     onclick="app.toggleTask('${task.id}')">
+                     onclick="app.showCompleteTaskSelector('${task.id}')">
                     ${task.completed ? '✓' : ''}
                 </div>
                 <div class="task-content">
@@ -430,6 +430,7 @@ class FamilyTracker {
                         <span class="task-category">${this.getCategoryName(task.category)}</span>
                         <span class="task-assignee">${this.getMemberName(task.assignee)}</span>
                         ${task.dueDate ? `<span class="task-due">${this.formatDueDate(task.dueDate)}</span>` : ''}
+                        ${task.completed && task.completedBy ? `<span class="task-completed-by" title="Completed by">✔️ ${this.getMemberName(task.completedBy)}</span>` : ''}
                     </div>
                 </div>
                 <div class="task-actions">
@@ -522,13 +523,11 @@ class FamilyTracker {
 
     renderFamily() {
         const container = document.getElementById('familyGrid');
-        
         container.innerHTML = this.familyMembers.map(member => {
-            const memberTasks = this.tasks.filter(task => task.assignee === member.id);
-            const completedTasks = memberTasks.filter(task => task.completed).length;
-            const completionRate = memberTasks.length > 0 ? 
-                Math.round((completedTasks / memberTasks.length) * 100) : 0;
-
+            // Count tasks completed BY this member (not just assigned)
+            const completedTasks = this.tasks.filter(task => task.completedBy === member.id).length;
+            const totalTasks = this.tasks.filter(task => task.assignee === member.id).length;
+            const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
             return `
                 <div class="family-member-card">
                     <div class="member-avatar">${member.avatar}</div>
@@ -537,12 +536,16 @@ class FamilyTracker {
                         <p class="member-role">${member.role}</p>
                         <div class="member-stats">
                             <div class="stat">
-                                <span class="stat-number">${memberTasks.length}</span>
+                                <span class="stat-number">${totalTasks}</span>
                                 <span class="stat-label">tasks</span>
                             </div>
                             <div class="stat">
                                 <span class="stat-number">${completionRate}%</span>
-                                <span class="stat-label">completed</span>
+                                <span class="stat-label">completion</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">${completedTasks}</span>
+                                <span class="stat-label">done</span>
                             </div>
                         </div>
                     </div>
@@ -956,8 +959,6 @@ class FamilyTracker {
         const timeRange = this.getAnalyticsTimeRange();
         const tasks = this.getTasksInTimeRange(timeRange);
         const memberStats = {};
-
-        // Initialize stats for all family members
         this.familyMembers.forEach(member => {
             memberStats[member.id] = {
                 name: member.name,
@@ -967,27 +968,19 @@ class FamilyTracker {
                 completionRate: 0
             };
         });
-
-        // Count tasks by assignee
+        // Count tasks by assignee and completions by completedBy
         tasks.forEach(task => {
             if (memberStats[task.assignee]) {
                 memberStats[task.assignee].total++;
-                if (task.completed) {
-                    memberStats[task.assignee].completed++;
-                }
+            }
+            if (task.completed && memberStats[task.completedBy]) {
+                memberStats[task.completedBy].completed++;
             }
         });
-
-        // Calculate completion rates
         Object.values(memberStats).forEach(stats => {
             stats.completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
         });
-
-        const labels = Object.values(memberStats).map(stats => `${stats.avatar} ${stats.name}`);
-        const data = Object.values(memberStats).map(stats => stats.completionRate);
-        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-
-        return { labels, data, colors: colors.slice(0, labels.length) };
+        return memberStats;
     }
 
     getAchievements() {
@@ -1163,7 +1156,8 @@ class FamilyTracker {
             completed: taskData.completed || false,
             recurring: taskData.recurring || false,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            completedBy: taskData.completedBy || (taskData.completed ? (taskData.completedBy || this.currentUser.id) : null)
         };
 
         this.tasks.push(task);
@@ -1171,16 +1165,19 @@ class FamilyTracker {
         this.renderApp();
         
         return task;
-    }    toggleTask(taskId) {
+    }    toggleTask(taskId, completedByOverride = null) {
         const task = this.tasks.find(t => t.id === taskId);
         if (task) {
             task.completed = !task.completed;
             task.updatedAt = new Date().toISOString();
-            
             if (task.completed) {
+                // Set who completed it (override or current user)
+                task.completedBy = completedByOverride || this.currentUser.id;
                 this.showToastWithAnimation(`✅ "${task.title}" completed!`, 'success');
+            } else {
+                // Clear completedBy if un-completing
+                task.completedBy = null;
             }
-            
             this.saveData();
             this.renderApp();
         }
@@ -1511,21 +1508,18 @@ class FamilyTracker {
 
     addTaskWithAnimation(taskData) {
         const task = this.addTask(taskData);
-        
         // Add task to DOM with animation
         setTimeout(() => {
             const taskElements = document.querySelectorAll(`[data-task-id="${task.id}"]`);
             taskElements.forEach(el => {
                 el.classList.add('task-created');
-                // Remove animation class after completion
                 setTimeout(() => el.classList.remove('task-created'), 500);
             });
         }, 100);
-        
         return task;
     }
 
-    toggleTaskWithAnimation(taskId) {
+    toggleTaskWithAnimation(taskId, completedByOverride = null) {
         const task = this.tasks.find(t => t.id === taskId);
         if (!task) return;
 
@@ -1542,8 +1536,8 @@ class FamilyTracker {
             });
         }
 
-        // Toggle the task state
-        this.toggleTask(taskId);
+        // Toggle the task state, pass completedByOverride
+        this.toggleTask(taskId, completedByOverride);
     }
 
     deleteTaskWithAnimation(taskId) {
@@ -1646,6 +1640,41 @@ class FamilyTracker {
         taskItems.forEach((item, index) => {
             item.style.animationDelay = `${index * 50}ms`;
         });
+    }
+
+    showCompleteTaskSelector(taskId) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        if (task.completed) {
+            // If already completed, just toggle (un-complete)
+            this.toggleTaskWithAnimation(taskId);
+            return;
+        }
+        // Create a quick selector dropdown near the checkbox
+        const taskEl = document.querySelector(`[data-task-id="${taskId}"] .task-checkbox`);
+        if (!taskEl) return;
+        // Remove any existing selector
+        const existing = document.getElementById('completeBySelector');
+        if (existing) existing.remove();
+        // Build selector
+        const selector = document.createElement('select');
+        selector.id = 'completeBySelector';
+        selector.className = 'complete-by-selector';
+        this.familyMembers.forEach(member => {
+            const opt = document.createElement('option');
+            opt.value = member.id;
+            opt.textContent = `${member.avatar} ${member.name}`;
+            if (member.id === this.currentUser.id) opt.selected = true;
+            selector.appendChild(opt);
+        });
+        selector.onblur = () => setTimeout(() => selector.remove(), 200);
+        selector.onchange = (e) => {
+            this.toggleTaskWithAnimation(taskId, selector.value);
+            selector.remove();
+        };
+        // Position selector
+        taskEl.appendChild(selector);
+        selector.focus();
     }
 }
 

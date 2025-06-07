@@ -23,3 +23,17 @@ Conway's Game of Life with visual enhancements showing cell ancestry through col
 
 **Location:** `/game-of-life-ancestry/`
 [Live version](https://anthonykazyaka.github.io/sandbox/game-of-life-ancestry)
+
+### Family To-Do Tracker
+A beautiful, customizable, and secure family task management app with analytics, gamification, and PWA support. Organize tasks, track progress, and collaborate with your family—all in your browser.
+
+**Features:**
+
+- Visual task management with priorities, categories, and streaks
+- Analytics dashboard with charts and insights
+- Multiple color themes and schemes
+- Local-first, privacy-focused, offline-ready
+- PWA: installable on desktop and mobile
+
+**Location:** `/to-do-tracker/`
+[Live version](https://anthonykazyaka.github.io/sandbox/to-do-tracker)

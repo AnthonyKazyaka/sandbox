@@ -41,33 +41,33 @@
                 </div>
                 <div class="header-center">
                     <nav class="main-nav">
-                        <button class="nav-btn active" data-view="dashboard">
+                        <button class="nav-btn active" data-view="dashboard" title="Dashboard" aria-label="Dashboard">
                             <span class="nav-icon">🏠</span>
                             Dashboard
                         </button>
-                        <button class="nav-btn" data-view="tasks">
+                        <button class="nav-btn" data-view="tasks" title="Tasks" aria-label="Tasks">
                             <span class="nav-icon">✅</span>
                             Tasks
                         </button>
-                        <button class="nav-btn" data-view="family">
+                        <button class="nav-btn" data-view="family" title="Family" aria-label="Family">
                             <span class="nav-icon">👥</span>
                             Family
                         </button>
-                        <button class="nav-btn" data-view="analytics">
+                        <button class="nav-btn" data-view="analytics" title="Analytics & Insights" aria-label="Analytics & Insights">
                             <span class="nav-icon">📊</span>
                             Analytics
                         </button>
                     </nav>
                 </div>
                 <div class="header-right">
-                    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
-                        <span class="theme-icon">🌙</span>
+                    <button class="theme-toggle" id="themeToggle" title="Toggle theme (Light/Dark/Auto)" aria-label="Toggle theme">
+                        <span class="theme-icon" aria-live="polite"></span>
                     </button>
-                    <button class="settings-btn" id="settingsBtn" title="Settings">
+                    <button class="settings-btn" id="settingsBtn" title="Settings" aria-label="Open settings">
                         <span class="settings-icon">⚙️</span>
                     </button>
                     <div class="user-profile">
-                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <div class="user-avatar" id="userAvatar" title="Your profile" aria-label="User profile">👤</div>
                     </div>
                 </div>
             </div>
@@ -186,25 +186,95 @@
                 <div class="family-grid" id="familyGrid">
                     <!-- Family members will be populated by JavaScript -->
                 </div>
-            </section>
-
-            <!-- Analytics View -->
+            </section>            <!-- Analytics View -->
             <section id="analyticsView" class="view">
                 <div class="view-header">
                     <h2>Analytics & Insights</h2>
+                    <div class="view-actions">
+                        <select class="filter-select" id="analyticsTimeRange">
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="analytics-grid">
-                    <div class="chart-card">
-                        <h3>Weekly Progress</h3>
-                        <div class="chart-placeholder">
-                            <p>📈 Charts coming soon!</p>
+                    <!-- Overview Stats -->
+                    <div class="analytics-overview">
+                        <div class="analytics-stat-card" title="Total number of tasks in selected period" aria-label="Total Tasks">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="totalTasksCount">0</div>
+                                <div class="stat-label">Total Tasks</div>
+                            </div>
+                        </div>
+                        <div class="analytics-stat-card" title="Percentage of completed tasks" aria-label="Completion Rate">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="completionRate">0%</div>
+                                <div class="stat-label">Completion Rate</div>
+                            </div>
+                        </div>
+                        <div class="analytics-stat-card" title="Current daily completion streak" aria-label="Current Streak">
+                            <div class="stat-icon">🔥</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="currentStreak">0</div>
+                                <div class="stat-label">Current Streak</div>
+                            </div>
+                        </div>
+                        <div class="analytics-stat-card" title="Average tasks completed per day" aria-label="Average Tasks Per Day">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="avgTasksPerDay">0</div>
+                                <div class="stat-label">Avg/Day</div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Charts -->
                     <div class="chart-card">
-                        <h3>Category Breakdown</h3>
-                        <div class="chart-placeholder">
-                            <p>🥧 Pie chart coming soon!</p>
+                        <h3 title="Tasks completed and created over time" aria-label="Weekly Progress">📈 Weekly Progress</h3>
+                        <div class="chart-container">
+                            <canvas id="weeklyProgressChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 title="Breakdown of tasks by category" aria-label="Category Breakdown">🥧 Category Breakdown</h3>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 title="Distribution of tasks by priority" aria-label="Priority Distribution">🎯 Priority Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="priorityChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 title="Family member completion rates" aria-label="Family Performance">👥 Family Performance</h3>
+                        <div class="chart-container">
+                            <canvas id="familyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Achievements -->
+                    <div class="achievements-card">
+                        <h3>🏆 Recent Achievements</h3>
+                        <div class="achievements-list" id="achievementsList">
+                            <!-- Achievements will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Insights -->
+                    <div class="insights-card">
+                        <h3>💡 Insights & Trends</h3>
+                        <div class="insights-list" id="insightsList">
+                            <!-- Insights will be populated by JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -308,11 +378,11 @@
                     <div class="setting-item">
                         <label for="colorScheme">Color Scheme</label>
                         <div class="color-schemes" id="colorSchemes">
-                            <button class="color-scheme active" data-scheme="blue">🔵</button>
-                            <button class="color-scheme" data-scheme="green">🟢</button>
-                            <button class="color-scheme" data-scheme="purple">🟣</button>
-                            <button class="color-scheme" data-scheme="orange">🟠</button>
-                            <button class="color-scheme" data-scheme="pink">🩷</button>
+                            <button class="color-scheme active" data-scheme="blue" title="Blue color scheme" aria-label="Blue color scheme">🔵</button>
+                            <button class="color-scheme" data-scheme="green" title="Green color scheme" aria-label="Green color scheme">🟢</button>
+                            <button class="color-scheme" data-scheme="purple" title="Purple color scheme" aria-label="Purple color scheme">🟣</button>
+                            <button class="color-scheme" data-scheme="orange" title="Orange color scheme" aria-label="Orange color scheme">🟠</button>
+                            <button class="color-scheme" data-scheme="pink" title="Pink color scheme" aria-label="Pink color scheme">🩷</button>
                         </div>
                     </div>
                 </div>
@@ -348,6 +418,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
     
     <!-- Service Worker Registration -->

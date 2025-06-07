@@ -304,23 +304,16 @@ class FamilyTracker {
         this.renderUrgentTasks();
         this.renderFamilyActivity();
         this.renderCategories();
-    }
-
-    renderProgressCircle() {
+    }    renderProgressCircle() {
         const todayTasks = this.getTodayTasks();
         const completed = todayTasks.filter(task => task.completed).length;
         const total = todayTasks.length;
-        const percentage = total > 0 ? (completed / total) * 100 : 0;
-
-        const circle = document.querySelector('.progress-ring-circle');
-        const circumference = 2 * Math.PI * 54; // radius = 54
-        const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-        circle.style.strokeDashoffset = strokeDashoffset;
-        circle.style.stroke = percentage === 100 ? '#10b981' : '#3b82f6';
 
         document.querySelector('.progress-number').textContent = completed;
         document.querySelector('.progress-label').textContent = total === 1 ? 'task' : 'tasks';
+        
+        // Use animated progress circle
+        this.animateProgressCircle();
     }
 
     renderStats() {
@@ -556,15 +549,602 @@ class FamilyTracker {
                 </div>
             `;
         }).join('');
-    }
-
-    // ==========================================================================
+    }    // ==========================================================================
     // Analytics Rendering
     // ==========================================================================
 
     renderAnalytics() {
-        // Placeholder for analytics - will be implemented in Phase 2
-        console.log('Analytics view rendered');
+        this.renderAnalyticsOverview();
+        this.renderAnalyticsCharts();
+        this.renderAchievements();
+        this.renderInsights();
+        this.setupAnalyticsTimeFilter();
+    }
+
+    renderAnalyticsOverview() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const tasks = this.getTasksInTimeRange(timeRange);
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(task => task.completed).length;
+        const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        const currentStreak = this.getCurrentStreak();
+        const avgTasksPerDay = this.getAverageTasksPerDay(timeRange);
+
+        document.getElementById('totalTasksCount').textContent = totalTasks;
+        document.getElementById('completionRate').textContent = `${completionRate}%`;
+        document.getElementById('currentStreak').textContent = `${currentStreak} days`;
+        document.getElementById('avgTasksPerDay').textContent = avgTasksPerDay.toFixed(1);
+    }
+
+    renderAnalyticsCharts() {
+        this.renderWeeklyProgressChart();
+        this.renderCategoryChart();
+        this.renderPriorityChart();
+        this.renderFamilyChart();
+    }
+
+    renderWeeklyProgressChart() {
+        const ctx = document.getElementById('weeklyProgressChart').getContext('2d');
+        const container = document.getElementById('weeklyProgressChart').parentElement;
+        const weeklyData = this.getWeeklyProgressData();
+        // Show empty state if no data
+        if (weeklyData.completed.every(v => v === 0) && weeklyData.created.every(v => v === 0)) {
+            container.innerHTML = '<div class="chart-placeholder">No data to display for this period.</div>';
+            return;
+        }
+        container.innerHTML = '<canvas id="weeklyProgressChart"></canvas>';
+        const newCtx = document.getElementById('weeklyProgressChart').getContext('2d');
+        new Chart(newCtx, {
+            type: 'line',
+            data: {
+                labels: weeklyData.labels,
+                datasets: [{
+                    label: 'Tasks Completed',
+                    data: weeklyData.completed,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Tasks Created',
+                    data: weeklyData.created,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { boxWidth: 18, font: { size: 13 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => `Date: ${items[0].label}`,
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y} tasks`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    renderCategoryChart() {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const container = document.getElementById('categoryChart').parentElement;
+        const categoryData = this.getCategoryDistribution();
+        if (categoryData.data.every(v => v === 0)) {
+            container.innerHTML = '<div class="chart-placeholder">No category data for this period.</div>';
+            return;
+        }
+        container.innerHTML = '<canvas id="categoryChart"></canvas>';
+        const newCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(newCtx, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    data: categoryData.data,
+                    backgroundColor: categoryData.colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { boxWidth: 18, font: { size: 13 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((context.parsed / total) * 100);
+                                return `${context.label}: ${context.parsed} tasks (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    renderPriorityChart() {
+        const ctx = document.getElementById('priorityChart').getContext('2d');
+        const container = document.getElementById('priorityChart').parentElement;
+        const priorityData = this.getPriorityDistribution();
+        if (priorityData.data.every(v => v === 0)) {
+            container.innerHTML = '<div class="chart-placeholder">No priority data for this period.</div>';
+            return;
+        }
+        container.innerHTML = '<canvas id="priorityChart"></canvas>';
+        const newCtx = document.getElementById('priorityChart').getContext('2d');
+        new Chart(newCtx, {
+            type: 'bar',
+            data: {
+                labels: priorityData.labels,
+                datasets: [{
+                    label: 'Tasks',
+                    data: priorityData.data,
+                    backgroundColor: priorityData.colors,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.label}: ${context.parsed.y} tasks`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    renderFamilyChart() {
+        const ctx = document.getElementById('familyChart').getContext('2d');
+        const container = document.getElementById('familyChart').parentElement;
+        const familyData = this.getFamilyPerformanceData();
+        if (familyData.data.every(v => v === 0)) {
+            container.innerHTML = '<div class="chart-placeholder">No family performance data for this period.</div>';
+            return;
+        }
+        container.innerHTML = '<canvas id="familyChart"></canvas>';
+        const newCtx = document.getElementById('familyChart').getContext('2d');
+        new Chart(newCtx, {
+            type: 'bar',
+            data: {
+                labels: familyData.labels,
+                datasets: [{
+                    label: 'Completion Rate',
+                    data: familyData.data,
+                    backgroundColor: familyData.colors,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.label}: ${context.parsed.x}% completion rate`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }    setupAnalyticsTimeFilter() {
+        const timeFilter = document.getElementById('analyticsTimeRange');
+        if (timeFilter && !timeFilter.hasAttribute('data-listener')) {
+            timeFilter.addEventListener('change', () => {
+                this.renderAnalytics();
+            });
+            timeFilter.setAttribute('data-listener', 'true');
+        }
+    }
+
+    // ==========================================================================
+    // Analytics Data Processing Helper Methods
+    // ==========================================================================
+
+    getAnalyticsTimeRange() {
+        const timeRangeSelect = document.getElementById('analyticsTimeRange');
+        const selectedRange = timeRangeSelect ? timeRangeSelect.value : 'week';
+        
+        const now = new Date();
+        const ranges = {
+            week: {
+                start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7),
+                end: now,
+                days: 7
+            },
+            month: {
+                start: new Date(now.getFullYear(), now.getMonth(), 1),
+                end: now,
+                days: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+            },
+            quarter: {
+                start: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1),
+                end: now,
+                days: 90
+            },
+            year: {
+                start: new Date(now.getFullYear(), 0, 1),
+                end: now,
+                days: 365
+            }
+        };
+
+        return ranges[selectedRange] || ranges.week;
+    }
+
+    getTasksInTimeRange(timeRange) {
+        const { start, end } = timeRange;
+        return this.tasks.filter(task => {
+            const taskDate = new Date(task.createdAt);
+            return taskDate >= start && taskDate <= end;
+        });
+    }
+
+    getCurrentStreak() {
+        // Calculate consecutive days with at least one completed task
+        const now = new Date();
+        let streak = 0;
+        let currentDate = new Date(now);
+        currentDate.setHours(0, 0, 0, 0);
+
+        while (true) {
+            const dayStart = new Date(currentDate);
+            const dayEnd = new Date(currentDate);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const dayTasks = this.tasks.filter(task => {
+                if (!task.completed) return false;
+                const completedDate = new Date(task.updatedAt);
+                return completedDate >= dayStart && completedDate <= dayEnd;
+            });
+
+            if (dayTasks.length === 0) {
+                break;
+            }
+
+            streak++;
+            currentDate.setDate(currentDate.getDate() - 1);
+            
+            // Prevent infinite loop - max 365 days
+            if (streak >= 365) break;
+        }
+
+        return streak;
+    }
+
+    getAverageTasksPerDay(timeRange) {
+        const tasks = this.getTasksInTimeRange(timeRange);
+        if (timeRange.days === 0) return 0;
+        return tasks.length / timeRange.days;
+    }
+
+    getWeeklyProgressData() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const daysToShow = Math.min(timeRange.days, 14); // Show max 14 days for weekly view
+        const labels = [];
+        const completed = [];
+        const created = [];
+
+        for (let i = daysToShow - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dayStart = new Date(date);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Format label
+            labels.push(date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+
+            // Count tasks created on this day
+            const createdCount = this.tasks.filter(task => {
+                const taskDate = new Date(task.createdAt);
+                return taskDate >= dayStart && taskDate <= dayEnd;
+            }).length;
+            created.push(createdCount);
+
+            // Count tasks completed on this day
+            const completedCount = this.tasks.filter(task => {
+                if (!task.completed) return false;
+                const completedDate = new Date(task.updatedAt);
+                return completedDate >= dayStart && completedDate <= dayEnd;
+            }).length;
+            completed.push(completedCount);
+        }
+
+        return { labels, completed, created };
+    }
+
+    getCategoryDistribution() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const tasks = this.getTasksInTimeRange(timeRange);
+        const categoryCount = {};
+        const categoryColors = {};
+
+        // Count tasks by category
+        tasks.forEach(task => {
+            const category = this.categories.find(c => c.id === task.category);
+            if (category) {
+                categoryCount[category.name] = (categoryCount[category.name] || 0) + 1;
+                categoryColors[category.name] = category.color || '#3b82f6';
+            }
+        });
+
+        const labels = Object.keys(categoryCount);
+        const data = Object.values(categoryCount);
+        const colors = labels.map(label => categoryColors[label]);
+
+        return { labels, data, colors };
+    }
+
+    getPriorityDistribution() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const tasks = this.getTasksInTimeRange(timeRange);
+        const priorityCount = { low: 0, medium: 0, high: 0, urgent: 0 };
+        const priorityColors = {
+            low: '#10b981',
+            medium: '#3b82f6', 
+            high: '#f59e0b',
+            urgent: '#ef4444'
+        };
+
+        tasks.forEach(task => {
+            if (priorityCount.hasOwnProperty(task.priority)) {
+                priorityCount[task.priority]++;
+            }
+        });
+
+        const labels = ['🟢 Low', '🟡 Medium', '🟠 High', '🔴 Urgent'];
+        const data = [priorityCount.low, priorityCount.medium, priorityCount.high, priorityCount.urgent];
+        const colors = [priorityColors.low, priorityColors.medium, priorityColors.high, priorityColors.urgent];
+
+        return { labels, data, colors };
+    }
+
+    getFamilyPerformanceData() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const tasks = this.getTasksInTimeRange(timeRange);
+        const memberStats = {};
+
+        // Initialize stats for all family members
+        this.familyMembers.forEach(member => {
+            memberStats[member.id] = {
+                name: member.name,
+                avatar: member.avatar,
+                total: 0,
+                completed: 0,
+                completionRate: 0
+            };
+        });
+
+        // Count tasks by assignee
+        tasks.forEach(task => {
+            if (memberStats[task.assignee]) {
+                memberStats[task.assignee].total++;
+                if (task.completed) {
+                    memberStats[task.assignee].completed++;
+                }
+            }
+        });
+
+        // Calculate completion rates
+        Object.values(memberStats).forEach(stats => {
+            stats.completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+        });
+
+        const labels = Object.values(memberStats).map(stats => `${stats.avatar} ${stats.name}`);
+        const data = Object.values(memberStats).map(stats => stats.completionRate);
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+
+        return { labels, data, colors: colors.slice(0, labels.length) };
+    }
+
+    getAchievements() {
+        const totalTasks = this.tasks.length;
+        const completedTasks = this.tasks.filter(task => task.completed).length;
+        const streak = this.getCurrentStreak();
+        const todayTasks = this.getTodayTasks();
+        const todayCompleted = todayTasks.filter(task => task.completed).length;
+
+        const achievements = [
+            {
+                id: 'first_task',
+                name: 'Getting Started',
+                description: 'Complete your first task',
+                icon: '🎯',
+                unlocked: completedTasks >= 1,
+                progress: Math.min(completedTasks, 1) * 100,
+                current: Math.min(completedTasks, 1),
+                target: 1
+            },
+            {
+                id: 'task_master',
+                name: 'Task Master',
+                description: 'Complete 10 tasks',
+                icon: '🏆',
+                unlocked: completedTasks >= 10,
+                progress: Math.min((completedTasks / 10) * 100, 100),
+                current: Math.min(completedTasks, 10),
+                target: 10
+            },
+            {
+                id: 'productive_day',
+                name: 'Productive Day',
+                description: 'Complete 5 tasks in one day',
+                icon: '⚡',
+                unlocked: todayCompleted >= 5,
+                progress: Math.min((todayCompleted / 5) * 100, 100),
+                current: Math.min(todayCompleted, 5),
+                target: 5
+            },
+            {
+                id: 'streak_starter',
+                name: 'Streak Starter',
+                description: 'Maintain a 3-day streak',
+                icon: '🔥',
+                unlocked: streak >= 3,
+                progress: Math.min((streak / 3) * 100, 100),
+                current: Math.min(streak, 3),
+                target: 3
+            },
+            {
+                id: 'consistency_king',
+                name: 'Consistency King',
+                description: 'Maintain a 7-day streak',
+                icon: '👑',
+                unlocked: streak >= 7,
+                progress: Math.min((streak / 7) * 100, 100),
+                current: Math.min(streak, 7),
+                target: 7
+            },
+            {
+                id: 'task_creator',
+                name: 'Task Creator',
+                description: 'Create 25 tasks',
+                icon: '📝',
+                unlocked: totalTasks >= 25,
+                progress: Math.min((totalTasks / 25) * 100, 100),
+                current: Math.min(totalTasks, 25),
+                target: 25
+            }
+        ];
+
+        return achievements;
+    }
+
+    generateInsights() {
+        const timeRange = this.getAnalyticsTimeRange();
+        const tasks = this.getTasksInTimeRange(timeRange);
+        const completedTasks = tasks.filter(task => task.completed);
+        const insights = [];
+
+        // Completion rate insight
+        const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
+        if (completionRate >= 80) {
+            insights.push({
+                icon: '🌟',
+                text: 'Excellent productivity!',
+                detail: `You've completed ${completionRate}% of your tasks. Keep up the great work!`
+            });
+        } else if (completionRate >= 60) {
+            insights.push({
+                icon: '👍',
+                text: 'Good progress',
+                detail: `${completionRate}% completion rate. You're doing well!`
+            });
+        } else if (completionRate < 60 && tasks.length > 0) {
+            insights.push({
+                icon: '💪',
+                text: 'Room for improvement',
+                detail: `Consider breaking down larger tasks or setting realistic daily goals.`
+            });
+        }
+
+        // Most productive category
+        const categoryStats = {};
+        completedTasks.forEach(task => {
+            const category = this.getCategoryName(task.category);
+            categoryStats[category] = (categoryStats[category] || 0) + 1;
+        });
+
+        const topCategory = Object.entries(categoryStats).sort((a, b) => b[1] - a[1])[0];
+        if (topCategory && topCategory[1] > 1) {
+            insights.push({
+                icon: '🏅',
+                text: 'Top performing category',
+                detail: `${topCategory[0]} with ${topCategory[1]} completed tasks`
+            });
+        }
+
+        // Streak insight
+        const streak = this.getCurrentStreak();
+        if (streak >= 7) {
+            insights.push({
+                icon: '🔥',
+                text: 'Amazing streak!',
+                detail: `You've completed tasks for ${streak} consecutive days`
+            });
+        } else if (streak >= 3) {
+            insights.push({
+                icon: '📈',
+                text: 'Building momentum',
+                detail: `${streak}-day streak going strong!`
+            });
+        }
+
+        // Weekly performance insight
+        const weeklyData = this.getWeeklyProgressData();
+        const avgCompleted = weeklyData.completed.reduce((a, b) => a + b, 0) / weeklyData.completed.length;
+        if (avgCompleted >= 2) {
+            insights.push({
+                icon: '⚡',
+                text: 'Consistent performer',
+                detail: `Averaging ${avgCompleted.toFixed(1)} completed tasks per day`
+            });
+        }
+
+        // Priority insight
+        const urgentTasks = tasks.filter(task => task.priority === 'urgent' && !task.completed);
+        if (urgentTasks.length > 0) {
+            insights.push({
+                icon: '⚠️',
+                text: 'Urgent tasks pending',
+                detail: `${urgentTasks.length} urgent task${urgentTasks.length > 1 ? 's' : ''} need${urgentTasks.length > 1 ? '' : 's'} attention`
+            });
+        }
+
+        return insights.slice(0, 4); // Limit to 4 insights for better UX
     }
 
     // ==========================================================================
@@ -591,16 +1171,14 @@ class FamilyTracker {
         this.renderApp();
         
         return task;
-    }
-
-    toggleTask(taskId) {
+    }    toggleTask(taskId) {
         const task = this.tasks.find(t => t.id === taskId);
         if (task) {
             task.completed = !task.completed;
             task.updatedAt = new Date().toISOString();
             
             if (task.completed) {
-                this.showToast(`✅ "${task.title}" completed!`, 'success');
+                this.showToastWithAnimation(`✅ "${task.title}" completed!`, 'success');
             }
             
             this.saveData();
@@ -647,9 +1225,7 @@ class FamilyTracker {
         }
 
         this.openModal('taskModal');
-    }
-
-    saveTask() {
+    }    saveTask() {
         const form = document.getElementById('taskForm');
         const formData = new FormData(form);
         const taskData = {
@@ -668,12 +1244,12 @@ class FamilyTracker {
             if (task) {
                 Object.assign(task, taskData);
                 task.updatedAt = new Date().toISOString();
-                this.showToast('Task updated!', 'success');
+                this.showToastWithAnimation('Task updated!', 'success');
             }
         } else {
-            // Create new task
-            this.addTask(taskData);
-            this.showToast('Task created!', 'success');
+            // Create new task with animation
+            this.addTaskWithAnimation(taskData);
+            this.showToastWithAnimation('Task created!', 'success');
         }
 
         this.closeModal('taskModal');
@@ -927,6 +1503,149 @@ class FamilyTracker {
         };
         
         input.click();
+    }
+
+    // ==========================================================================
+    // Enhanced Animation Methods (Phase 2)
+    // ==========================================================================
+
+    addTaskWithAnimation(taskData) {
+        const task = this.addTask(taskData);
+        
+        // Add task to DOM with animation
+        setTimeout(() => {
+            const taskElements = document.querySelectorAll(`[data-task-id="${task.id}"]`);
+            taskElements.forEach(el => {
+                el.classList.add('task-created');
+                // Remove animation class after completion
+                setTimeout(() => el.classList.remove('task-created'), 500);
+            });
+        }, 100);
+        
+        return task;
+    }
+
+    toggleTaskWithAnimation(taskId) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        const taskElements = document.querySelectorAll(`[data-task-id="${taskId}"]`);
+        
+        if (!task.completed) {
+            // Completing task - add completion animation
+            taskElements.forEach(el => {
+                el.classList.add('completing');
+                setTimeout(() => {
+                    el.classList.remove('completing');
+                    el.classList.add('completed');
+                }, 600);
+            });
+        }
+
+        // Toggle the task state
+        this.toggleTask(taskId);
+    }
+
+    deleteTaskWithAnimation(taskId) {
+        const taskElements = document.querySelectorAll(`[data-task-id="${taskId}"]`);
+        
+        // Animate out before deleting
+        taskElements.forEach(el => {
+            el.classList.add('task-deleting');
+        });
+        
+        // Delete after animation completes
+        setTimeout(() => {
+            this.deleteTask(taskId);
+        }, 400);
+    }
+
+    showToastWithAnimation(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toastIcon');
+        const messageEl = document.getElementById('toastMessage');
+
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+
+        icon.textContent = icons[type] || icons.success;
+        messageEl.textContent = message;
+
+        // Remove any existing classes
+        toast.className = 'toast';
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    animateProgressCircle() {
+        const todayTasks = this.getTodayTasks();
+        const completed = todayTasks.filter(task => task.completed).length;
+        const total = todayTasks.length;
+        const percentage = total > 0 ? (completed / total) * 100 : 0;
+
+        const circle = document.querySelector('.progress-ring-circle');
+        const circumference = 2 * Math.PI * 54;
+        
+        // Start from current position for smooth transition
+        const currentOffset = circle.style.strokeDashoffset || circumference;
+        const targetOffset = circumference - (percentage / 100) * circumference;
+        
+        // Animate the progress
+        const duration = 800; // ms
+        const startTime = performance.now();
+        const startOffset = parseFloat(currentOffset);
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function for smooth animation
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentValue = startOffset + (targetOffset - startOffset) * easeOut;
+            
+            circle.style.strokeDashoffset = currentValue;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Animation complete - update color
+                circle.style.stroke = percentage === 100 ? '#10b981' : '#3b82f6';
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    }
+
+    showLoadingState(element, text = 'Loading...') {
+        const originalContent = element.innerHTML;
+        element.innerHTML = `
+            <span class="loading-state">
+                <span class="loading-spinner-mini"></span>
+                ${text}
+            </span>
+        `;
+        
+        return () => {
+            element.innerHTML = originalContent;
+        };
+    }
+
+    staggerTaskAnimation() {
+        const taskItems = document.querySelectorAll('.task-item');
+        taskItems.forEach((item, index) => {
+            item.style.animationDelay = `${index * 50}ms`;
+        });
     }
 }
 

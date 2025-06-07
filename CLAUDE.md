@@ -1,5 +1,38 @@
 # Claude AI Assistant Instructions for Sandbox Projects
 
+## ⚡ Quick Reference
+
+**Current Project**: to-do-tracker (Phase 2 - Enhanced User Experience)  
+**Status**: Phase 1 MVP Complete, implementing visual polish and advanced features  
+**Immediate Priority**: UI animations, micro-interactions, performance optimization  
+**Documentation Status**: Review DEV_LOG.md for latest progress and next steps
+
+### Context Retrieval Protocol
+1. **ALWAYS CHECK FIRST**: `to-do-tracker/DEV_LOG.md` → "Next Steps" section
+2. **UNDERSTAND PHASE**: `PROJECT_ROADMAP.md` → Phase 2 requirements and goals
+3. **VERIFY CURRENT STATE**: Test existing functionality before implementing changes
+4. **CHECK ARCHITECTURE**: Review `app.js` class structure and state management patterns
+
+### Key Decision Points
+- **Framework**: Vanilla JavaScript (no external dependencies)
+- **Architecture**: Class-based state management with localStorage persistence  
+- **Design**: Visual appeal inspired by Tody app with unlimited customization
+- **Focus**: Family collaboration with privacy-first approach
+
+### Phase-Aware Development Context
+**Current Phase**: Phase 2 - Enhanced User Experience  
+**Phase Focus**: Visual polish, animations, micro-interactions, advanced features  
+**Technical Priorities**: CSS animations, touch gestures, performance optimization, accessibility
+
+#### Phase 2 Implementation Standards
+- **Animation Guidelines**: 200-300ms CSS transitions for micro-interactions
+- **Touch Interface**: Swipe gestures for mobile task management
+- **Performance Standards**: <100ms UI response times for all interactions
+- **Visual Design**: 8px grid system, refined typography, consistent spacing
+- **Advanced Functionality**: Drag-and-drop, keyboard shortcuts, batch operations
+
+---
+
 ## Context & Purpose
 This sandbox workspace contains experimental and learning projects requiring AI assistance for development, documentation, and problem-solving. Claude should provide comprehensive support while maintaining project-specific context and quality standards.
 
@@ -98,11 +131,49 @@ class FamilyTracker {
 
 ### 📋 Development Workflow Support
 
+#### Decision Tree for Feature Requests
+```
+New Feature Request:
+├── In current phase? → Check PROJECT_ROADMAP.md Phase 2 requirements
+├── Conflicts with existing? → Review app.js architecture and patterns  
+├── Requires dependencies? → Evaluate against vanilla JavaScript constraint
+├── UI/UX implications? → Consider mobile-first responsive design
+└── Testing needed? → Reference comprehensive testing checklist
+```
+
 #### Starting New Work Sessions
 1. **Review Current Status**: Read DEV_LOG.md for to-do-tracker projects
 2. **Understand Context**: Check roadmap phase and current priorities
 3. **Assess Technical Debt**: Review known issues and limitations
 4. **Plan Approach**: Suggest optimal implementation strategy
+
+#### Decision Tree for Feature Requests
+
+**When User Requests New Feature:**
+```
+Is feature in current roadmap phase?
+├─ YES → Check DEV_LOG.md priorities → Provide implementation guidance
+└─ NO → Assess feature value → Suggest phase alignment or roadmap adjustment
+
+Does feature align with vanilla JS constraint?
+├─ YES → Proceed with architecture-consistent implementation
+└─ NO → Suggest alternative approaches → Explain trade-offs
+
+Will feature impact existing functionality?
+├─ MINIMAL → Proceed with careful integration testing
+└─ SIGNIFICANT → Require explicit confirmation → Plan migration strategy
+```
+
+**When Debugging Complex Issues:**
+```
+Is error reproducible?
+├─ YES → Create minimal test case → Identify root cause → Provide fix
+└─ NO → Add comprehensive logging → Monitor patterns → Suggest debugging tools
+
+Is issue architectural?
+├─ YES → Review design patterns → Suggest refactoring approach
+└─ NO → Focus on specific implementation → Provide targeted solution
+```
 
 #### During Development
 - Provide real-time code review and optimization suggestions
@@ -302,7 +373,7 @@ console.log('Current theme:', {
 ## 📝 Maintenance & Version Control
 
 ### Change History
-- **June 7, 2025**: Updated with comprehensive guidelines and sync protocol
+- **June 7, 2025**: Added Quick Reference section, enhanced decision trees, integrated context retrieval protocol, added Phase 2 development context, implemented performance standards
 - **Pending**: Weekly updates based on development progress
 
 ### File Dependencies
@@ -322,6 +393,6 @@ When updating this file:
 ---
 
 *Last Updated: June 7, 2025*  
-*Version: 1.1.0*  
+*Version: 1.2.0*  
 *Sync Status: ✅ Synchronized with copilot-instructions.md and AGENTS.md*  
 *Next Review: After major project milestones or weekly during active development*

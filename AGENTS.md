@@ -1,5 +1,37 @@
 # AI Agent Instructions for Sandbox Projects
 
+## ⚡ Quick Reference
+
+**Active Project**: to-do-tracker (Phase 2 - Enhanced User Experience)  
+**Current Focus**: UI animations, micro-interactions, performance optimization  
+**Architecture**: Vanilla JavaScript PWA with class-based state management  
+**Key Principle**: Local-first, privacy-focused family collaboration tool
+
+### Context Retrieval Priority
+1. **Current Status**: `to-do-tracker/DEV_LOG.md` → Check "Next Steps" section
+2. **Phase Requirements**: `PROJECT_ROADMAP.md` → Understand Phase 2 goals  
+3. **Technical Context**: `app.js` → Review class architecture and patterns
+4. **User Perspective**: `README.md` → Understand feature functionality
+
+### Core Constraints
+- **No External Dependencies**: Vanilla JavaScript only
+- **Data Storage**: localStorage (local-first approach)
+- **Design Inspiration**: Tody app aesthetics with unlimited customization
+- **Target Users**: Families needing visual task management
+
+### Performance & Quality Guidelines
+**Current Phase**: Phase 2 - Enhanced User Experience  
+**Development Standards**: CSS animations (200-300ms), <100ms UI response times, 8px grid system  
+**Technical Focus**: Micro-interactions, touch gestures, performance optimization, accessibility refinements
+
+#### Universal Quality Metrics
+- **Context Relevance**: >95% accurate suggestions based on project patterns
+- **Code Quality**: <5% syntax/runtime errors in generated code
+- **Architecture Consistency**: 100% adherence to existing patterns
+- **Documentation Sync**: Always update relevant docs with changes
+
+---
+
 ## Universal AI Assistant Guidelines
 
 This document provides general instructions for any AI agent (GitHub Copilot, Claude, ChatGPT, or other AI assistants) working within this sandbox development environment.
@@ -363,6 +395,21 @@ const testData = { /* test data structure */ };
 localStorage.setItem('familyTrackerData', JSON.stringify(testData));
 ```
 
+## 📊 Performance & Quality Guidelines
+
+### AI Assistance Effectiveness Metrics
+- **Context Retrieval Time**: < 30 seconds to gather relevant project context
+- **Solution Accuracy**: > 80% success rate on first attempt  
+- **Documentation Sync**: Update relevant docs with every code change
+- **Testing Coverage**: Validate functionality before marking complete
+
+### Quality Assurance Checklist
+- [ ] Solution aligns with current project phase and priorities
+- [ ] Code follows established patterns and architecture
+- [ ] Changes are tested across target browsers and devices
+- [ ] Documentation is updated to reflect new functionality
+- [ ] No breaking changes to existing features
+
 ## 📞 Support & Escalation
 
 ### When to Request Additional Context
@@ -390,12 +437,12 @@ localStorage.setItem('familyTrackerData', JSON.stringify(testData));
 ## 📝 Maintenance Log
 
 **Last Updated**: June 7, 2025  
-**Version**: 1.0.0  
+**Version**: 1.2.0  
 **Sync Status**: ✅ Synchronized with copilot-instructions.md and CLAUDE.md  
-**Next Review**: Weekly during active development  
+**Next Review**: Weekly during active development
 
 ### Change History
-- **June 7, 2025**: Initial creation with comprehensive guidelines
+- **June 7, 2025**: Added Quick Reference section, performance guidelines, enhanced universal standards, integrated Phase 2 development context
 - **Pending**: Weekly updates based on development progress
 
 ---

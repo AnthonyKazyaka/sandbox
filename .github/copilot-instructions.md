@@ -1,5 +1,44 @@
 # GitHub Copilot Instructions for Sandbox Projects
 
+## ⚡ Quick Reference
+
+**Current Project**: to-do-tracker (Phase 2 - Enhanced User Experience)  
+**Priority**: UI polish, advanced features, performance optimization  
+**Key Context**: Check `DEV_LOG.md` → Next Steps before starting  
+**Current Focus**: Visual animations, micro-interactions, advanced UI
+
+### Essential Actions
+1. **Start Here**: Read `to-do-tracker/DEV_LOG.md` "Next Steps" section
+2. **Understand Phase**: Reference `PROJECT_ROADMAP.md` for Phase 2 requirements  
+3. **Test First**: Verify current functionality before making changes
+4. **Document Updates**: Update DEV_LOG.md with progress every ~12 messages
+
+### Quick Commands
+```javascript
+// Debug current state
+console.log(JSON.parse(localStorage.getItem('familyTrackerData')));
+
+// Reset for testing
+localStorage.removeItem('familyTrackerData'); location.reload();
+
+// Test theme switching
+document.documentElement.setAttribute('data-theme', 'green');
+```
+
+### Phase-Aware Development Context
+**Current Phase**: Phase 2 - Enhanced User Experience  
+**Focus Areas**: UI polish, animations, micro-interactions, advanced features  
+**Technical Priorities**: CSS animations, touch gestures, performance optimization, accessibility refinements
+
+#### Phase 2 Specific Guidelines
+- **Animation Standards**: Use CSS transitions (200-300ms) for micro-interactions
+- **Touch Support**: Implement swipe gestures for mobile task management
+- **Performance Targets**: <100ms response time for all UI interactions
+- **Visual Polish**: Consistent spacing (8px grid system), refined typography
+- **Advanced Features**: Drag-and-drop, keyboard shortcuts, batch operations
+
+---
+
 ## Overview
 This sandbox workspace contains multiple experimental and learning projects. Each project has its own specific requirements and contexts that AI assistants should understand when providing help.
 
@@ -108,6 +147,32 @@ This sandbox workspace contains multiple experimental and learning projects. Eac
 
 ### 🔄 Development Workflow
 
+#### Context Retrieval Protocol
+**ALWAYS follow this sequence before providing assistance:**
+
+1. **Check Current Status**: Read `to-do-tracker/DEV_LOG.md` → "Next Steps" section
+2. **Understand Phase Context**: Review `PROJECT_ROADMAP.md` → Current phase requirements  
+3. **Verify Existing State**: Test current functionality before making changes
+4. **Review Architecture**: Check `app.js` class structure and state patterns
+5. **Validate Constraints**: Ensure adherence to vanilla JavaScript approach
+
+#### VS Code Tool Integration Patterns
+**Optimize context gathering with these tool usage patterns:**
+
+- **`semantic_search`**: Use for finding related code patterns and context
+- **`list_code_usages`**: Check impact of changes across the codebase  
+- **`read_file`**: Always read existing files before making edits
+- **`get_errors`**: Validate changes and check for compilation issues
+- **`run_in_terminal`**: Test functionality with local development server
+
+**Tool Sequence for New Features:**
+1. `semantic_search` → Find existing patterns and related code
+2. `read_file` → Understand current implementation
+3. `list_code_usages` → Check dependencies and usage patterns
+4. `insert_edit_into_file` → Implement changes
+5. `get_errors` → Validate implementation
+6. `run_in_terminal` → Test functionality
+
 #### Starting Work on to-do-tracker
 1. Read DEV_LOG.md "Next Steps" section
 2. Check PROJECT_ROADMAP.md for current phase requirements
@@ -125,6 +190,41 @@ This sandbox workspace contains multiple experimental and learning projects. Eac
 - Document any new issues discovered
 - Update next steps and priorities
 - Commit with clear, descriptive messages
+
+#### GitHub Copilot Decision Tree
+
+**When User Requests New Feature:**
+```
+Is feature in current phase? 
+├─ YES → Check DEV_LOG.md next steps → Implement
+└─ NO → Suggest phase alignment or defer to roadmap
+
+Is change breaking existing functionality?
+├─ YES → Require explicit confirmation + backup strategy
+└─ NO → Proceed with implementation
+
+Does feature require new dependencies?
+├─ YES → Justify need + check vanilla JS constraints
+└─ NO → Implement using existing patterns
+```
+
+**When Debugging Issues:**
+```
+Is error in console? 
+├─ YES → Check browser dev tools → Fix syntax/runtime
+└─ NO → Check localStorage → Check UI state → Check event listeners
+
+Is issue reproducible?
+├─ YES → Create minimal test case → Fix root cause
+└─ NO → Add logging → Monitor for patterns
+```
+
+**When Optimizing Performance:**
+```
+Is issue UI responsiveness?
+├─ YES → Check animations → Reduce DOM manipulation → Use CSS transforms
+└─ NO → Check data operations → Optimize algorithms → Add caching
+```
 
 ### 🧪 Testing Requirements
 
@@ -154,6 +254,37 @@ This sandbox workspace contains multiple experimental and learning projects. Eac
 - [ ] Service worker caches appropriately
 
 ## 📋 Common Tasks & Patterns
+
+### VS Code Tool Integration
+**Optimize context gathering with these tool usage patterns:**
+
+- **`semantic_search`**: Use for finding related code patterns and context
+- **`list_code_usages`**: Check impact of changes across the codebase  
+- **`read_file`**: Always read existing files before making edits
+- **`get_errors`**: Validate changes and check for compilation issues
+- **`run_in_terminal`**: Test functionality with local development server
+
+**Tool Sequence for New Features:**
+1. `semantic_search` → Find existing patterns and related code
+2. `read_file` → Understand current implementation
+3. `list_code_usages` → Check dependencies and usage patterns
+4. `insert_edit_into_file` → Implement changes
+5. `get_errors` → Validate implementation
+6. `run_in_terminal` → Test functionality
+
+### Performance Monitoring & Quality Assurance
+
+#### Code Generation Quality Metrics
+- **Context Accuracy**: >95% relevant code suggestions based on project patterns
+- **Error Reduction**: <5% syntax/runtime errors in generated code
+- **Pattern Consistency**: Follow existing architecture 100% of the time
+- **Documentation Sync**: Always update relevant docs with code changes
+
+#### Performance Targets
+- **Response Time**: <2 seconds for code suggestions
+- **Context Retrieval**: <10 seconds for comprehensive project analysis
+- **Error Detection**: Real-time validation using `get_errors` tool
+- **Testing Efficiency**: <30 seconds to verify changes work correctly
 
 ### Adding New Features to to-do-tracker
 1. **Planning**: Check if feature aligns with current phase in roadmap
@@ -308,7 +439,7 @@ location.reload();
 ## 📝 Maintenance & Version Control
 
 ### Change History
-- **June 7, 2025**: Updated with comprehensive guidelines and sync protocol
+- **June 7, 2025**: Added Quick Reference section, enhanced Context Retrieval Protocol, integrated VS Code tool patterns, added Phase 2 development context, implemented decision trees, added performance monitoring guidelines
 - **Pending**: Weekly updates based on development progress
 
 ### File Dependencies
@@ -328,6 +459,6 @@ When updating this file:
 ---
 
 *Last Updated: June 7, 2025*  
-*Version: 1.1.0*  
+*Version: 1.2.0*  
 *Sync Status: ✅ Synchronized with CLAUDE.md and AGENTS.md*  
 *Next Review: Weekly during active development or after major project milestones*

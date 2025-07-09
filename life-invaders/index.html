@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life-Invaders - Conway's Game of Life meets Space Invaders</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000;
+            color: #0f0;
+        }
+        
+        .container {
+            text-align: center;
+        }
+        
+        h1 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .description {
+            margin-bottom: 20px;
+            color: #0a0;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 2px solid #00ff00;
+            margin: 20px 0;
+            background-color: #000;
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #000;
+            color: #00ff00;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background-color: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        button:disabled {
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+        }
+        
+        button:disabled:hover {
+            background-color: #000;
+            color: #333;
+            box-shadow: none;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background-color: #001100;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #0a0;
+        }
+        
+        .info {
+            margin-top: 20px;
+            text-align: left;
+            background-color: #001100;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .info li {
+            margin: 5px 0;
+            color: #0a0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #001100;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #00ff00;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .generation-indicator {
+            font-size: 18px;
+            color: #ff0;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LIFE-INVADERS</h1>
+        
+        <div class="description">
+            Use WASD or Arrow Keys to move, SPACE to shoot. Destroy cells to trigger evolution!
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="generation">0</div>
+                <div class="stat-label">Generation</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="liveCells">0</div>
+                <div class="stat-label">Live Cells</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">Score</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="killCount">0</div>
+                <div class="stat-label">Kills</div>
+            </div>
+        </div>
+        
+        <div class="generation-indicator">
+            Next Evolution: <span id="killProgress">0</span>/10 kills
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="500"></canvas>
+        
+        <div class="controls">
+            <button id="startBtn">Start Game</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <button id="resetBtn">Reset</button>
+            <button id="newPatternBtn">New Pattern</button>
+            <button id="manualEvolveBtn">Force Evolution</button>
+        </div>
+        
+        <div class="info">
+            <h3>Mission Briefing:</h3>
+            <ul>
+                <li><strong>Objective:</strong> Eliminate all hostile life forms (living cells)</li>
+                <li><strong>Controls:</strong> WASD or Arrow Keys to move, SPACE to fire</li>
+                <li><strong>Evolution:</strong> Every 10 cells destroyed triggers pattern evolution</li>
+                <li><strong>Strategy:</strong> Balance aggressive clearing with pattern management</li>
+                <li><strong>Scoring:</strong> Base points + age bonus for each cell destroyed</li>
+                <li><strong>Warning:</strong> Evolution can create new threats or opportunities!</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

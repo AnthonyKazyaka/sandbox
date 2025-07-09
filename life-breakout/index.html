@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life-Breakout - Conway's Game of Life meets Breakout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+        }
+        
+        .container {
+            text-align: center;
+        }
+        
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 2px solid #4CAF50;
+            margin: 20px 0;
+            background-color: #111;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        
+        .info {
+            margin-top: 20px;
+            text-align: left;
+            background-color: #222;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #444;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Life-Breakout</h1>
+        
+        <div class="description">
+            Use arrow keys or mouse to control the paddle. Break living cells to clear the board!<br>
+            Generations advance only when the ball hits your paddle.
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="generation">0</div>
+                <div class="stat-label">Generation</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="liveCells">0</div>
+                <div class="stat-label">Live Cells</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">Score</div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="500"></canvas>
+        
+        <div class="controls">
+            <button id="startBtn">Start Game</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <button id="resetBtn">Reset</button>
+            <button id="seedBtn">New Pattern</button>
+        </div>
+        
+        <div class="info">
+            <h3>How to Play:</h3>
+            <ul>
+                <li><strong>Goal:</strong> Clear all living cells (colored squares) by hitting them with the ball</li>
+                <li><strong>Controls:</strong> Use arrow keys or mouse to move the paddle</li>
+                <li><strong>Evolution:</strong> The pattern evolves following Conway's Game of Life rules, but only when the ball hits your paddle</li>
+                <li><strong>Scoring:</strong> Gain points for destroying cells, bonus points for clearing patterns</li>
+                <li><strong>Challenge:</strong> Balance clearing cells with letting the pattern evolve strategically</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1316,6 +1316,59 @@ class GPSAdminApp {
     }
 
     /**
+     * Calculate event duration for a specific day
+     * Handles multi-day events and overnight appointments properly
+     * @param {Object} event - The event object
+     * @param {Date} targetDate - The specific date to calculate duration for
+     * @returns {number} Duration in minutes for that specific day
+     */
+    calculateEventDurationForDay(event, targetDate) {
+        // All-day events (like birthdays) don't count toward workload
+        if (event.isAllDay) {
+            return 0;
+        }
+        
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        
+        // Set target day boundaries (midnight to midnight)
+        const dayStart = new Date(targetDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        const dayEnd = new Date(targetDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        // If event doesn't overlap with this day at all, return 0
+        if (eventEnd <= dayStart || eventStart > dayEnd) {
+            return 0;
+        }
+        
+        // Special handling for overnight appointments
+        // These typically run from 8-9 PM to 8-9 AM and should count as 12 hours per day
+        const isOvernightType = event.type === 'overnight' || 
+                               event.title?.toLowerCase().includes('overnight') ||
+                               event.title?.toLowerCase().includes('boarding');
+        
+        if (isOvernightType) {
+            // Calculate the actual overlap, but cap at 12 hours per day for overnights
+            const overlapStart = eventStart > dayStart ? eventStart : dayStart;
+            const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+            const actualMinutes = (overlapEnd - overlapStart) / (1000 * 60);
+            
+            // For overnight stays, count 12 hours per day maximum
+            // This represents the active care time (evening check-in + morning check-out)
+            return Math.min(actualMinutes, 12 * 60);
+        }
+        
+        // For regular appointments, calculate the actual overlap with the day
+        const overlapStart = eventStart > dayStart ? eventStart : dayStart;
+        const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+        const minutes = (overlapEnd - overlapStart) / (1000 * 60);
+        
+        return Math.max(0, minutes);
+    }
+
+    /**
      * Render dashboard view
      */
     renderDashboard() {
@@ -1341,7 +1394,7 @@ class GPSAdminApp {
         const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
 
         const totalMinutes = workEvents.reduce((sum, event) => {
-            return sum + (event.end - event.start) / (1000 * 60);
+            return sum + this.calculateEventDurationForDay(event, today);
         }, 0);
 
         const hours = Math.floor(totalMinutes / 60);
@@ -1390,7 +1443,7 @@ class GPSAdminApp {
             const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
 
             const totalMinutes = workEvents.reduce((sum, event) => {
-                return sum + (event.end - event.start) / (1000 * 60);
+                return sum + this.calculateEventDurationForDay(event, date);
             }, 0);
 
             const hours = (totalMinutes / 60).toFixed(1);
@@ -1443,7 +1496,7 @@ class GPSAdminApp {
             });
 
             const totalMinutes = dayEvents.reduce((sum, event) => {
-                return sum + (event.end - event.start) / (1000 * 60);
+                return sum + this.calculateEventDurationForDay(event, date);
             }, 0);
 
             nextWeek.push({
@@ -1579,7 +1632,7 @@ class GPSAdminApp {
             });
 
             const totalMinutes = dayEvents.reduce((sum, event) => {
-                return sum + (event.end - event.start) / (1000 * 60);
+                return sum + this.calculateEventDurationForDay(event, dateKey);
             }, 0);
 
             const hours = (totalMinutes / 60).toFixed(1);
@@ -1777,7 +1830,7 @@ class GPSAdminApp {
                                     ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
                                 </span>
                             ` : ''}
-                            <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="app.toggleEventIgnored('${event.id}')" style="margin-top: 4px;">
+                            <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="window.gpsApp.toggleEventIgnored('${event.id}')" style="margin-top: 4px;">
                                 ${event.ignored ? '✓ Ignored' : 'Ignore'}
                             </button>
                         </div>
@@ -1874,7 +1927,7 @@ class GPSAdminApp {
 
         // Calculate totals
         const totalMinutes = sortedEvents.reduce((sum, event) => {
-            return sum + (event.end - event.start) / (1000 * 60);
+            return sum + this.calculateEventDurationForDay(event, dateKey);
         }, 0);
         const hours = (totalMinutes / 60).toFixed(1);
         const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
@@ -1915,7 +1968,12 @@ class GPSAdminApp {
         events.forEach(event => {
             const startTime = event.isAllDay ? 'All Day' : this.formatTime(event.start);
             const endTime = event.isAllDay ? '' : this.formatTime(event.end);
-            const duration = event.isAllDay ? 'All Day' : `${Math.round((event.end - event.start) / (1000 * 60))} min`;
+            
+            // Calculate duration for this specific day (handles multi-day events properly)
+            const dateKey = this.selectedDate || new Date(event.start);
+            dateKey.setHours(0, 0, 0, 0);
+            const durationMinutes = event.isAllDay ? 0 : this.calculateEventDurationForDay(event, dateKey);
+            const duration = event.isAllDay ? 'All Day' : `${Math.round(durationMinutes)} min`;
 
             html += `
                 <div class="day-details-event ${event.ignored ? 'event-ignored' : ''}">
@@ -1955,7 +2013,7 @@ class GPSAdminApp {
                                 ${event.client}
                             </span>
                         ` : ''}
-                        <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="app.toggleEventIgnored('${event.id}')" style="margin-left: auto;">
+                        <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="window.gpsApp.toggleEventIgnored('${event.id}')" style="margin-left: auto;">
                             ${event.ignored ? '✓ Ignored' : 'Ignore from Workload'}
                         </button>
                     </div>
@@ -2346,7 +2404,7 @@ class GPSAdminApp {
         const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
 
         const totalMinutes = workEvents.reduce((sum, event) => {
-            return sum + (event.end - event.start) / (1000 * 60);
+            return sum + this.calculateEventDurationForDay(event, today);
         }, 0);
 
         const hours = totalMinutes / 60;

@@ -26,15 +26,69 @@ class WorkloadAnalyzer {
     }
 
     /**
+     * Calculate event duration for a specific day
+     * Handles multi-day events and overnight appointments properly
+     * @param {Object} event - The event object
+     * @param {Date} targetDate - The specific date to calculate duration for
+     * @returns {number} Duration in minutes for that specific day
+     */
+    calculateEventDurationForDay(event, targetDate) {
+        // All-day events (like birthdays) don't count toward workload
+        if (event.isAllDay) {
+            return 0;
+        }
+        
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        
+        // Set target day boundaries (midnight to midnight)
+        const dayStart = new Date(targetDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        const dayEnd = new Date(targetDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        // If event doesn't overlap with this day at all, return 0
+        if (eventEnd <= dayStart || eventStart > dayEnd) {
+            return 0;
+        }
+        
+        // Special handling for overnight appointments
+        // These typically run from 8-9 PM to 8-9 AM and should count as 12 hours per day
+        const isOvernightType = event.type === 'overnight' || 
+                               event.title?.toLowerCase().includes('overnight') ||
+                               event.title?.toLowerCase().includes('boarding');
+        
+        if (isOvernightType) {
+            // Calculate the actual overlap, but cap at 12 hours per day for overnights
+            const overlapStart = eventStart > dayStart ? eventStart : dayStart;
+            const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+            const actualMinutes = (overlapEnd - overlapStart) / (1000 * 60);
+            
+            // For overnight stays, count 12 hours per day maximum
+            // This represents the active care time (evening check-in + morning check-out)
+            return Math.min(actualMinutes, 12 * 60);
+        }
+        
+        // For regular appointments, calculate the actual overlap with the day
+        const overlapStart = eventStart > dayStart ? eventStart : dayStart;
+        const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+        const minutes = (overlapEnd - overlapStart) / (1000 * 60);
+        
+        return Math.max(0, minutes);
+    }
+
+    /**
      * Analyze a single day's workload
      * @param {Array} events - Events for the day
      * @param {Date} date - The date being analyzed
      * @returns {Object} Analysis results
      */
     analyzeDay(events, date) {
-        // Calculate total working time
+        // Calculate total working time for this specific day
+        // This properly handles multi-day events by only counting overlap with this day
         const totalMinutes = events.reduce((sum, event) => {
-            const duration = (event.end - event.start) / (1000 * 60);
+            const duration = this.calculateEventDurationForDay(event, date);
             return sum + duration;
         }, 0);
 

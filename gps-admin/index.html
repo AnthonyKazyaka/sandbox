@@ -298,6 +298,18 @@
                             <label for="maps-api-key">Google Maps API Key</label>
                             <input type="text" id="maps-api-key" class="input" placeholder="Your API Key">
                         </div>
+                        <div class="form-group">
+                            <label for="home-address">🏠 Home/Base Address</label>
+                            <input type="text" id="home-address" class="input" placeholder="123 Main St, City, State ZIP">
+                            <small class="form-help">Starting point for calculating travel time to appointments</small>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="include-travel-time" checked>
+                                <span>Include travel time in workload calculations</span>
+                            </label>
+                            <small class="form-help">When enabled, travel time between appointments is added to your daily workload</small>
+                        </div>
                         <button id="save-api-settings" class="btn btn-primary">Save API Settings</button>
                     </div>
 

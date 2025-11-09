@@ -40,7 +40,9 @@ class GPSAdminApp {
                 api: {
                     calendarClientId: '',
                     mapsApiKey: ''
-                }
+                },
+                homeAddress: '',
+                includeTravelTime: true // Include travel time in workload calculations
             }
         };
 
@@ -63,6 +65,16 @@ class GPSAdminApp {
         // Initialize workload analyzer
         if (window.WorkloadAnalyzer) {
             this.workloadAnalyzer = new WorkloadAnalyzer(this.state.settings.thresholds);
+        }
+
+        // Initialize Calendar API if available
+        if (window.CalendarAPI && this.state.settings.api.calendarClientId) {
+            this.calendarAPI = new CalendarAPI(this.state.settings.api.calendarClientId);
+        }
+
+        // Initialize Maps API if available
+        if (window.MapsAPI && this.state.settings.api.mapsApiKey) {
+            this.initMapsAPI();
         }
 
         // Render initial view
@@ -102,6 +114,78 @@ class GPSAdminApp {
                 app.style.opacity = '1';
             }, 50);
         }, 300);
+    }
+
+    /**
+     * Initialize Google Maps API
+     */
+    async initMapsAPI() {
+        try {
+            if (this.state.settings.api.mapsApiKey) {
+                this.mapsAPI = new MapsAPI(this.state.settings.api.mapsApiKey);
+                await this.mapsAPI.init();
+                console.log('✅ Maps API initialized');
+            }
+        } catch (error) {
+            console.error('Error initializing Maps API:', error);
+        }
+    }
+
+    /**
+     * Calculate travel time between two locations
+     * @param {string} origin - Starting location
+     * @param {string} destination - Ending location
+     * @param {Date} departureTime - Departure time
+     * @returns {number} Travel time in minutes, or 0 if can't calculate
+     */
+    async calculateTravelTime(origin, destination, departureTime = null) {
+        if (!this.mapsAPI || !origin || !destination) {
+            return 0;
+        }
+
+        try {
+            const result = await this.mapsAPI.calculateDriveTime(origin, destination, departureTime);
+            return result.duration.minutes;
+        } catch (error) {
+            console.warn('Could not calculate travel time:', error);
+            // Fallback: estimate based on typical city driving (30 mph average)
+            // Assume 5 miles average between appointments = ~10 minutes
+            return 10;
+        }
+    }
+
+    /**
+     * Get starting location for an event (home or previous appointment)
+     * @param {Object} event - Current event
+     * @param {Array} allEvents - All events sorted by start time
+     * @returns {string} Starting location
+     */
+    getEventStartingLocation(event, allEvents) {
+        const homeAddress = this.state.settings.homeAddress;
+        if (!homeAddress) {
+            return null;
+        }
+
+        // Find all events before this one on the same day
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+
+        const previousEvents = allEvents.filter(e => {
+            const eDate = new Date(e.start);
+            eDate.setHours(0, 0, 0, 0);
+            return eDate.getTime() === eventDate.getTime() && e.start < event.start;
+        }).sort((a, b) => a.start - b.start);
+
+        // If there's a previous event with a location, use that as starting point
+        if (previousEvents.length > 0) {
+            const lastEvent = previousEvents[previousEvents.length - 1];
+            if (lastEvent.location) {
+                return lastEvent.location;
+            }
+        }
+
+        // Otherwise, start from home
+        return homeAddress;
     }
 
     /**
@@ -2161,6 +2245,8 @@ class GPSAdminApp {
         // Populate API settings
         document.getElementById('calendar-client-id').value = this.state.settings.api.calendarClientId || '';
         document.getElementById('maps-api-key').value = this.state.settings.api.mapsApiKey || '';
+        document.getElementById('home-address').value = this.state.settings.homeAddress || '';
+        document.getElementById('include-travel-time').checked = this.state.settings.includeTravelTime !== false;
 
         // Populate daily workload thresholds
         document.getElementById('threshold-daily-comfortable').value = this.state.settings.thresholds.daily.comfortable;
@@ -2381,8 +2467,16 @@ class GPSAdminApp {
     saveApiSettings() {
         this.state.settings.api.calendarClientId = document.getElementById('calendar-client-id').value;
         this.state.settings.api.mapsApiKey = document.getElementById('maps-api-key').value;
+        this.state.settings.homeAddress = document.getElementById('home-address').value;
+        this.state.settings.includeTravelTime = document.getElementById('include-travel-time').checked;
+
+        // Initialize Maps API if key was just added
+        if (this.state.settings.api.mapsApiKey && !this.mapsAPI) {
+            this.initMapsAPI();
+        }
+
         this.saveSettings();
-        alert('API settings saved!');
+        alert('✅ API settings saved successfully!');
     }
 
     /**

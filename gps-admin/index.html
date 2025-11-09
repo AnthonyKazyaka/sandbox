@@ -304,25 +304,72 @@
                     <!-- Workload Preferences -->
                     <div class="settings-section">
                         <h3>Workload Thresholds</h3>
+                        <p class="text-muted" style="margin-bottom: var(--spacing-lg);">
+                            Configure how many hours per day defines each workload level. These thresholds affect the color-coding throughout the app.
+                        </p>
+
+                        <!-- Threshold Preview -->
+                        <div style="margin-bottom: var(--spacing-xl); padding: var(--spacing-md); background: var(--gray-50); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--gray-700);">Current Thresholds:</div>
+                            <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--green-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;">0-<span id="preview-comfortable">6</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--yellow-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-busy-start">6</span>-<span id="preview-busy">8</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--orange-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-high-start">8</span>-<span id="preview-high">10</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--red-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-burnout-start">10</span>h+</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
-                            <label for="threshold-comfortable">Comfortable Daily Hours</label>
-                            <input type="number" id="threshold-comfortable" class="input" value="6" min="1" max="24">
-                            <small class="form-help">Green zone: up to this many hours per day</small>
+                            <label for="threshold-comfortable">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 12px; height: 12px; background: var(--green-500); border-radius: 50%;"></div>
+                                    Comfortable Daily Hours
+                                </span>
+                            </label>
+                            <input type="number" id="threshold-comfortable" class="input" value="6" min="1" max="24" step="0.5">
+                            <small class="form-help">🟢 Manageable workload - you have energy for other activities</small>
                         </div>
                         <div class="form-group">
-                            <label for="threshold-busy">Busy Daily Hours</label>
-                            <input type="number" id="threshold-busy" class="input" value="8" min="1" max="24">
-                            <small class="form-help">Yellow zone: between comfortable and busy</small>
+                            <label for="threshold-busy">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 12px; height: 12px; background: var(--yellow-500); border-radius: 50%;"></div>
+                                    Busy Daily Hours
+                                </span>
+                            </label>
+                            <input type="number" id="threshold-busy" class="input" value="8" min="1" max="24" step="0.5">
+                            <small class="form-help">🟡 Full schedule - still sustainable for regular days</small>
                         </div>
                         <div class="form-group">
-                            <label for="threshold-overload">Overload Daily Hours</label>
-                            <input type="number" id="threshold-overload" class="input" value="10" min="1" max="24">
-                            <small class="form-help">Orange zone: high workload</small>
+                            <label for="threshold-overload">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 12px; height: 12px; background: var(--orange-500); border-radius: 50%;"></div>
+                                    High Workload Daily Hours
+                                </span>
+                            </label>
+                            <input type="number" id="threshold-overload" class="input" value="10" min="1" max="24" step="0.5">
+                            <small class="form-help">🟠 Heavy schedule - acceptable occasionally but not sustainable long-term</small>
                         </div>
                         <div class="form-group">
-                            <label for="threshold-burnout">Burnout Risk Daily Hours</label>
-                            <input type="number" id="threshold-burnout" class="input" value="12" min="1" max="24">
-                            <small class="form-help">Red zone: burnout risk above this</small>
+                            <label for="threshold-burnout">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 12px; height: 12px; background: var(--red-500); border-radius: 50%;"></div>
+                                    Burnout Risk Daily Hours
+                                </span>
+                            </label>
+                            <input type="number" id="threshold-burnout" class="input" value="12" min="1" max="24" step="0.5">
+                            <small class="form-help">🔴 Extreme workload - consider declining new clients or taking time off</small>
                         </div>
                         <button id="save-workload-settings" class="btn btn-primary">Save Thresholds</button>
                     </div>

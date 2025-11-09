@@ -2095,9 +2095,47 @@ class GPSAdminApp {
         document.getElementById('threshold-busy').value = this.state.settings.thresholds.busy;
         document.getElementById('threshold-overload').value = this.state.settings.thresholds.high;
         document.getElementById('threshold-burnout').value = this.state.settings.thresholds.burnout;
-        
+
+        // Update threshold preview
+        this.updateThresholdPreview();
+
+        // Add input event listeners for live preview update
+        ['threshold-comfortable', 'threshold-busy', 'threshold-overload', 'threshold-burnout'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                // Remove existing listener if any
+                input.removeEventListener('input', this.updateThresholdPreview.bind(this));
+                // Add new listener
+                input.addEventListener('input', () => this.updateThresholdPreview());
+            }
+        });
+
         // Render calendar selection
         this.renderCalendarSelection();
+    }
+
+    /**
+     * Update threshold preview
+     */
+    updateThresholdPreview() {
+        const comfortable = parseFloat(document.getElementById('threshold-comfortable')?.value || 6);
+        const busy = parseFloat(document.getElementById('threshold-busy')?.value || 8);
+        const high = parseFloat(document.getElementById('threshold-overload')?.value || 10);
+
+        // Update preview text
+        const previewComfortable = document.getElementById('preview-comfortable');
+        const previewBusyStart = document.getElementById('preview-busy-start');
+        const previewBusy = document.getElementById('preview-busy');
+        const previewHighStart = document.getElementById('preview-high-start');
+        const previewHigh = document.getElementById('preview-high');
+        const previewBurnoutStart = document.getElementById('preview-burnout-start');
+
+        if (previewComfortable) previewComfortable.textContent = comfortable;
+        if (previewBusyStart) previewBusyStart.textContent = comfortable;
+        if (previewBusy) previewBusy.textContent = busy;
+        if (previewHighStart) previewHighStart.textContent = busy;
+        if (previewHigh) previewHigh.textContent = high;
+        if (previewBurnoutStart) previewBurnoutStart.textContent = high;
     }
 
     /**
@@ -2220,10 +2258,36 @@ class GPSAdminApp {
      * Save workload settings
      */
     saveWorkloadSettings() {
-        this.state.settings.thresholds.comfortable = parseInt(document.getElementById('threshold-comfortable').value);
-        this.state.settings.thresholds.busy = parseInt(document.getElementById('threshold-busy').value);
-        this.state.settings.thresholds.high = parseInt(document.getElementById('threshold-overload').value);
-        this.state.settings.thresholds.burnout = parseInt(document.getElementById('threshold-burnout').value);
+        const comfortable = parseFloat(document.getElementById('threshold-comfortable').value);
+        const busy = parseFloat(document.getElementById('threshold-busy').value);
+        const high = parseFloat(document.getElementById('threshold-overload').value);
+        const burnout = parseFloat(document.getElementById('threshold-burnout').value);
+
+        // Validate thresholds are in increasing order
+        if (comfortable >= busy) {
+            alert('⚠️ Validation Error:\n\nBusy threshold must be higher than Comfortable threshold.');
+            return;
+        }
+        if (busy >= high) {
+            alert('⚠️ Validation Error:\n\nHigh Workload threshold must be higher than Busy threshold.');
+            return;
+        }
+        if (high >= burnout) {
+            alert('⚠️ Validation Error:\n\nBurnout Risk threshold must be higher than High Workload threshold.');
+            return;
+        }
+
+        // Validate reasonable values
+        if (comfortable < 1 || burnout > 24) {
+            alert('⚠️ Validation Error:\n\nThresholds must be between 1 and 24 hours.');
+            return;
+        }
+
+        // Save validated thresholds
+        this.state.settings.thresholds.comfortable = comfortable;
+        this.state.settings.thresholds.busy = busy;
+        this.state.settings.thresholds.high = high;
+        this.state.settings.thresholds.burnout = burnout;
 
         this.saveSettings();
 
@@ -2236,7 +2300,7 @@ class GPSAdminApp {
         this.renderDashboard();
         this.updateWorkloadIndicator();
 
-        alert('Workload thresholds saved!');
+        alert('✅ Workload thresholds saved successfully!\n\nYour dashboard and calendar will now use the new thresholds.');
     }
 
     /**

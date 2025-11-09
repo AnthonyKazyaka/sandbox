@@ -755,6 +755,111 @@ label {
     justify-content: flex-end;
 }
 
+/* Day Details Modal */
+.modal-content-wide {
+    max-width: 700px;
+}
+
+.day-details-subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-top: 4px;
+}
+
+.day-details-summary {
+    display: flex;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.day-details-summary-item {
+    flex: 1;
+    text-align: center;
+}
+
+.day-details-summary-label {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.day-details-summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.day-details-events {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.day-details-event {
+    padding: var(--spacing-md);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: white;
+    transition: all var(--transition-fast);
+}
+
+.day-details-event:hover {
+    border-color: var(--primary-300);
+    box-shadow: var(--shadow-sm);
+}
+
+.day-details-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.day-details-event-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 1rem;
+}
+
+.day-details-event-time {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    white-space: nowrap;
+    margin-left: var(--spacing-md);
+}
+
+.day-details-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.day-details-event-meta svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.day-details-empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--gray-500);
+}
+
+.day-details-empty-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .app-container {

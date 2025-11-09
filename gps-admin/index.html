@@ -412,6 +412,39 @@
         </div>
     </div>
 
+    <!-- Day Details Modal -->
+    <div id="day-details-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-content-wide">
+            <div class="modal-header">
+                <div>
+                    <h3 id="day-details-title">Day Details</h3>
+                    <p id="day-details-subtitle" class="day-details-subtitle"></p>
+                </div>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="day-details-content">
+                    <!-- Day events will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">Close</button>
+                <button id="view-in-list-btn" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                    View in List
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Configuration (load first) -->
     <!-- Try to load local config, fall back to example if not found -->
     <script src="config.local.js" onerror="this.onerror=null; this.src='config.example.js';"></script>

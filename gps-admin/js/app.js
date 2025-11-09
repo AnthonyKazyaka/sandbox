@@ -1161,6 +1161,11 @@ class GPSAdminApp {
                 modal?.classList.remove('active');
             });
         });
+
+        // View in List button in day details modal
+        document.getElementById('view-in-list-btn')?.addEventListener('click', () => {
+            this.viewDateInList();
+        });
     }
 
     /**
@@ -1473,6 +1478,14 @@ class GPSAdminApp {
 
         html += '</div></div>';
         container.innerHTML = html;
+
+        // Add click handlers to calendar days
+        container.querySelectorAll('.calendar-day').forEach(dayElement => {
+            dayElement.addEventListener('click', () => {
+                const dateStr = dayElement.dataset.date;
+                this.showDayDetails(new Date(dateStr));
+            });
+        });
     }
 
     /**
@@ -1672,6 +1685,175 @@ class GPSAdminApp {
             'other': 'Other'
         };
         return labels[type] || 'Other';
+    }
+
+    /**
+     * Show day details modal
+     */
+    showDayDetails(date) {
+        const dateKey = new Date(date);
+        dateKey.setHours(0, 0, 0, 0);
+
+        // Store selected date for "View in List" functionality
+        this.selectedDate = new Date(dateKey);
+
+        // Get events for this day
+        const dayEvents = this.state.events.filter(event => {
+            const eventDate = new Date(event.start);
+            eventDate.setHours(0, 0, 0, 0);
+            return eventDate.getTime() === dateKey.getTime();
+        });
+
+        // Sort events by start time
+        const sortedEvents = dayEvents.sort((a, b) => a.start - b.start);
+
+        // Update modal title
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isToday = dateKey.getTime() === today.getTime();
+
+        const titleElement = document.getElementById('day-details-title');
+        const subtitleElement = document.getElementById('day-details-subtitle');
+
+        titleElement.textContent = `${dayNames[dateKey.getDay()]}, ${monthNames[dateKey.getMonth()]} ${dateKey.getDate()}`;
+        if (isToday) {
+            titleElement.textContent += ' (Today)';
+        }
+
+        // Calculate totals
+        const totalMinutes = sortedEvents.reduce((sum, event) => {
+            return sum + (event.end - event.start) / (1000 * 60);
+        }, 0);
+        const hours = (totalMinutes / 60).toFixed(1);
+        const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
+        const workloadLabel = this.getWorkloadLabel(workloadLevel);
+
+        subtitleElement.innerHTML = `
+            <span>${sortedEvents.length} appointment${sortedEvents.length !== 1 ? 's' : ''}</span> •
+            <span>${hours} hours</span> •
+            <span class="workload-badge ${workloadLevel}">${workloadLabel}</span>
+        `;
+
+        // Render events
+        this.renderDayDetailsEvents(sortedEvents);
+
+        // Show modal
+        const modal = document.getElementById('day-details-modal');
+        modal.classList.add('active');
+    }
+
+    /**
+     * Render events in day details modal
+     */
+    renderDayDetailsEvents(events) {
+        const container = document.getElementById('day-details-content');
+
+        if (events.length === 0) {
+            container.innerHTML = `
+                <div class="day-details-empty">
+                    <div class="day-details-empty-icon">📅</div>
+                    <div>No appointments scheduled for this day</div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="day-details-events">';
+
+        events.forEach(event => {
+            const startTime = this.formatTime(event.start);
+            const endTime = this.formatTime(event.end);
+            const duration = Math.round((event.end - event.start) / (1000 * 60));
+
+            html += `
+                <div class="day-details-event">
+                    <div class="day-details-event-header">
+                        <div class="day-details-event-title">${event.title}</div>
+                        <div class="day-details-event-time">${startTime} - ${endTime}</div>
+                    </div>
+                    <div class="day-details-event-meta">
+                        <span class="event-type-badge ${event.type}">
+                            ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
+                        </span>
+                        <span>${duration} min</span>
+                        ${event.location ? `
+                            <span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                ${event.location}
+                            </span>
+                        ` : ''}
+                        ${event.client ? `
+                            <span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                ${event.client}
+                            </span>
+                        ` : ''}
+                    </div>
+                    ${event.notes ? `
+                        <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--gray-200); font-size: 0.875rem; color: var(--gray-600);">
+                            ${event.notes}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * View selected date in list view
+     */
+    viewDateInList() {
+        if (!this.selectedDate) return;
+
+        // Set the current date to the selected date's month
+        this.state.currentDate = new Date(this.selectedDate);
+
+        // Switch to list view
+        this.state.calendarView = 'list';
+
+        // Update view toggle buttons
+        document.querySelectorAll('[data-calendar-view]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.calendarView === 'list');
+        });
+
+        // Switch to calendar view
+        this.switchView('calendar');
+
+        // Close the modal
+        const modal = document.getElementById('day-details-modal');
+        modal.classList.remove('active');
+
+        // Small delay to ensure DOM is rendered, then scroll to the date
+        setTimeout(() => {
+            const dateKey = this.selectedDate.toISOString().split('T')[0];
+            const dayElements = document.querySelectorAll('.calendar-list-day');
+
+            dayElements.forEach(dayElement => {
+                const header = dayElement.querySelector('.calendar-list-day-header');
+                if (header && header.textContent.includes(this.selectedDate.getDate())) {
+                    dayElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Highlight the day briefly
+                    dayElement.style.transition = 'box-shadow 0.3s ease';
+                    dayElement.style.boxShadow = '0 0 0 3px var(--primary-300)';
+                    setTimeout(() => {
+                        dayElement.style.boxShadow = '';
+                    }, 2000);
+                }
+            });
+        }, 100);
     }
 
     /**

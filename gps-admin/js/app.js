@@ -1398,6 +1398,9 @@ class GPSAdminApp {
             case 'day':
                 this.renderDayView(container);
                 break;
+            case 'list':
+                this.renderListView(container);
+                break;
         }
     }
 
@@ -1487,6 +1490,191 @@ class GPSAdminApp {
     }
 
     /**
+     * Render list view (sequential events)
+     */
+    renderListView(container) {
+        // Get events for the current month
+        const year = this.state.currentDate.getFullYear();
+        const month = this.state.currentDate.getMonth();
+
+        const monthStart = new Date(year, month, 1);
+        monthStart.setHours(0, 0, 0, 0);
+
+        const monthEnd = new Date(year, month + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+
+        // Filter events for current month
+        const monthEvents = this.state.events.filter(event => {
+            const eventDate = new Date(event.start);
+            return eventDate >= monthStart && eventDate <= monthEnd;
+        });
+
+        // Sort events by start time
+        const sortedEvents = [...monthEvents].sort((a, b) => a.start - b.start);
+
+        // Group events by day
+        const eventsByDay = {};
+        sortedEvents.forEach(event => {
+            const dateKey = new Date(event.start);
+            dateKey.setHours(0, 0, 0, 0);
+            const key = dateKey.toISOString().split('T')[0];
+
+            if (!eventsByDay[key]) {
+                eventsByDay[key] = [];
+            }
+            eventsByDay[key].push(event);
+        });
+
+        // If no events, show empty state
+        if (Object.keys(eventsByDay).length === 0) {
+            container.innerHTML = `
+                <div class="calendar-list-empty">
+                    <div class="calendar-list-empty-icon">📅</div>
+                    <div class="calendar-list-empty-text">No appointments scheduled for this month</div>
+                </div>
+            `;
+            return;
+        }
+
+        // Render list
+        let html = '<div class="calendar-list">';
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // Render each day
+        Object.keys(eventsByDay).sort().forEach(dateKey => {
+            const date = new Date(dateKey + 'T00:00:00');
+            const dayEvents = eventsByDay[dateKey];
+
+            const isToday = date.getTime() === today.getTime();
+
+            // Calculate daily totals
+            const totalMinutes = dayEvents.reduce((sum, event) => {
+                return sum + (event.end - event.start) / (1000 * 60);
+            }, 0);
+
+            const hours = (totalMinutes / 60).toFixed(1);
+            const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
+            const workloadLabel = this.getWorkloadLabel(workloadLevel);
+
+            html += `
+                <div class="calendar-list-day">
+                    <div class="calendar-list-day-header ${isToday ? 'today' : ''}">
+                        <div>
+                            <div class="calendar-list-day-title ${isToday ? 'today' : ''}">
+                                ${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}
+                                ${isToday ? '<span style="margin-left: 8px; font-size: 0.75rem; background: var(--primary-600); color: white; padding: 2px 8px; border-radius: 4px;">Today</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="calendar-list-day-summary">
+                            <span>${dayEvents.length} appointment${dayEvents.length !== 1 ? 's' : ''}</span>
+                            <span>${hours} hours</span>
+                            <span class="workload-badge ${workloadLevel}">${workloadLabel}</span>
+                        </div>
+                    </div>
+                    <div class="calendar-list-events">
+            `;
+
+            // Render events for this day
+            dayEvents.forEach(event => {
+                const startTime = this.formatTime(event.start);
+                const endTime = this.formatTime(event.end);
+                const duration = Math.round((event.end - event.start) / (1000 * 60));
+
+                html += `
+                    <div class="calendar-list-event">
+                        <div class="calendar-list-event-time">
+                            <div>${startTime}</div>
+                            <div class="calendar-list-event-time-range">${duration} min</div>
+                        </div>
+                        <div class="calendar-list-event-details">
+                            <div class="calendar-list-event-title">${event.title}</div>
+                            <div class="calendar-list-event-meta">
+                                ${event.location ? `
+                                    <span class="calendar-list-event-location">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                            <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        ${event.location}
+                                    </span>
+                                ` : ''}
+                                ${event.client ? `
+                                    <span class="calendar-list-event-client">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                        ${event.client}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="calendar-list-event-type">
+                            <span class="event-type-badge ${event.type}">
+                                ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * Format time to 12-hour format
+     */
+    formatTime(date) {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
+        return `${displayHours}:${displayMinutes} ${ampm}`;
+    }
+
+    /**
+     * Get event type icon
+     */
+    getEventTypeIcon(type) {
+        const icons = {
+            'overnight': '🌙',
+            'dropin': '🏃',
+            'walk': '🦮',
+            'meet-greet': '👋',
+            'other': '📅'
+        };
+        return icons[type] || icons['other'];
+    }
+
+    /**
+     * Get event type label
+     */
+    getEventTypeLabel(type) {
+        const labels = {
+            'overnight': 'Overnight',
+            'dropin': 'Drop-in',
+            'walk': 'Dog Walk',
+            'meet-greet': 'Meet & Greet',
+            'other': 'Other'
+        };
+        return labels[type] || 'Other';
+    }
+
+    /**
      * Navigate calendar
      */
     navigateCalendar(direction) {
@@ -1494,6 +1682,7 @@ class GPSAdminApp {
 
         switch (this.state.calendarView) {
             case 'month':
+            case 'list':
                 current.setMonth(current.getMonth() + direction);
                 break;
             case 'week':

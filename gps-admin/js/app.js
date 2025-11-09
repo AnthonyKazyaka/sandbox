@@ -18,10 +18,24 @@ class GPSAdminApp {
             ignoredEventPatterns: [], // Patterns for events to ignore (title matches)
             settings: {
                 thresholds: {
-                    comfortable: 6,
-                    busy: 8,
-                    high: 10,
-                    burnout: 12
+                    daily: {
+                        comfortable: 6,
+                        busy: 8,
+                        high: 10,
+                        burnout: 12
+                    },
+                    weekly: {
+                        comfortable: 35,
+                        busy: 45,
+                        high: 55,
+                        burnout: 65
+                    },
+                    monthly: {
+                        comfortable: 140,
+                        busy: 180,
+                        high: 220,
+                        burnout: 260
+                    }
                 },
                 api: {
                     calendarClientId: '',
@@ -1509,13 +1523,13 @@ class GPSAdminApp {
         let html = '';
 
         // Check for burnout risk
-        const burnoutDays = nextWeek.filter(day => day.hours >= this.state.settings.thresholds.burnout);
+        const burnoutDays = nextWeek.filter(day => day.hours >= this.state.settings.thresholds.daily.burnout);
         if (burnoutDays.length > 0) {
             html += `
                 <div class="recommendation-card danger">
                     <div class="recommendation-icon">⚠️</div>
                     <div class="recommendation-content">
-                        <p><strong>Burnout Risk Detected:</strong> You have ${burnoutDays.length} day(s) this week with ${this.state.settings.thresholds.burnout}+ hours. Consider declining new bookings or rescheduling if possible.</p>
+                        <p><strong>Burnout Risk Detected:</strong> You have ${burnoutDays.length} day(s) this week with ${this.state.settings.thresholds.daily.burnout}+ hours. Consider declining new bookings or rescheduling if possible.</p>
                     </div>
                 </div>
             `;
@@ -1523,7 +1537,7 @@ class GPSAdminApp {
 
         // Check for high workload
         const highWorkloadDays = nextWeek.filter(day =>
-            day.hours >= this.state.settings.thresholds.high && day.hours < this.state.settings.thresholds.burnout
+            day.hours >= this.state.settings.thresholds.daily.high && day.hours < this.state.settings.thresholds.daily.burnout
         );
         if (highWorkloadDays.length > 0 && burnoutDays.length === 0) {
             html += `
@@ -1537,7 +1551,7 @@ class GPSAdminApp {
         }
 
         // Check for good capacity
-        const comfortableDays = nextWeek.filter(day => day.hours < this.state.settings.thresholds.comfortable);
+        const comfortableDays = nextWeek.filter(day => day.hours < this.state.settings.thresholds.daily.comfortable);
         if (comfortableDays.length >= 4) {
             html += `
                 <div class="recommendation-card">
@@ -2148,17 +2162,35 @@ class GPSAdminApp {
         document.getElementById('calendar-client-id').value = this.state.settings.api.calendarClientId || '';
         document.getElementById('maps-api-key').value = this.state.settings.api.mapsApiKey || '';
 
-        // Populate workload thresholds
-        document.getElementById('threshold-comfortable').value = this.state.settings.thresholds.comfortable;
-        document.getElementById('threshold-busy').value = this.state.settings.thresholds.busy;
-        document.getElementById('threshold-overload').value = this.state.settings.thresholds.high;
-        document.getElementById('threshold-burnout').value = this.state.settings.thresholds.burnout;
+        // Populate daily workload thresholds
+        document.getElementById('threshold-daily-comfortable').value = this.state.settings.thresholds.daily.comfortable;
+        document.getElementById('threshold-daily-busy').value = this.state.settings.thresholds.daily.busy;
+        document.getElementById('threshold-daily-overload').value = this.state.settings.thresholds.daily.high;
+        document.getElementById('threshold-daily-burnout').value = this.state.settings.thresholds.daily.burnout;
+
+        // Populate weekly workload thresholds
+        document.getElementById('threshold-weekly-comfortable').value = this.state.settings.thresholds.weekly.comfortable;
+        document.getElementById('threshold-weekly-busy').value = this.state.settings.thresholds.weekly.busy;
+        document.getElementById('threshold-weekly-overload').value = this.state.settings.thresholds.weekly.high;
+        document.getElementById('threshold-weekly-burnout').value = this.state.settings.thresholds.weekly.burnout;
+
+        // Populate monthly workload thresholds
+        document.getElementById('threshold-monthly-comfortable').value = this.state.settings.thresholds.monthly.comfortable;
+        document.getElementById('threshold-monthly-busy').value = this.state.settings.thresholds.monthly.busy;
+        document.getElementById('threshold-monthly-overload').value = this.state.settings.thresholds.monthly.high;
+        document.getElementById('threshold-monthly-burnout').value = this.state.settings.thresholds.monthly.burnout;
 
         // Update threshold preview
         this.updateThresholdPreview();
 
         // Add input event listeners for live preview update
-        ['threshold-comfortable', 'threshold-busy', 'threshold-overload', 'threshold-burnout'].forEach(id => {
+        const thresholdInputs = [
+            'threshold-daily-comfortable', 'threshold-daily-busy', 'threshold-daily-overload', 'threshold-daily-burnout',
+            'threshold-weekly-comfortable', 'threshold-weekly-busy', 'threshold-weekly-overload', 'threshold-weekly-burnout',
+            'threshold-monthly-comfortable', 'threshold-monthly-busy', 'threshold-monthly-overload', 'threshold-monthly-burnout'
+        ];
+
+        thresholdInputs.forEach(id => {
             const input = document.getElementById(id);
             if (input) {
                 // Remove existing listener if any
@@ -2176,24 +2208,65 @@ class GPSAdminApp {
      * Update threshold preview
      */
     updateThresholdPreview() {
-        const comfortable = parseFloat(document.getElementById('threshold-comfortable')?.value || 6);
-        const busy = parseFloat(document.getElementById('threshold-busy')?.value || 8);
-        const high = parseFloat(document.getElementById('threshold-overload')?.value || 10);
+        // Get daily thresholds
+        const dailyComfortable = parseFloat(document.getElementById('threshold-daily-comfortable')?.value || 6);
+        const dailyBusy = parseFloat(document.getElementById('threshold-daily-busy')?.value || 8);
+        const dailyHigh = parseFloat(document.getElementById('threshold-daily-overload')?.value || 10);
 
-        // Update preview text
-        const previewComfortable = document.getElementById('preview-comfortable');
-        const previewBusyStart = document.getElementById('preview-busy-start');
-        const previewBusy = document.getElementById('preview-busy');
-        const previewHighStart = document.getElementById('preview-high-start');
-        const previewHigh = document.getElementById('preview-high');
-        const previewBurnoutStart = document.getElementById('preview-burnout-start');
+        // Update daily preview text
+        const previewDailyComfortable = document.getElementById('preview-daily-comfortable');
+        const previewDailyBusyStart = document.getElementById('preview-daily-busy-start');
+        const previewDailyBusy = document.getElementById('preview-daily-busy');
+        const previewDailyHighStart = document.getElementById('preview-daily-high-start');
+        const previewDailyHigh = document.getElementById('preview-daily-high');
+        const previewDailyBurnoutStart = document.getElementById('preview-daily-burnout-start');
 
-        if (previewComfortable) previewComfortable.textContent = comfortable;
-        if (previewBusyStart) previewBusyStart.textContent = comfortable;
-        if (previewBusy) previewBusy.textContent = busy;
-        if (previewHighStart) previewHighStart.textContent = busy;
-        if (previewHigh) previewHigh.textContent = high;
-        if (previewBurnoutStart) previewBurnoutStart.textContent = high;
+        if (previewDailyComfortable) previewDailyComfortable.textContent = dailyComfortable;
+        if (previewDailyBusyStart) previewDailyBusyStart.textContent = dailyComfortable;
+        if (previewDailyBusy) previewDailyBusy.textContent = dailyBusy;
+        if (previewDailyHighStart) previewDailyHighStart.textContent = dailyBusy;
+        if (previewDailyHigh) previewDailyHigh.textContent = dailyHigh;
+        if (previewDailyBurnoutStart) previewDailyBurnoutStart.textContent = dailyHigh;
+
+        // Get weekly thresholds
+        const weeklyComfortable = parseFloat(document.getElementById('threshold-weekly-comfortable')?.value || 35);
+        const weeklyBusy = parseFloat(document.getElementById('threshold-weekly-busy')?.value || 45);
+        const weeklyHigh = parseFloat(document.getElementById('threshold-weekly-overload')?.value || 55);
+
+        // Update weekly preview text
+        const previewWeeklyComfortable = document.getElementById('preview-weekly-comfortable');
+        const previewWeeklyBusyStart = document.getElementById('preview-weekly-busy-start');
+        const previewWeeklyBusy = document.getElementById('preview-weekly-busy');
+        const previewWeeklyHighStart = document.getElementById('preview-weekly-high-start');
+        const previewWeeklyHigh = document.getElementById('preview-weekly-high');
+        const previewWeeklyBurnoutStart = document.getElementById('preview-weekly-burnout-start');
+
+        if (previewWeeklyComfortable) previewWeeklyComfortable.textContent = weeklyComfortable;
+        if (previewWeeklyBusyStart) previewWeeklyBusyStart.textContent = weeklyComfortable;
+        if (previewWeeklyBusy) previewWeeklyBusy.textContent = weeklyBusy;
+        if (previewWeeklyHighStart) previewWeeklyHighStart.textContent = weeklyBusy;
+        if (previewWeeklyHigh) previewWeeklyHigh.textContent = weeklyHigh;
+        if (previewWeeklyBurnoutStart) previewWeeklyBurnoutStart.textContent = weeklyHigh;
+
+        // Get monthly thresholds
+        const monthlyComfortable = parseFloat(document.getElementById('threshold-monthly-comfortable')?.value || 140);
+        const monthlyBusy = parseFloat(document.getElementById('threshold-monthly-busy')?.value || 180);
+        const monthlyHigh = parseFloat(document.getElementById('threshold-monthly-overload')?.value || 220);
+
+        // Update monthly preview text
+        const previewMonthlyComfortable = document.getElementById('preview-monthly-comfortable');
+        const previewMonthlyBusyStart = document.getElementById('preview-monthly-busy-start');
+        const previewMonthlyBusy = document.getElementById('preview-monthly-busy');
+        const previewMonthlyHighStart = document.getElementById('preview-monthly-high-start');
+        const previewMonthlyHigh = document.getElementById('preview-monthly-high');
+        const previewMonthlyBurnoutStart = document.getElementById('preview-monthly-burnout-start');
+
+        if (previewMonthlyComfortable) previewMonthlyComfortable.textContent = monthlyComfortable;
+        if (previewMonthlyBusyStart) previewMonthlyBusyStart.textContent = monthlyComfortable;
+        if (previewMonthlyBusy) previewMonthlyBusy.textContent = monthlyBusy;
+        if (previewMonthlyHighStart) previewMonthlyHighStart.textContent = monthlyBusy;
+        if (previewMonthlyHigh) previewMonthlyHigh.textContent = monthlyHigh;
+        if (previewMonthlyBurnoutStart) previewMonthlyBurnoutStart.textContent = monthlyHigh;
     }
 
     /**
@@ -2316,36 +2389,95 @@ class GPSAdminApp {
      * Save workload settings
      */
     saveWorkloadSettings() {
-        const comfortable = parseFloat(document.getElementById('threshold-comfortable').value);
-        const busy = parseFloat(document.getElementById('threshold-busy').value);
-        const high = parseFloat(document.getElementById('threshold-overload').value);
-        const burnout = parseFloat(document.getElementById('threshold-burnout').value);
+        // Get daily thresholds
+        const dailyComfortable = parseFloat(document.getElementById('threshold-daily-comfortable').value);
+        const dailyBusy = parseFloat(document.getElementById('threshold-daily-busy').value);
+        const dailyHigh = parseFloat(document.getElementById('threshold-daily-overload').value);
+        const dailyBurnout = parseFloat(document.getElementById('threshold-daily-burnout').value);
 
-        // Validate thresholds are in increasing order
-        if (comfortable >= busy) {
-            alert('⚠️ Validation Error:\n\nBusy threshold must be higher than Comfortable threshold.');
+        // Get weekly thresholds
+        const weeklyComfortable = parseFloat(document.getElementById('threshold-weekly-comfortable').value);
+        const weeklyBusy = parseFloat(document.getElementById('threshold-weekly-busy').value);
+        const weeklyHigh = parseFloat(document.getElementById('threshold-weekly-overload').value);
+        const weeklyBurnout = parseFloat(document.getElementById('threshold-weekly-burnout').value);
+
+        // Get monthly thresholds
+        const monthlyComfortable = parseFloat(document.getElementById('threshold-monthly-comfortable').value);
+        const monthlyBusy = parseFloat(document.getElementById('threshold-monthly-busy').value);
+        const monthlyHigh = parseFloat(document.getElementById('threshold-monthly-overload').value);
+        const monthlyBurnout = parseFloat(document.getElementById('threshold-monthly-burnout').value);
+
+        // Validate daily thresholds are in increasing order
+        if (dailyComfortable >= dailyBusy) {
+            alert('⚠️ Validation Error:\n\nDaily Busy threshold must be higher than Daily Comfortable threshold.');
             return;
         }
-        if (busy >= high) {
-            alert('⚠️ Validation Error:\n\nHigh Workload threshold must be higher than Busy threshold.');
+        if (dailyBusy >= dailyHigh) {
+            alert('⚠️ Validation Error:\n\nDaily High Workload threshold must be higher than Daily Busy threshold.');
             return;
         }
-        if (high >= burnout) {
-            alert('⚠️ Validation Error:\n\nBurnout Risk threshold must be higher than High Workload threshold.');
+        if (dailyHigh >= dailyBurnout) {
+            alert('⚠️ Validation Error:\n\nDaily Burnout Risk threshold must be higher than Daily High Workload threshold.');
+            return;
+        }
+
+        // Validate weekly thresholds are in increasing order
+        if (weeklyComfortable >= weeklyBusy) {
+            alert('⚠️ Validation Error:\n\nWeekly Busy threshold must be higher than Weekly Comfortable threshold.');
+            return;
+        }
+        if (weeklyBusy >= weeklyHigh) {
+            alert('⚠️ Validation Error:\n\nWeekly High Workload threshold must be higher than Weekly Busy threshold.');
+            return;
+        }
+        if (weeklyHigh >= weeklyBurnout) {
+            alert('⚠️ Validation Error:\n\nWeekly Burnout Risk threshold must be higher than Weekly High Workload threshold.');
+            return;
+        }
+
+        // Validate monthly thresholds are in increasing order
+        if (monthlyComfortable >= monthlyBusy) {
+            alert('⚠️ Validation Error:\n\nMonthly Busy threshold must be higher than Monthly Comfortable threshold.');
+            return;
+        }
+        if (monthlyBusy >= monthlyHigh) {
+            alert('⚠️ Validation Error:\n\nMonthly High Workload threshold must be higher than Monthly Busy threshold.');
+            return;
+        }
+        if (monthlyHigh >= monthlyBurnout) {
+            alert('⚠️ Validation Error:\n\nMonthly Burnout Risk threshold must be higher than Monthly High Workload threshold.');
             return;
         }
 
         // Validate reasonable values
-        if (comfortable < 1 || burnout > 24) {
-            alert('⚠️ Validation Error:\n\nThresholds must be between 1 and 24 hours.');
+        if (dailyComfortable < 1 || dailyBurnout > 24) {
+            alert('⚠️ Validation Error:\n\nDaily thresholds must be between 1 and 24 hours.');
+            return;
+        }
+        if (weeklyComfortable < 1 || weeklyBurnout > 168) {
+            alert('⚠️ Validation Error:\n\nWeekly thresholds must be between 1 and 168 hours (7 days × 24 hours).');
+            return;
+        }
+        if (monthlyComfortable < 1 || monthlyBurnout > 744) {
+            alert('⚠️ Validation Error:\n\nMonthly thresholds must be between 1 and 744 hours (31 days × 24 hours).');
             return;
         }
 
         // Save validated thresholds
-        this.state.settings.thresholds.comfortable = comfortable;
-        this.state.settings.thresholds.busy = busy;
-        this.state.settings.thresholds.high = high;
-        this.state.settings.thresholds.burnout = burnout;
+        this.state.settings.thresholds.daily.comfortable = dailyComfortable;
+        this.state.settings.thresholds.daily.busy = dailyBusy;
+        this.state.settings.thresholds.daily.high = dailyHigh;
+        this.state.settings.thresholds.daily.burnout = dailyBurnout;
+
+        this.state.settings.thresholds.weekly.comfortable = weeklyComfortable;
+        this.state.settings.thresholds.weekly.busy = weeklyBusy;
+        this.state.settings.thresholds.weekly.high = weeklyHigh;
+        this.state.settings.thresholds.weekly.burnout = weeklyBurnout;
+
+        this.state.settings.thresholds.monthly.comfortable = monthlyComfortable;
+        this.state.settings.thresholds.monthly.busy = monthlyBusy;
+        this.state.settings.thresholds.monthly.high = monthlyHigh;
+        this.state.settings.thresholds.monthly.burnout = monthlyBurnout;
 
         this.saveSettings();
 
@@ -2363,9 +2495,12 @@ class GPSAdminApp {
 
     /**
      * Get workload level based on hours
+     * @param {number} hours - Hours worked
+     * @param {string} period - 'daily', 'weekly', or 'monthly'
      */
-    getWorkloadLevel(hours) {
-        const { comfortable, busy, high, burnout } = this.state.settings.thresholds;
+    getWorkloadLevel(hours, period = 'daily') {
+        const thresholds = this.state.settings.thresholds[period];
+        const { comfortable, busy, high, burnout } = thresholds;
 
         if (hours >= burnout) return 'burnout';
         if (hours >= high) return 'high';

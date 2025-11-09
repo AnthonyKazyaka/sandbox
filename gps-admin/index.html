@@ -305,73 +305,136 @@
                     <div class="settings-section">
                         <h3>Workload Thresholds</h3>
                         <p class="text-muted" style="margin-bottom: var(--spacing-lg);">
-                            Configure how many hours per day defines each workload level. These thresholds affect the color-coding throughout the app.
+                            Configure thresholds for daily, weekly, and monthly workloads. These affect color-coding throughout the app.
                         </p>
 
-                        <!-- Threshold Preview -->
-                        <div style="margin-bottom: var(--spacing-xl); padding: var(--spacing-md); background: var(--gray-50); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
-                            <div style="font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--gray-700);">Current Thresholds:</div>
+                        <!-- Daily Thresholds -->
+                        <h4 style="margin-top: var(--spacing-xl); margin-bottom: var(--spacing-md);">📅 Daily Thresholds</h4>
+                        <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--gray-50); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--gray-700);">Preview:</div>
                             <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
                                 <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--green-500); border-radius: 50%;"></div>
-                                    <span style="font-size: 0.875rem;">0-<span id="preview-comfortable">6</span>h</span>
+                                    <span style="font-size: 0.875rem;">0-<span id="preview-daily-comfortable">6</span>h</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--yellow-500); border-radius: 50%;"></div>
-                                    <span style="font-size: 0.875rem;"><span id="preview-busy-start">6</span>-<span id="preview-busy">8</span>h</span>
+                                    <span style="font-size: 0.875rem;"><span id="preview-daily-busy-start">6</span>-<span id="preview-daily-busy">8</span>h</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--orange-500); border-radius: 50%;"></div>
-                                    <span style="font-size: 0.875rem;"><span id="preview-high-start">8</span>-<span id="preview-high">10</span>h</span>
+                                    <span style="font-size: 0.875rem;"><span id="preview-daily-high-start">8</span>-<span id="preview-daily-high">10</span>h</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--red-500); border-radius: 50%;"></div>
-                                    <span style="font-size: 0.875rem;"><span id="preview-burnout-start">10</span>h+</span>
+                                    <span style="font-size: 0.875rem;"><span id="preview-daily-burnout-start">10</span>h+</span>
                                 </div>
                             </div>
                         </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                            <div class="form-group">
+                                <label for="threshold-daily-comfortable">🟢 Comfortable</label>
+                                <input type="number" id="threshold-daily-comfortable" class="input" value="6" min="1" max="24" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-daily-busy">🟡 Busy</label>
+                                <input type="number" id="threshold-daily-busy" class="input" value="8" min="1" max="24" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-daily-overload">🟠 High Workload</label>
+                                <input type="number" id="threshold-daily-overload" class="input" value="10" min="1" max="24" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-daily-burnout">🔴 Burnout Risk</label>
+                                <input type="number" id="threshold-daily-burnout" class="input" value="12" min="1" max="24" step="0.5">
+                            </div>
+                        </div>
 
-                        <div class="form-group">
-                            <label for="threshold-comfortable">
-                                <span style="display: flex; align-items: center; gap: 8px;">
+                        <!-- Weekly Thresholds -->
+                        <h4 style="margin-top: var(--spacing-xl); margin-bottom: var(--spacing-md);">📆 Weekly Thresholds</h4>
+                        <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--gray-50); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--gray-700);">Preview:</div>
+                            <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--green-500); border-radius: 50%;"></div>
-                                    Comfortable Daily Hours
-                                </span>
-                            </label>
-                            <input type="number" id="threshold-comfortable" class="input" value="6" min="1" max="24" step="0.5">
-                            <small class="form-help">🟢 Manageable workload - you have energy for other activities</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="threshold-busy">
-                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.875rem;">0-<span id="preview-weekly-comfortable">35</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--yellow-500); border-radius: 50%;"></div>
-                                    Busy Daily Hours
-                                </span>
-                            </label>
-                            <input type="number" id="threshold-busy" class="input" value="8" min="1" max="24" step="0.5">
-                            <small class="form-help">🟡 Full schedule - still sustainable for regular days</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="threshold-overload">
-                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.875rem;"><span id="preview-weekly-busy-start">35</span>-<span id="preview-weekly-busy">45</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--orange-500); border-radius: 50%;"></div>
-                                    High Workload Daily Hours
-                                </span>
-                            </label>
-                            <input type="number" id="threshold-overload" class="input" value="10" min="1" max="24" step="0.5">
-                            <small class="form-help">🟠 Heavy schedule - acceptable occasionally but not sustainable long-term</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="threshold-burnout">
-                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.875rem;"><span id="preview-weekly-high-start">45</span>-<span id="preview-weekly-high">55</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
                                     <div style="width: 12px; height: 12px; background: var(--red-500); border-radius: 50%;"></div>
-                                    Burnout Risk Daily Hours
-                                </span>
-                            </label>
-                            <input type="number" id="threshold-burnout" class="input" value="12" min="1" max="24" step="0.5">
-                            <small class="form-help">🔴 Extreme workload - consider declining new clients or taking time off</small>
+                                    <span style="font-size: 0.875rem;"><span id="preview-weekly-burnout-start">55</span>h+</span>
+                                </div>
+                            </div>
                         </div>
-                        <button id="save-workload-settings" class="btn btn-primary">Save Thresholds</button>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                            <div class="form-group">
+                                <label for="threshold-weekly-comfortable">🟢 Comfortable</label>
+                                <input type="number" id="threshold-weekly-comfortable" class="input" value="35" min="1" max="168" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-weekly-busy">🟡 Busy</label>
+                                <input type="number" id="threshold-weekly-busy" class="input" value="45" min="1" max="168" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-weekly-overload">🟠 High Workload</label>
+                                <input type="number" id="threshold-weekly-overload" class="input" value="55" min="1" max="168" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-weekly-burnout">🔴 Burnout Risk</label>
+                                <input type="number" id="threshold-weekly-burnout" class="input" value="65" min="1" max="168" step="1">
+                            </div>
+                        </div>
+
+                        <!-- Monthly Thresholds -->
+                        <h4 style="margin-top: var(--spacing-xl); margin-bottom: var(--spacing-md);">🗓️ Monthly Thresholds</h4>
+                        <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--gray-50); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--gray-700);">Preview:</div>
+                            <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--green-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;">0-<span id="preview-monthly-comfortable">140</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--yellow-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-monthly-busy-start">140</span>-<span id="preview-monthly-busy">180</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--orange-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-monthly-high-start">180</span>-<span id="preview-monthly-high">220</span>h</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <div style="width: 12px; height: 12px; background: var(--red-500); border-radius: 50%;"></div>
+                                    <span style="font-size: 0.875rem;"><span id="preview-monthly-burnout-start">220</span>h+</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                            <div class="form-group">
+                                <label for="threshold-monthly-comfortable">🟢 Comfortable</label>
+                                <input type="number" id="threshold-monthly-comfortable" class="input" value="140" min="1" max="744" step="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-monthly-busy">🟡 Busy</label>
+                                <input type="number" id="threshold-monthly-busy" class="input" value="180" min="1" max="744" step="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-monthly-overload">🟠 High Workload</label>
+                                <input type="number" id="threshold-monthly-overload" class="input" value="220" min="1" max="744" step="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="threshold-monthly-burnout">🔴 Burnout Risk</label>
+                                <input type="number" id="threshold-monthly-burnout" class="input" value="260" min="1" max="744" step="5">
+                            </div>
+                        </div>
+
+                        <button id="save-workload-settings" class="btn btn-primary" style="margin-top: var(--spacing-lg);">Save All Thresholds</button>
                     </div>
 
                     <!-- Calendar Selection -->

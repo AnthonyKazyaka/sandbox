@@ -54,6 +54,9 @@ class GPSAdminApp {
         this.renderDashboard();
         this.updateWorkloadIndicator();
 
+        // Update connect button state if already authenticated
+        this.updateConnectButtonState();
+
         // Hide loading screen
         this.hideLoadingScreen();
 
@@ -1072,12 +1075,23 @@ class GPSAdminApp {
             try {
                 const settings = JSON.parse(saved);
                 this.state.settings = { ...this.state.settings, ...settings };
-                
+
                 // Load selected calendars if available
                 if (settings.selectedCalendars) {
                     this.state.selectedCalendars = settings.selectedCalendars;
                 }
-                
+
+                // Load authentication state
+                if (settings.isAuthenticated) {
+                    this.state.isAuthenticated = settings.isAuthenticated;
+                    this.state.useMockData = false;
+                }
+
+                // Load available calendars
+                if (settings.availableCalendars) {
+                    this.state.availableCalendars = settings.availableCalendars;
+                }
+
                 console.log('✅ Loaded settings from localStorage');
             } catch (e) {
                 console.error('Error loading settings:', e);
@@ -1091,9 +1105,43 @@ class GPSAdminApp {
     saveSettings() {
         const settingsToSave = {
             ...this.state.settings,
-            selectedCalendars: this.state.selectedCalendars
+            selectedCalendars: this.state.selectedCalendars,
+            isAuthenticated: this.state.isAuthenticated,
+            availableCalendars: this.state.availableCalendars
         };
         localStorage.setItem('gps-admin-settings', JSON.stringify(settingsToSave));
+    }
+
+    /**
+     * Update the connect button state based on authentication status
+     */
+    updateConnectButtonState() {
+        const btn = document.getElementById('connect-calendar-btn');
+        if (!btn) return;
+
+        if (this.state.isAuthenticated) {
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Connected
+            `;
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-primary');
+        } else {
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Connect Calendar
+            `;
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-success');
+        }
     }
 
     /**
@@ -1157,6 +1205,15 @@ class GPSAdminApp {
 
         document.getElementById('save-workload-settings')?.addEventListener('click', () => {
             this.saveWorkloadSettings();
+        });
+
+        // Account management handlers
+        document.getElementById('logout-btn')?.addEventListener('click', () => {
+            this.handleLogout();
+        });
+
+        document.getElementById('clear-calendar-data-btn')?.addEventListener('click', () => {
+            this.handleClearCalendarData();
         });
 
         // Modal close handlers
@@ -2196,24 +2253,17 @@ class GPSAdminApp {
                 // Re-render views
                 this.renderDashboard();
                 this.updateWorkloadIndicator();
-                
+
                 // Update calendar selection in settings if we're on that view
                 if (this.state.currentView === 'settings') {
                     this.renderCalendarSelection();
                 }
 
                 // Update button text
-                const btn = document.getElementById('connect-calendar-btn');
-                if (btn) {
-                    btn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        Connected
-                    `;
-                    btn.classList.add('btn-success');
-                }
+                this.updateConnectButtonState();
+
+                // Save settings to persist connection
+                this.saveSettings();
             }
         } catch (error) {
             console.error('Calendar connection error:', error);
@@ -2274,5 +2324,107 @@ class GPSAdminApp {
     showAppointmentModal() {
         const modal = document.getElementById('appointment-modal');
         modal?.classList.add('active');
+    }
+
+    /**
+     * Handle logout from Google Calendar
+     */
+    handleLogout() {
+        if (!this.state.isAuthenticated) {
+            alert('You are not currently connected to Google Calendar.');
+            return;
+        }
+
+        const confirmed = confirm(
+            'Are you sure you want to logout from Google Calendar?\n\n' +
+            'This will:\n' +
+            '• Disconnect your Google account\n' +
+            '• Revoke access tokens\n' +
+            '• Switch back to mock data\n\n' +
+            'Your locally stored calendar events will be preserved unless you clear them separately.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            // Sign out from Google Calendar API
+            if (this.calendarAPI) {
+                this.calendarAPI.signOut();
+            }
+
+            // Clear authentication state
+            this.state.isAuthenticated = false;
+            this.state.useMockData = true;
+            this.state.availableCalendars = [];
+
+            // Save settings
+            this.saveSettings();
+
+            // Update button state
+            this.updateConnectButtonState();
+
+            // Reinitialize mock data
+            this.initMockData();
+
+            // Re-render views
+            this.renderDashboard();
+            this.updateWorkloadIndicator();
+
+            // Update calendar selection in settings
+            if (this.state.currentView === 'settings') {
+                this.renderCalendarSelection();
+            }
+
+            alert('✅ Successfully logged out from Google Calendar.\n\nYou are now using mock data.');
+            console.log('✅ Logged out from Google Calendar');
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('Error logging out: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Handle clearing calendar data
+     */
+    handleClearCalendarData() {
+        const confirmed = confirm(
+            'Are you sure you want to clear all calendar data?\n\n' +
+            'This will:\n' +
+            '• Clear all locally stored events\n' +
+            '• Clear calendar selections\n' +
+            '• Reset to mock data\n\n' +
+            'This action cannot be undone.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            // Clear events
+            this.state.events = [];
+
+            // Clear calendar selections
+            this.state.selectedCalendars = ['primary'];
+
+            // Reinitialize mock data
+            this.initMockData();
+
+            // Save settings
+            this.saveSettings();
+
+            // Re-render views
+            this.renderDashboard();
+            this.updateWorkloadIndicator();
+
+            // Update calendar selection in settings
+            if (this.state.currentView === 'settings') {
+                this.renderCalendarSelection();
+            }
+
+            alert('✅ Calendar data has been cleared.\n\nYou are now using mock data.');
+            console.log('✅ Cleared calendar data');
+        } catch (error) {
+            console.error('Clear data error:', error);
+            alert('Error clearing data: ' + (error.message || 'Unknown error'));
+        }
     }
 }

@@ -15,6 +15,7 @@ class GPSAdminApp {
             templates: [],
             availableCalendars: [], // List of calendars from Google
             selectedCalendars: ['primary'], // Calendar IDs to sync with
+            ignoredEventPatterns: [], // Patterns for events to ignore (title matches)
             settings: {
                 thresholds: {
                     comfortable: 6,
@@ -1010,6 +1011,49 @@ class GPSAdminApp {
             }
         ];
 
+        // Add calendar metadata to mock events
+        this.state.events.forEach(event => {
+            event.calendarName = 'Genie\'s Pet Sitting Calendar';
+            event.calendarId = 'primary';
+            event.isAllDay = false;
+            event.recurringEventId = null;
+            event.ignored = false;
+        });
+
+        // Add some sample all-day events for testing
+        this.state.events.push(
+            {
+                id: '92',
+                title: 'Your Birthday',
+                type: 'other',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 0, 0, 0, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6, 0, 0, 0, 0),
+                location: '',
+                client: '',
+                notes: '',
+                calendarName: 'Personal Calendar',
+                calendarId: 'personal',
+                isAllDay: true,
+                recurringEventId: null,
+                ignored: false
+            },
+            {
+                id: '93',
+                title: 'Annual Vet Conference',
+                type: 'other',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12, 0, 0, 0, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 0, 0, 0, 0),
+                location: 'Convention Center',
+                client: '',
+                notes: 'Professional development - mark as ignored for workload',
+                calendarName: 'Personal Calendar',
+                calendarId: 'personal',
+                isAllDay: true,
+                recurringEventId: null,
+                ignored: false
+            }
+        );
+
         // Initialize default templates
         this.state.templates = [
             {
@@ -1293,7 +1337,10 @@ class GPSAdminApp {
             return eventDate.getTime() === today.getTime();
         });
 
-        const totalMinutes = todayEvents.reduce((sum, event) => {
+        // Filter out ignored events for workload calculations
+        const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
+
+        const totalMinutes = workEvents.reduce((sum, event) => {
             return sum + (event.end - event.start) / (1000 * 60);
         }, 0);
 
@@ -1339,7 +1386,10 @@ class GPSAdminApp {
                 return eventDate.getTime() === date.getTime();
             });
 
-            const totalMinutes = dayEvents.reduce((sum, event) => {
+            // Filter out ignored events and all-day events for workload calculations
+            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
+
+            const totalMinutes = workEvents.reduce((sum, event) => {
                 return sum + (event.end - event.start) / (1000 * 60);
             }, 0);
 
@@ -1347,8 +1397,11 @@ class GPSAdminApp {
             const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+            // Store date for click handler
+            const dateStr = date.toISOString();
+
             html += `
-                <div class="week-day ${workloadLevel}">
+                <div class="week-day ${workloadLevel}" data-date="${dateStr}" style="cursor: pointer;">
                     <div class="week-day-name">${dayNames[i]}</div>
                     <div class="week-day-date">${date.getDate()}</div>
                     <div class="week-day-hours">${hours}h</div>
@@ -1357,6 +1410,14 @@ class GPSAdminApp {
         }
 
         weekOverview.innerHTML = html;
+
+        // Add click handlers to week days
+        weekOverview.querySelectorAll('.week-day').forEach(dayElement => {
+            dayElement.addEventListener('click', () => {
+                const dateStr = dayElement.dataset.date;
+                this.showDayDetails(new Date(dateStr));
+            });
+        });
     }
 
     /**
@@ -1635,8 +1696,9 @@ class GPSAdminApp {
 
             const isToday = date.getTime() === today.getTime();
 
-            // Calculate daily totals
-            const totalMinutes = dayEvents.reduce((sum, event) => {
+            // Calculate daily totals (excluding ignored and all-day events)
+            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
+            const totalMinutes = workEvents.reduce((sum, event) => {
                 return sum + (event.end - event.start) / (1000 * 60);
             }, 0);
 
@@ -1664,18 +1726,30 @@ class GPSAdminApp {
 
             // Render events for this day
             dayEvents.forEach(event => {
-                const startTime = this.formatTime(event.start);
-                const endTime = this.formatTime(event.end);
-                const duration = Math.round((event.end - event.start) / (1000 * 60));
+                const startTime = event.isAllDay ? 'All Day' : this.formatTime(event.start);
+                const endTime = event.isAllDay ? '' : this.formatTime(event.end);
+                const duration = event.isAllDay ? 'All Day' : `${Math.round((event.end - event.start) / (1000 * 60))} min`;
 
                 html += `
-                    <div class="calendar-list-event">
+                    <div class="calendar-list-event ${event.ignored ? 'event-ignored' : ''}">
                         <div class="calendar-list-event-time">
                             <div>${startTime}</div>
-                            <div class="calendar-list-event-time-range">${duration} min</div>
+                            <div class="calendar-list-event-time-range">${duration}</div>
                         </div>
                         <div class="calendar-list-event-details">
-                            <div class="calendar-list-event-title">${event.title}</div>
+                            <div class="calendar-list-event-title">
+                                ${event.title}
+                                ${event.calendarName ? `
+                                    <span class="calendar-label" style="margin-left: 8px; font-size: 0.75rem; background: var(--primary-100); color: var(--primary-700); padding: 2px 8px; border-radius: 12px;">
+                                        📅 ${event.calendarName}
+                                    </span>
+                                ` : ''}
+                                ${event.ignored ? `
+                                    <span style="margin-left: 8px; font-size: 0.75rem; background: var(--gray-200); color: var(--gray-600); padding: 2px 8px; border-radius: 12px;">
+                                        Ignored
+                                    </span>
+                                ` : ''}
+                            </div>
                             <div class="calendar-list-event-meta">
                                 ${event.location ? `
                                     <span class="calendar-list-event-location">
@@ -1698,9 +1772,14 @@ class GPSAdminApp {
                             </div>
                         </div>
                         <div class="calendar-list-event-type">
-                            <span class="event-type-badge ${event.type}">
-                                ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
-                            </span>
+                            ${!event.isAllDay ? `
+                                <span class="event-type-badge ${event.type}">
+                                    ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
+                                </span>
+                            ` : ''}
+                            <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="app.toggleEventIgnored('${event.id}')" style="margin-top: 4px;">
+                                ${event.ignored ? '✓ Ignored' : 'Ignore'}
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1834,21 +1913,30 @@ class GPSAdminApp {
         let html = '<div class="day-details-events">';
 
         events.forEach(event => {
-            const startTime = this.formatTime(event.start);
-            const endTime = this.formatTime(event.end);
-            const duration = Math.round((event.end - event.start) / (1000 * 60));
+            const startTime = event.isAllDay ? 'All Day' : this.formatTime(event.start);
+            const endTime = event.isAllDay ? '' : this.formatTime(event.end);
+            const duration = event.isAllDay ? 'All Day' : `${Math.round((event.end - event.start) / (1000 * 60))} min`;
 
             html += `
-                <div class="day-details-event">
+                <div class="day-details-event ${event.ignored ? 'event-ignored' : ''}">
                     <div class="day-details-event-header">
-                        <div class="day-details-event-title">${event.title}</div>
-                        <div class="day-details-event-time">${startTime} - ${endTime}</div>
+                        <div class="day-details-event-title">
+                            ${event.title}
+                            ${event.calendarName ? `
+                                <span class="calendar-label" style="margin-left: 8px; font-size: 0.75rem; background: var(--primary-100); color: var(--primary-700); padding: 2px 8px; border-radius: 12px;">
+                                    📅 ${event.calendarName}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <div class="day-details-event-time">${startTime}${endTime ? ' - ' + endTime : ''}</div>
                     </div>
                     <div class="day-details-event-meta">
-                        <span class="event-type-badge ${event.type}">
-                            ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
-                        </span>
-                        <span>${duration} min</span>
+                        ${!event.isAllDay ? `
+                            <span class="event-type-badge ${event.type}">
+                                ${this.getEventTypeIcon(event.type)} ${this.getEventTypeLabel(event.type)}
+                            </span>
+                        ` : ''}
+                        <span>${duration}</span>
                         ${event.location ? `
                             <span>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1867,6 +1955,9 @@ class GPSAdminApp {
                                 ${event.client}
                             </span>
                         ` : ''}
+                        <button class="btn btn-sm ${event.ignored ? 'btn-outline' : 'btn-secondary'}" onclick="app.toggleEventIgnored('${event.id}')" style="margin-left: auto;">
+                            ${event.ignored ? '✓ Ignored' : 'Ignore from Workload'}
+                        </button>
                     </div>
                     ${event.notes ? `
                         <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--gray-200); font-size: 0.875rem; color: var(--gray-600);">
@@ -2187,7 +2278,10 @@ class GPSAdminApp {
             return eventDate.getTime() === today.getTime();
         });
 
-        const totalMinutes = todayEvents.reduce((sum, event) => {
+        // Filter out ignored events and all-day events for workload calculations
+        const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
+
+        const totalMinutes = workEvents.reduce((sum, event) => {
             return sum + (event.end - event.start) / (1000 * 60);
         }, 0);
 
@@ -2297,8 +2391,20 @@ class GPSAdminApp {
             const allEvents = [];
             for (const calendarId of this.state.selectedCalendars) {
                 try {
-                    console.log(`📅 Fetching from calendar: ${calendarId}`);
-                    const events = await this.calendarAPI.fetchEvents(calendarId, startDate, endDate);
+                    // Find calendar name
+                    const calendar = this.state.availableCalendars.find(cal => cal.id === calendarId);
+                    const calendarName = calendar ? calendar.name : calendarId;
+
+                    console.log(`📅 Fetching from calendar: ${calendarName}`);
+                    const events = await this.calendarAPI.fetchEvents(calendarId, startDate, endDate, calendarName);
+
+                    // Load ignored events from localStorage
+                    const ignoredEvents = this.getIgnoredEvents();
+                    events.forEach(event => {
+                        event.ignored = ignoredEvents.includes(event.id) ||
+                                       this.isEventIgnoredByPattern(event);
+                    });
+
                     allEvents.push(...events);
                 } catch (error) {
                     console.error(`Failed to fetch from calendar ${calendarId}:`, error);
@@ -2324,6 +2430,65 @@ class GPSAdminApp {
     showAppointmentModal() {
         const modal = document.getElementById('appointment-modal');
         modal?.classList.add('active');
+    }
+
+    /**
+     * Get ignored events from localStorage
+     */
+    getIgnoredEvents() {
+        const ignored = localStorage.getItem('gps-admin-ignored-events');
+        return ignored ? JSON.parse(ignored) : [];
+    }
+
+    /**
+     * Save ignored events to localStorage
+     */
+    saveIgnoredEvents(ignoredEventIds) {
+        localStorage.setItem('gps-admin-ignored-events', JSON.stringify(ignoredEventIds));
+    }
+
+    /**
+     * Check if event should be ignored based on patterns
+     */
+    isEventIgnoredByPattern(event) {
+        if (!this.state.ignoredEventPatterns || this.state.ignoredEventPatterns.length === 0) {
+            return false;
+        }
+
+        const titleLower = (event.title || '').toLowerCase();
+        return this.state.ignoredEventPatterns.some(pattern => {
+            const patternLower = pattern.toLowerCase();
+            return titleLower.includes(patternLower);
+        });
+    }
+
+    /**
+     * Toggle event ignored status
+     */
+    toggleEventIgnored(eventId) {
+        const ignoredEvents = this.getIgnoredEvents();
+        const index = ignoredEvents.indexOf(eventId);
+
+        if (index > -1) {
+            ignoredEvents.splice(index, 1);
+        } else {
+            ignoredEvents.push(eventId);
+        }
+
+        this.saveIgnoredEvents(ignoredEvents);
+
+        // Update the event in state
+        const event = this.state.events.find(e => e.id === eventId);
+        if (event) {
+            event.ignored = index === -1; // New state is opposite of what it was
+        }
+
+        // Re-render views
+        this.renderDashboard();
+        this.updateWorkloadIndicator();
+        if (this.state.currentView === 'calendar') {
+            this.renderCalendar();
+        }
     }
 
     /**

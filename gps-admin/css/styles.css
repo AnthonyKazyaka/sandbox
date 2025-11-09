@@ -860,6 +860,23 @@ label {
     opacity: 0.5;
 }
 
+/* Ignored Events */
+.event-ignored {
+    opacity: 0.6;
+    background: var(--gray-50);
+    border-left: 3px solid var(--gray-400);
+}
+
+.event-ignored .day-details-event-title,
+.event-ignored .calendar-list-event-title {
+    color: var(--gray-600);
+}
+
+.calendar-label {
+    display: inline-block;
+    font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .app-container {

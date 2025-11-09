@@ -167,9 +167,10 @@ class CalendarAPI {
      * @param {string} calendarId - Calendar ID (default: 'primary')
      * @param {Date} timeMin - Start date/time
      * @param {Date} timeMax - End date/time
+     * @param {string} calendarName - Calendar name for labeling
      * @returns {Array} Events
      */
-    async fetchEvents(calendarId = 'primary', timeMin = null, timeMax = null) {
+    async fetchEvents(calendarId = 'primary', timeMin = null, timeMax = null, calendarName = null) {
         try {
             // Default to current month if no range specified
             if (!timeMin) {
@@ -193,7 +194,9 @@ class CalendarAPI {
                 orderBy: 'startTime',
             });
 
-            return response.result.items.map(event => this.parseEvent(event));
+            return response.result.items.map(event =>
+                this.parseEvent(event, calendarId, calendarName)
+            );
         } catch (error) {
             console.error('Error fetching events:', error);
             throw error;
@@ -202,15 +205,39 @@ class CalendarAPI {
 
     /**
      * Parse Google Calendar event to our format
+     * @param {Object} gcalEvent - Google Calendar event
+     * @param {string} calendarId - Calendar ID
+     * @param {string} calendarName - Calendar name
      */
-    parseEvent(gcalEvent) {
-        const start = gcalEvent.start.dateTime
-            ? new Date(gcalEvent.start.dateTime)
-            : new Date(gcalEvent.start.date);
+    parseEvent(gcalEvent, calendarId = null, calendarName = null) {
+        // Handle all-day events with proper timezone handling
+        // All-day events use date (not dateTime) and should be treated as local midnight
+        let start, end;
+        const isAllDay = !gcalEvent.start.dateTime;
 
-        const end = gcalEvent.end.dateTime
-            ? new Date(gcalEvent.end.dateTime)
-            : new Date(gcalEvent.end.date);
+        if (isAllDay) {
+            // For all-day events, parse the date in local timezone
+            // Google Calendar sends date in YYYY-MM-DD format
+            const startDateParts = gcalEvent.start.date.split('-');
+            start = new Date(
+                parseInt(startDateParts[0]),
+                parseInt(startDateParts[1]) - 1, // Month is 0-indexed
+                parseInt(startDateParts[2]),
+                0, 0, 0, 0
+            );
+
+            const endDateParts = gcalEvent.end.date.split('-');
+            end = new Date(
+                parseInt(endDateParts[0]),
+                parseInt(endDateParts[1]) - 1,
+                parseInt(endDateParts[2]),
+                0, 0, 0, 0
+            );
+        } else {
+            // For timed events, use the provided dateTime
+            start = new Date(gcalEvent.start.dateTime);
+            end = new Date(gcalEvent.end.dateTime);
+        }
 
         // Try to determine event type from title/description
         const type = this.detectEventType(gcalEvent.summary, gcalEvent.description);
@@ -228,6 +255,11 @@ class CalendarAPI {
             colorId: gcalEvent.colorId,
             status: gcalEvent.status,
             htmlLink: gcalEvent.htmlLink,
+            calendarId: calendarId,
+            calendarName: calendarName,
+            isAllDay: isAllDay,
+            recurringEventId: gcalEvent.recurringEventId || null,
+            ignored: false, // Default to not ignored
         };
     }
 

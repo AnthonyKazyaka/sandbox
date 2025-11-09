@@ -13,6 +13,8 @@ class GPSAdminApp {
             useMockData: true, // Toggle between mock and real data
             events: [],
             templates: [],
+            availableCalendars: [], // List of calendars from Google
+            selectedCalendars: ['primary'], // Calendar IDs to sync with
             settings: {
                 thresholds: {
                     comfortable: 6,
@@ -1070,6 +1072,12 @@ class GPSAdminApp {
             try {
                 const settings = JSON.parse(saved);
                 this.state.settings = { ...this.state.settings, ...settings };
+                
+                // Load selected calendars if available
+                if (settings.selectedCalendars) {
+                    this.state.selectedCalendars = settings.selectedCalendars;
+                }
+                
                 console.log('✅ Loaded settings from localStorage');
             } catch (e) {
                 console.error('Error loading settings:', e);
@@ -1081,7 +1089,11 @@ class GPSAdminApp {
      * Save settings to localStorage
      */
     saveSettings() {
-        localStorage.setItem('gps-admin-settings', JSON.stringify(this.state.settings));
+        const settingsToSave = {
+            ...this.state.settings,
+            selectedCalendars: this.state.selectedCalendars
+        };
+        localStorage.setItem('gps-admin-settings', JSON.stringify(settingsToSave));
     }
 
     /**
@@ -1935,6 +1947,115 @@ class GPSAdminApp {
         document.getElementById('threshold-busy').value = this.state.settings.thresholds.busy;
         document.getElementById('threshold-overload').value = this.state.settings.thresholds.high;
         document.getElementById('threshold-burnout').value = this.state.settings.thresholds.burnout;
+        
+        // Render calendar selection
+        this.renderCalendarSelection();
+    }
+
+    /**
+     * Render calendar selection UI
+     */
+    renderCalendarSelection() {
+        const calendarList = document.getElementById('calendar-list');
+        if (!calendarList) return;
+
+        // If not authenticated, show message
+        if (!this.state.isAuthenticated || this.state.availableCalendars.length === 0) {
+            calendarList.innerHTML = `
+                <p class="text-muted">
+                    ${this.state.isAuthenticated 
+                        ? 'Loading calendars...' 
+                        : 'Connect your Google Calendar to select calendars'}
+                </p>
+            `;
+            return;
+        }
+
+        // Render calendar checkboxes
+        calendarList.innerHTML = `
+            <div class="calendar-selection-list">
+                ${this.state.availableCalendars.map(calendar => `
+                    <label class="calendar-selection-item">
+                        <input 
+                            type="checkbox" 
+                            value="${calendar.id}"
+                            ${this.state.selectedCalendars.includes(calendar.id) ? 'checked' : ''}
+                            onchange="window.gpsApp.toggleCalendarSelection('${calendar.id}')"
+                        >
+                        <div class="calendar-info">
+                            <div class="calendar-name">
+                                ${calendar.name}
+                                ${calendar.primary ? '<span class="badge badge-primary">Primary</span>' : ''}
+                            </div>
+                            ${calendar.description ? `<div class="calendar-description">${calendar.description}</div>` : ''}
+                        </div>
+                        <div class="calendar-color" style="background-color: ${calendar.backgroundColor || '#3b82f6'}"></div>
+                    </label>
+                `).join('')}
+            </div>
+            <div style="margin-top: 1rem;">
+                <button onclick="window.gpsApp.saveCalendarSelection()" class="btn btn-primary">
+                    Save Calendar Selection
+                </button>
+                <button onclick="window.gpsApp.refreshCalendarList()" class="btn btn-secondary">
+                    Refresh List
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Toggle calendar selection
+     */
+    toggleCalendarSelection(calendarId) {
+        const index = this.state.selectedCalendars.indexOf(calendarId);
+        if (index > -1) {
+            this.state.selectedCalendars.splice(index, 1);
+        } else {
+            this.state.selectedCalendars.push(calendarId);
+        }
+    }
+
+    /**
+     * Save calendar selection and reload events
+     */
+    async saveCalendarSelection() {
+        if (this.state.selectedCalendars.length === 0) {
+            alert('Please select at least one calendar.');
+            return;
+        }
+
+        this.saveSettings();
+        alert('Calendar selection saved! Reloading events...');
+
+        // Reload events from selected calendars
+        await this.loadCalendarEvents();
+        
+        // Re-render views
+        this.renderDashboard();
+        this.updateWorkloadIndicator();
+    }
+
+    /**
+     * Refresh calendar list from Google
+     */
+    async refreshCalendarList() {
+        if (!this.calendarAPI || !this.state.isAuthenticated) {
+            alert('Please connect to Google Calendar first.');
+            return;
+        }
+
+        try {
+            console.log('🔄 Refreshing calendar list...');
+            const calendars = await this.calendarAPI.listCalendars();
+            this.state.availableCalendars = calendars;
+            console.log(`✅ Found ${calendars.length} calendars`);
+            
+            this.renderCalendarSelection();
+        } catch (error) {
+            console.error('Error refreshing calendar list:', error);
+            alert('Failed to refresh calendar list.\n\nError: ' + (error.message || 'Unknown error'));
+        }
     }
 
     /**
@@ -2061,14 +2182,25 @@ class GPSAdminApp {
                 this.state.isAuthenticated = true;
                 this.state.useMockData = false;
 
-                alert('✅ Successfully connected to Google Calendar!\n\nLoading your real events...');
+                // Fetch available calendars
+                console.log('📅 Fetching calendar list...');
+                const calendars = await this.calendarAPI.listCalendars();
+                this.state.availableCalendars = calendars;
+                console.log(`✅ Found ${calendars.length} calendars`);
 
-                // Fetch real events
+                alert('✅ Successfully connected to Google Calendar!\n\nLoading your events...');
+
+                // Fetch real events from selected calendars
                 await this.loadCalendarEvents();
 
                 // Re-render views
                 this.renderDashboard();
                 this.updateWorkloadIndicator();
+                
+                // Update calendar selection in settings if we're on that view
+                if (this.state.currentView === 'settings') {
+                    this.renderCalendarSelection();
+                }
 
                 // Update button text
                 const btn = document.getElementById('connect-calendar-btn');
@@ -2111,11 +2243,24 @@ class GPSAdminApp {
             const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
-            // Fetch events
-            const events = await this.calendarAPI.fetchEvents('primary', startDate, endDate);
+            // Fetch events from all selected calendars
+            const allEvents = [];
+            for (const calendarId of this.state.selectedCalendars) {
+                try {
+                    console.log(`📅 Fetching from calendar: ${calendarId}`);
+                    const events = await this.calendarAPI.fetchEvents(calendarId, startDate, endDate);
+                    allEvents.push(...events);
+                } catch (error) {
+                    console.error(`Failed to fetch from calendar ${calendarId}:`, error);
+                    // Continue with other calendars even if one fails
+                }
+            }
 
-            this.state.events = events;
-            console.log(`✅ Loaded ${events.length} events from Google Calendar`);
+            // Sort events by start time
+            allEvents.sort((a, b) => a.start - b.start);
+
+            this.state.events = allEvents;
+            console.log(`✅ Loaded ${allEvents.length} events from ${this.state.selectedCalendars.length} calendar(s)`);
 
         } catch (error) {
             console.error('Error loading calendar events:', error);

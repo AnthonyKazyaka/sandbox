@@ -90,9 +90,10 @@ class GPSAdminApp {
     initMockData() {
         const today = new Date();
 
-        // Generate mock events for the current week and next week
+        // Generate mock events for 4 weeks of realistic pet sitting appointments
         this.state.events = [
-            // Today
+            // ===== WEEK 1: TODAY =====
+            // Today - Moderate workload
             {
                 id: '1',
                 title: 'Bella - Morning Drop-in',
@@ -134,7 +135,7 @@ class GPSAdminApp {
                 notes: 'Dinner and potty break'
             },
 
-            // Tomorrow
+            // Day +1 - Light day
             {
                 id: '5',
                 title: 'Charlie - Meet & Greet',
@@ -156,7 +157,7 @@ class GPSAdminApp {
                 notes: 'Feed and quick walk'
             },
 
-            // Day after tomorrow
+            // Day +2 - Overnight starts
             {
                 id: '7',
                 title: 'Rocky & Bella - Overnight',
@@ -167,10 +168,20 @@ class GPSAdminApp {
                 client: 'Johnson Family',
                 notes: 'Overnight care - family vacation'
             },
-
-            // Rest of the week
             {
                 id: '8',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 9, 30),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+
+            // Day +3 - Busy day with ongoing overnight
+            {
+                id: '9',
                 title: 'Max & Cooper - Morning Walk',
                 type: 'walk',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 9, 0),
@@ -180,7 +191,7 @@ class GPSAdminApp {
                 notes: '1 hour walk'
             },
             {
-                id: '9',
+                id: '10',
                 title: 'Luna - Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 12, 0),
@@ -190,7 +201,7 @@ class GPSAdminApp {
                 notes: 'Medication'
             },
             {
-                id: '10',
+                id: '11',
                 title: 'Milo - Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 17, 0),
@@ -200,18 +211,18 @@ class GPSAdminApp {
                 notes: 'Evening care'
             },
 
-            // Busy Friday
+            // Day +4 - Very busy Friday
             {
-                id: '11',
-                title: 'Bella - Morning Drop-in',
+                id: '12',
+                title: 'Bella - Early Morning Drop-in',
                 type: 'dropin',
-                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 7, 30),
-                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 8, 0),
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 7, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 7, 30),
                 location: '123 Oak Street',
                 client: 'Johnson Family'
             },
             {
-                id: '12',
+                id: '13',
                 title: 'Charlie - Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 9, 0),
@@ -220,7 +231,7 @@ class GPSAdminApp {
                 client: 'Brown Family'
             },
             {
-                id: '13',
+                id: '14',
                 title: 'Max & Cooper - Walk',
                 type: 'walk',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 11, 0),
@@ -229,7 +240,7 @@ class GPSAdminApp {
                 client: 'Smith Family'
             },
             {
-                id: '14',
+                id: '15',
                 title: 'Luna - Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 13, 30),
@@ -238,7 +249,7 @@ class GPSAdminApp {
                 client: 'Davis Family'
             },
             {
-                id: '15',
+                id: '16',
                 title: 'Daisy - Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 15, 0),
@@ -247,7 +258,7 @@ class GPSAdminApp {
                 client: 'Taylor Family'
             },
             {
-                id: '16',
+                id: '17',
                 title: 'Milo - Evening Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 17, 30),
@@ -256,13 +267,741 @@ class GPSAdminApp {
                 client: 'Wilson Family'
             },
             {
-                id: '17',
+                id: '18',
                 title: 'Oscar - Late Drop-in',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 19, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 19, 30),
                 location: '999 Willow Way',
                 client: 'Anderson Family'
+            },
+
+            // Day +5 - Weekend Saturday - Moderate
+            {
+                id: '19',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 9, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Weekend medication'
+            },
+            {
+                id: '20',
+                title: 'Jasper - Meet & Greet',
+                type: 'meet-greet',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 12, 0),
+                location: '234 Spruce St',
+                client: 'Garcia Family',
+                notes: 'New client - senior cat'
+            },
+            {
+                id: '21',
+                title: 'Daisy - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 18, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5, 18, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+
+            // Day +6 - Sunday - Light
+            {
+                id: '22',
+                title: 'Max & Cooper - Long Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6, 11, 30),
+                location: '456 Elm Avenue',
+                client: 'Smith Family',
+                notes: '1.5 hour park walk'
+            },
+
+            // ===== WEEK 2 =====
+            // Day +7 - Monday - Back to work busy
+            {
+                id: '23',
+                title: 'Bella - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 8, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '24',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 9, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 10, 0),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '25',
+                title: 'Charlie - Midday Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 12, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 13, 15),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '26',
+                title: 'Max & Cooper - Afternoon Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 16, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '27',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 18, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+
+            // Day +8 - Tuesday - Overnight starts
+            {
+                id: '28',
+                title: 'Tucker - Overnight Stay',
+                type: 'overnight',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8, 18, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 10, 0),
+                location: '777 Poplar Blvd',
+                client: 'Martinez Family',
+                notes: '3-night stay - business trip'
+            },
+            {
+                id: '29',
+                title: 'Bella - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8, 8, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '30',
+                title: 'Luna - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8, 13, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+
+            // Day +9 - Wednesday - HIGH WORKLOAD
+            {
+                id: '31',
+                title: 'Bella - Early Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 7, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 7, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '32',
+                title: 'Charlie - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 8, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 9, 15),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '33',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 11, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '34',
+                title: 'Luna - Midday Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 12, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 12, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '35',
+                title: 'Daisy - Afternoon Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 14, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 14, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+            {
+                id: '36',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 16, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 17, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+            {
+                id: '37',
+                title: 'Oscar - Late Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 18, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 9, 19, 0),
+                location: '999 Willow Way',
+                client: 'Anderson Family'
+            },
+
+            // Day +10 - Thursday - VERY HIGH WORKLOAD (BURNOUT RISK)
+            {
+                id: '38',
+                title: 'Bella - Early Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 6, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 7, 0),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '39',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 8, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '40',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 9, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 10, 15),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '41',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 12, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '42',
+                title: 'Jasper - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 13, 30),
+                location: '234 Spruce St',
+                client: 'Garcia Family'
+            },
+            {
+                id: '43',
+                title: 'Daisy - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 14, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 15, 0),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+            {
+                id: '44',
+                title: 'Milo - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 16, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 16, 30),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+            {
+                id: '45',
+                title: 'Oscar - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 18, 0),
+                location: '999 Willow Way',
+                client: 'Anderson Family'
+            },
+            {
+                id: '46',
+                title: 'Buddy - Late Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 19, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 10, 19, 45),
+                location: '111 Ash Avenue',
+                client: 'Thompson Family',
+                notes: 'Emergency visit - owner delayed'
+            },
+
+            // Day +11 - Friday - Still busy
+            {
+                id: '47',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 8, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '48',
+                title: 'Bella - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 10, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '49',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 12, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 13, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '50',
+                title: 'Daisy - Afternoon Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 15, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+            {
+                id: '51',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 18, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+
+            // Day +12 - Weekend Saturday
+            {
+                id: '52',
+                title: 'Luna - Weekend Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12, 10, 30),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Weekend medication'
+            },
+            {
+                id: '53',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12, 14, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12, 14, 45),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+
+            // Day +13 - Sunday - Light day (rest!)
+            {
+                id: '54',
+                title: 'Max & Cooper - Long Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13, 11, 30),
+                location: '456 Elm Avenue',
+                client: 'Smith Family',
+                notes: 'Weekend park walk'
+            },
+
+            // ===== WEEK 3 =====
+            // Day +14 - Monday - New week starts
+            {
+                id: '55',
+                title: 'Bella - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 8, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '56',
+                title: 'Luna - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 13, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '57',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14, 18, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+
+            // Day +15 - Tuesday - Moderate
+            {
+                id: '58',
+                title: 'Max & Cooper - Morning Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 10, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '59',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 11, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 12, 15),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '60',
+                title: 'Daisy - Afternoon Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15, 15, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+
+            // Day +16 - Wednesday - Long overnight starts
+            {
+                id: '61',
+                title: 'Bella & Rocky - Extended Overnight',
+                type: 'overnight',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 16, 18, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 10, 0),
+                location: '123 Oak Street',
+                client: 'Johnson Family',
+                notes: '5-night stay - cruise vacation'
+            },
+            {
+                id: '62',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 16, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 16, 9, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '63',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 16, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 16, 12, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+
+            // Day +17 - Thursday - Busy with ongoing overnight
+            {
+                id: '64',
+                title: 'Luna - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 13, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '65',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 15, 45),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '66',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 18, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+            {
+                id: '67',
+                title: 'Daisy - Late Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 19, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 17, 19, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+
+            // Day +18 - Friday
+            {
+                id: '68',
+                title: 'Max & Cooper - Morning Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 10, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '69',
+                title: 'Luna - Midday Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 12, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 13, 15),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '70',
+                title: 'Oscar - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 16, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 18, 16, 30),
+                location: '999 Willow Way',
+                client: 'Anderson Family'
+            },
+
+            // Weekend 19-20 - Ongoing overnight only
+            {
+                id: '71',
+                title: 'Luna - Weekend Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 19, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 19, 10, 30),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Weekend medication'
+            },
+
+            // ===== WEEK 4 =====
+            // Day +21 - Monday - Overnight ends, back to normal
+            {
+                id: '72',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 9, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '73',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 12, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '74',
+                title: 'Milo - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21, 18, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+
+            // Day +22 - Tuesday
+            {
+                id: '75',
+                title: 'Bella - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 8, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 8, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '76',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 10, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 11, 15),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '77',
+                title: 'Daisy - Afternoon Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 22, 15, 30),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+
+            // Day +23 - Wednesday - New client consultation
+            {
+                id: '78',
+                title: 'Penny - Meet & Greet',
+                type: 'meet-greet',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 11, 0),
+                location: '432 Hickory Lane',
+                client: 'Roberts Family',
+                notes: 'New client - energetic puppy'
+            },
+            {
+                id: '79',
+                title: 'Luna - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 13, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '80',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 15, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 23, 16, 30),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+
+            // Day +24 - Thursday - Holiday prep busy
+            {
+                id: '81',
+                title: 'Bella - Early Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 7, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 7, 30),
+                location: '123 Oak Street',
+                client: 'Johnson Family'
+            },
+            {
+                id: '82',
+                title: 'Luna - Morning Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 9, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 9, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '83',
+                title: 'Charlie - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 11, 45),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+            {
+                id: '84',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 14, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+            {
+                id: '85',
+                title: 'Milo - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 15, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 16, 0),
+                location: '321 Pine Road',
+                client: 'Wilson Family'
+            },
+            {
+                id: '86',
+                title: 'Daisy - Evening Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 17, 30),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 18, 0),
+                location: '888 Birch Court',
+                client: 'Taylor Family'
+            },
+            {
+                id: '87',
+                title: 'Oscar - Late Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 19, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 24, 19, 30),
+                location: '999 Willow Way',
+                client: 'Anderson Family'
+            },
+
+            // Day +25 - Friday - Light day
+            {
+                id: '88',
+                title: 'Luna - Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 25, 13, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 25, 13, 45),
+                location: '789 Maple Drive',
+                client: 'Davis Family',
+                notes: 'Medication'
+            },
+            {
+                id: '89',
+                title: 'Max & Cooper - Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 25, 15, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 25, 16, 0),
+                location: '456 Elm Avenue',
+                client: 'Smith Family'
+            },
+
+            // Day +26 - Weekend Saturday
+            {
+                id: '90',
+                title: 'Charlie - Weekend Drop-in',
+                type: 'dropin',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 26, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 26, 10, 45),
+                location: '555 Cedar Lane',
+                client: 'Brown Family'
+            },
+
+            // Day +27 - Sunday - Rest day
+            {
+                id: '91',
+                title: 'Max & Cooper - Long Weekend Walk',
+                type: 'walk',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 27, 10, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 27, 11, 30),
+                location: '456 Elm Avenue',
+                client: 'Smith Family',
+                notes: '1.5 hour park walk - weekend special'
             }
         ];
 
@@ -311,11 +1050,27 @@ class GPSAdminApp {
      * Load settings from localStorage
      */
     loadSettings() {
+        // First, load from config file if available
+        if (window.GPSConfig) {
+            if (window.GPSConfig.calendar?.clientId) {
+                this.state.settings.api.calendarClientId = window.GPSConfig.calendar.clientId;
+            }
+            if (window.GPSConfig.maps?.apiKey) {
+                this.state.settings.api.mapsApiKey = window.GPSConfig.maps.apiKey;
+            }
+            if (window.GPSConfig.app?.useMockData !== undefined) {
+                this.state.useMockData = window.GPSConfig.app.useMockData;
+            }
+            console.log('✅ Loaded configuration from config file');
+        }
+
+        // Then, override with localStorage if available
         const saved = localStorage.getItem('gps-admin-settings');
         if (saved) {
             try {
                 const settings = JSON.parse(saved);
                 this.state.settings = { ...this.state.settings, ...settings };
+                console.log('✅ Loaded settings from localStorage');
             } catch (e) {
                 console.error('Error loading settings:', e);
             }
@@ -903,13 +1658,97 @@ class GPSAdminApp {
     /**
      * Handle calendar connection
      */
-    handleCalendarConnect() {
-        if (this.state.settings.api.calendarClientId) {
-            // Real API connection would go here
-            alert('Calendar API integration coming in Phase 1.1!\n\nFor now, you can explore the app with mock data.');
-        } else {
-            alert('Please configure your Google Calendar API credentials in Settings first.');
+    async handleCalendarConnect() {
+        const clientId = this.state.settings.api.calendarClientId;
+
+        if (!clientId || clientId === '' || clientId === 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com') {
+            alert('Please configure your Google Calendar OAuth Client ID first.\n\n' +
+                  '1. Go to Settings\n' +
+                  '2. Enter your OAuth Client ID\n' +
+                  '3. Save settings\n\n' +
+                  'Or edit config.local.js with your credentials.');
             this.switchView('settings');
+            return;
+        }
+
+        try {
+            // Initialize Calendar API if not already done
+            if (!this.calendarAPI) {
+                this.calendarAPI = new CalendarAPI(clientId);
+                const initialized = await this.calendarAPI.init();
+
+                if (!initialized) {
+                    throw new Error('Failed to initialize Calendar API');
+                }
+            }
+
+            // Authenticate user
+            console.log('🔐 Starting OAuth authentication...');
+            const response = await this.calendarAPI.authenticate();
+
+            if (response) {
+                this.state.isAuthenticated = true;
+                this.state.useMockData = false;
+
+                alert('✅ Successfully connected to Google Calendar!\n\nLoading your real events...');
+
+                // Fetch real events
+                await this.loadCalendarEvents();
+
+                // Re-render views
+                this.renderDashboard();
+                this.updateWorkloadIndicator();
+
+                // Update button text
+                const btn = document.getElementById('connect-calendar-btn');
+                if (btn) {
+                    btn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Connected
+                    `;
+                    btn.classList.add('btn-success');
+                }
+            }
+        } catch (error) {
+            console.error('Calendar connection error:', error);
+            alert('Failed to connect to Google Calendar.\n\n' +
+                  'Error: ' + (error.message || 'Unknown error') + '\n\n' +
+                  'Please check:\n' +
+                  '1. Your Client ID is correct\n' +
+                  '2. You authorized the app in the OAuth popup\n' +
+                  '3. Your browser allows popups from this site');
+        }
+    }
+
+    /**
+     * Load events from Google Calendar
+     */
+    async loadCalendarEvents() {
+        if (!this.calendarAPI || !this.state.isAuthenticated) {
+            console.warn('Calendar API not initialized or not authenticated');
+            return;
+        }
+
+        try {
+            console.log('📅 Fetching calendar events...');
+
+            // Get start and end dates for current view
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+
+            // Fetch events
+            const events = await this.calendarAPI.fetchEvents('primary', startDate, endDate);
+
+            this.state.events = events;
+            console.log(`✅ Loaded ${events.length} events from Google Calendar`);
+
+        } catch (error) {
+            console.error('Error loading calendar events:', error);
+            alert('Failed to load calendar events.\n\nError: ' + (error.message || 'Unknown error'));
         }
     }
 

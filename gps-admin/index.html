@@ -411,6 +411,10 @@
         </div>
     </div>
 
+    <!-- Configuration (load first) -->
+    <!-- Try to load local config, fall back to example if not found -->
+    <script src="config.local.js" onerror="this.onerror=null; this.src='config.example.js';"></script>
+
     <!-- Scripts -->
     <script src="js/app.js"></script>
     <script src="js/calendar-api.js"></script>

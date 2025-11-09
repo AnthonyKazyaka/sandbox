@@ -6,10 +6,14 @@
 class WorkloadAnalyzer {
     constructor(thresholds = {}) {
         this.thresholds = {
-            comfortable: 6,
-            busy: 8,
-            high: 10,
-            burnout: 12,
+            comfortable: 6,      // Daily hours for comfortable workload
+            busy: 8,             // Daily hours when getting busy
+            high: 10,            // Daily hours for high workload
+            burnout: 12,         // Daily hours for single-day burnout risk
+            weeklyComfortable: 35,  // Weekly hours for sustainable workload
+            weeklyHigh: 50,         // Weekly hours that's getting unsustainable
+            consecutiveDaysWarning: 5,  // Days in a row before warning
+            consecutiveDaysCritical: 7, // Days in a row before critical
             ...thresholds
         };
     }
@@ -263,25 +267,36 @@ class WorkloadAnalyzer {
 
     /**
      * Calculate weekly risk score
+     * Focuses on sustained patterns rather than single-day spikes
      */
     calculateWeeklyRiskScore({ avgDailyHours, consecutiveWorkDays, burnoutDays, highWorkloadDays, totalWeekHours }) {
         let score = 0;
 
-        // Average daily hours (0-30 points)
-        const avgRatio = avgDailyHours / this.thresholds.burnout;
-        score += Math.min(avgRatio * 30, 30);
+        // Total weekly hours (0-35 points) - Most important factor
+        // Reflects cumulative time away from personal life
+        if (totalWeekHours >= 60) score += 35;      // Extreme - no life outside work
+        else if (totalWeekHours >= 50) score += 30; // Very high - minimal personal time
+        else if (totalWeekHours >= 40) score += 20; // High - limited personal time
+        else if (totalWeekHours >= 35) score += 10; // Moderate - manageable
+        else score += 0;                             // Sustainable
 
-        // Consecutive work days (0-25 points)
-        if (consecutiveWorkDays >= 7) score += 25;
-        else if (consecutiveWorkDays >= 6) score += 20;
-        else if (consecutiveWorkDays >= 5) score += 15;
-        else if (consecutiveWorkDays >= 4) score += 10;
+        // Consecutive work days without rest (0-30 points) - Second most important
+        // Lack of recovery time is key burnout indicator
+        if (consecutiveWorkDays >= 7) score += 30;      // No rest days at all
+        else if (consecutiveWorkDays >= 6) score += 25; // Only one rest day
+        else if (consecutiveWorkDays >= 5) score += 15; // Limited recovery
+        else if (consecutiveWorkDays >= 4) score += 5;  // Some recovery time
 
-        // Burnout days (0-30 points)
-        score += burnoutDays * 10;
+        // High workload days sustained over time (0-20 points)
+        // Multiple demanding days compounds fatigue
+        if (highWorkloadDays >= 5) score += 20;      // Most of week is demanding
+        else if (highWorkloadDays >= 4) score += 15; // More than half demanding
+        else if (highWorkloadDays >= 3) score += 10; // Several demanding days
+        else if (highWorkloadDays >= 2) score += 5;  // A few demanding days
 
-        // High workload days (0-15 points)
-        score += highWorkloadDays * 3;
+        // Single burnout days (0-15 points) - Less important than sustained load
+        // One crazy day is recoverable, sustained load is not
+        score += Math.min(burnoutDays * 8, 15);
 
         return Math.min(score, 100);
     }
@@ -357,60 +372,108 @@ class WorkloadAnalyzer {
 
     /**
      * Generate weekly recommendations
+     * Focus on sustained patterns and recovery time
      */
     generateWeeklyRecommendations({ avgDailyHours, consecutiveWorkDays, burnoutDays, highWorkloadDays }) {
         const recommendations = [];
 
-        if (burnoutDays > 0) {
+        // CRITICAL: No rest days - highest priority issue
+        if (consecutiveWorkDays >= 7) {
             recommendations.push({
                 type: 'critical',
                 icon: '🚨',
-                title: 'Multiple Burnout Risk Days',
-                message: `${burnoutDays} day(s) this week exceed burnout threshold. Strongly recommend reducing workload.`
+                title: 'Burnout Risk: No Recovery Time',
+                message: 'Working all 7 days without rest leaves no time for personal responsibilities, recovery, or self-care. This pattern is unsustainable and leads to burnout.'
             });
-        }
-
-        if (consecutiveWorkDays >= 7) {
+        } else if (consecutiveWorkDays >= 6) {
             recommendations.push({
                 type: 'warning',
                 icon: '😴',
-                title: 'No Rest Days',
-                message: 'You have no days off this week. Schedule at least one rest day for recovery.'
+                title: 'Very Limited Recovery Time',
+                message: `Only ${7 - consecutiveWorkDays} rest day(s) this week. Difficult to recharge, handle personal tasks, or maintain work-life balance.`
             });
         } else if (consecutiveWorkDays >= 5) {
             recommendations.push({
                 type: 'info',
                 icon: '📅',
-                title: 'Limited Rest',
-                message: `${consecutiveWorkDays} consecutive work days. Consider adding a rest day for better balance.`
+                title: 'Limited Personal Time',
+                message: `${consecutiveWorkDays} consecutive work days. Consider protecting at least 2 days per week for personal life and recovery.`
             });
         }
 
-        if (avgDailyHours > this.thresholds.busy) {
+        // WARNING: Multiple high-demand days sustained over time
+        if (highWorkloadDays >= 5) {
             recommendations.push({
                 type: 'warning',
-                icon: '⏱️',
-                title: 'High Weekly Average',
-                message: `Averaging ${avgDailyHours.toFixed(1)} hours/day. Consider reducing bookings next week.`
+                icon: '⚠️',
+                title: 'Sustained High Demand',
+                message: `${highWorkloadDays} demanding days this week makes it hard to keep up with personal goals and responsibilities. Consider spreading out the workload.`
             });
-        }
-
-        if (highWorkloadDays >= 4) {
+        } else if (highWorkloadDays >= 4) {
             recommendations.push({
                 type: 'info',
                 icon: '📊',
-                title: 'Busy Week',
-                message: `${highWorkloadDays} days with high workload. Plan rest time for next week.`
+                title: 'Busy Week Pattern',
+                message: `${highWorkloadDays} high-workload days. Ensure you're protecting time for rest and personal tasks.`
             });
         }
 
-        // Positive reinforcement
-        if (avgDailyHours < this.thresholds.comfortable && burnoutDays === 0) {
+        // Total weekly hours check - cumulative impact
+        const totalWeekHours = avgDailyHours * 7;
+        if (totalWeekHours >= 60) {
+            recommendations.push({
+                type: 'critical',
+                icon: '🛑',
+                title: 'Extreme Weekly Hours',
+                message: `${totalWeekHours.toFixed(0)} hours this week leaves almost no time for personal life. This pace is not sustainable.`
+            });
+        } else if (totalWeekHours >= 50) {
+            recommendations.push({
+                type: 'warning',
+                icon: '⏰',
+                title: 'Very High Weekly Hours',
+                message: `${totalWeekHours.toFixed(0)} hours working makes it difficult to maintain personal responsibilities and relationships.`
+            });
+        } else if (totalWeekHours >= 40) {
+            recommendations.push({
+                type: 'info',
+                icon: '⏱️',
+                title: 'High Weekly Load',
+                message: `${totalWeekHours.toFixed(0)} hours scheduled. Monitor how you're feeling and protect personal time where possible.`
+            });
+        }
+
+        // Note about single extreme days (less concerning than patterns)
+        if (burnoutDays > 0 && burnoutDays <= 2) {
+            recommendations.push({
+                type: 'info',
+                icon: '💡',
+                title: 'Note: Single Busy Day',
+                message: `${burnoutDays} very busy day(s) this week. One crazy day is manageable if you have recovery time before and after.`
+            });
+        } else if (burnoutDays > 2) {
+            recommendations.push({
+                type: 'warning',
+                icon: '🚨',
+                title: 'Multiple Extreme Days',
+                message: `${burnoutDays} days with extreme hours. Multiple demanding days compounds fatigue - ensure adequate recovery.`
+            });
+        }
+
+        // Positive reinforcement for healthy patterns
+        if (consecutiveWorkDays <= 5 && totalWeekHours < 40 && highWorkloadDays <= 3) {
             recommendations.push({
                 type: 'success',
                 icon: '🌟',
-                title: 'Healthy Workload',
-                message: 'Your weekly workload looks sustainable. Great job maintaining balance!'
+                title: 'Sustainable Pace',
+                message: 'Your schedule allows time for personal goals, rest, and responsibilities. This pace is maintainable long-term!'
+            });
+        } else if (consecutiveWorkDays <= 6 && totalWeekHours < 50) {
+            recommendations.push({
+                type: 'success',
+                icon: '✅',
+                title: 'Manageable Workload',
+                message: 'You have some recovery time built in. Keep protecting those rest days!'
             });
         }
 

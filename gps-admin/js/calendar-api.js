@@ -68,7 +68,7 @@ class CalendarAPI {
         await new Promise((resolve) => gapi.load('client', resolve));
 
         await gapi.client.init({
-            apiKey: 'YOUR_API_KEY', // Not needed for OAuth, but can be set
+            // No API key needed for OAuth 2.0 authentication
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         });
 

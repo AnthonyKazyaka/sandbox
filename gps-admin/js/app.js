@@ -72,12 +72,12 @@ class GPSAdminApp {
 
         // Initialize Maps API if available
         if (window.MapsAPI && this.state.settings.api.mapsApiKey) {
-            this.initMapsAPI();
+            await this.initMapsAPI();
         }
 
         // Render initial view
-        this.renderDashboard();
-        this.updateWorkloadIndicator();
+        await this.renderDashboard();
+        await this.updateWorkloadIndicator();
 
         // Update connect button state if already authenticated
         this.updateConnectButtonState();
@@ -184,6 +184,89 @@ class GPSAdminApp {
 
         // Otherwise, start from home
         return homeAddress;
+    }
+
+    /**
+     * Calculate total travel time for a specific day
+     * @param {Date} targetDate - The date to calculate travel for
+     * @returns {number} Total travel time in minutes (or mock estimate if Maps API unavailable)
+     */
+    async calculateDailyTravelTime(targetDate) {
+        // If travel time not enabled, return 0
+        if (!this.state.settings.includeTravelTime) {
+            return 0;
+        }
+
+        const homeAddress = this.state.settings.homeAddress;
+        if (!homeAddress) {
+            return 0;
+        }
+
+        const dateKey = new Date(targetDate);
+        dateKey.setHours(0, 0, 0, 0);
+
+        // Get all events for this day that aren't ignored or all-day
+        const dayEvents = this.state.events.filter(event => {
+            const eventDate = new Date(event.start);
+            eventDate.setHours(0, 0, 0, 0);
+            return eventDate.getTime() === dateKey.getTime() &&
+                   !event.ignored &&
+                   !event.isAllDay &&
+                   event.location; // Only count events with locations
+        }).sort((a, b) => a.start - b.start);
+
+        if (dayEvents.length === 0) {
+            return 0;
+        }
+
+        // If Maps API is not available, use mock estimates
+        if (!this.mapsAPI || !this.mapsAPI.isLoaded) {
+            // Estimate: 10 minutes per trip (home to first, between each, last to home)
+            const tripCount = dayEvents.length + 1; // +1 for return home
+            return tripCount * 10;
+        }
+
+        let totalTravelMinutes = 0;
+
+        try {
+            // Calculate travel from home to first appointment
+            const travelToFirst = await this.calculateTravelTime(
+                homeAddress,
+                dayEvents[0].location,
+                dayEvents[0].start
+            );
+            totalTravelMinutes += travelToFirst;
+
+            // Calculate travel between consecutive appointments
+            for (let i = 0; i < dayEvents.length - 1; i++) {
+                const current = dayEvents[i];
+                const next = dayEvents[i + 1];
+
+                const travelBetween = await this.calculateTravelTime(
+                    current.location,
+                    next.location,
+                    next.start
+                );
+                totalTravelMinutes += travelBetween;
+            }
+
+            // Calculate travel from last appointment back home
+            const lastEvent = dayEvents[dayEvents.length - 1];
+            const travelToHome = await this.calculateTravelTime(
+                lastEvent.location,
+                homeAddress,
+                lastEvent.end
+            );
+            totalTravelMinutes += travelToHome;
+
+        } catch (error) {
+            console.error('Error calculating daily travel time:', error);
+            // Fallback to estimate
+            const tripCount = dayEvents.length + 1;
+            return tripCount * 10;
+        }
+
+        return totalTravelMinutes;
     }
 
     /**
@@ -1395,7 +1478,7 @@ class GPSAdminApp {
     /**
      * Switch between views
      */
-    switchView(viewName) {
+    async switchView(viewName) {
         // Update state
         this.state.currentView = viewName;
 
@@ -1412,7 +1495,7 @@ class GPSAdminApp {
         // Render view content
         switch (viewName) {
             case 'dashboard':
-                this.renderDashboard();
+                await this.renderDashboard();
                 break;
             case 'calendar':
                 this.renderCalendar();
@@ -1505,8 +1588,8 @@ class GPSAdminApp {
     /**
      * Render dashboard view
      */
-    renderDashboard() {
-        this.renderQuickStats();
+    async renderDashboard() {
+        await this.renderQuickStats();
         this.renderWeekOverview();
         this.renderWeeklyInsights();
         this.renderRecommendations();
@@ -1515,7 +1598,7 @@ class GPSAdminApp {
     /**
      * Render quick stats cards
      */
-    renderQuickStats() {
+    async renderQuickStats() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayEnd = new Date(today);
@@ -1535,47 +1618,31 @@ class GPSAdminApp {
             return sum + this.calculateEventDurationForDay(event, today);
         }, 0);
 
+        // Calculate travel time
+        const travelMinutes = await this.calculateDailyTravelTime(today);
+
         const hours = Math.floor(totalMinutes / 60);
         const minutes = Math.round(totalMinutes % 60);
 
-        // Calculate estimated travel time between consecutive appointments
-        let travelMinutes = 0;
-        if (workEvents.length > 0) {
-            // Add travel to first appointment from home (15 min)
-            if (workEvents[0].location) {
-                travelMinutes += 15;
-            }
-            
-            // For each consecutive pair of appointments with locations, add 15 min travel
-            for (let i = 0; i < workEvents.length - 1; i++) {
-                const currentEvent = workEvents[i];
-                const nextEvent = workEvents[i + 1];
-                if (currentEvent.location && nextEvent.location && !currentEvent.isAllDay && !nextEvent.isAllDay) {
-                    travelMinutes += 15;
-                }
-            }
-            
-            // Add travel home from last appointment (15 min)
-            if (workEvents[workEvents.length - 1].location) {
-                travelMinutes += 15;
-            }
-        }
-        
         const driveHours = Math.floor(travelMinutes / 60);
-        const driveMinutes = travelMinutes % 60;
+        const driveMinutes = Math.round(travelMinutes % 60);
 
-        // Total time including travel
-        const totalWithTravel = totalMinutes + travelMinutes;
-        const totalHours = Math.floor(totalWithTravel / 60);
-        const totalMins = Math.round(totalWithTravel % 60);
+        // Total workload includes travel time if enabled
+        const totalWorkloadMinutes = this.state.settings.includeTravelTime
+            ? totalMinutes + travelMinutes
+            : totalMinutes;
+
+        // Calculate total hours for display (always includes work + travel for the stat)
+        const totalHours = Math.floor((totalMinutes + travelMinutes) / 60);
+        const totalMins = Math.round((totalMinutes + travelMinutes) % 60);
 
         // Update stats
         document.getElementById('stat-today').textContent = todayEvents.length;
         document.getElementById('stat-hours').textContent = `${totalHours}h ${totalMins}m`;
         document.getElementById('stat-drive').textContent = driveHours > 0 ? `${driveHours}h ${driveMinutes}m` : `${driveMinutes}m`;
 
-        // Workload level based on total time including travel
-        const workloadLevel = this.getWorkloadLevel(totalWithTravel / 60);
+        // Workload level includes travel time
+        const workloadLevel = this.getWorkloadLevel(totalWorkloadMinutes / 60);
         document.getElementById('stat-workload').textContent = this.getWorkloadLabel(workloadLevel);
     }
 
@@ -3055,7 +3122,7 @@ class GPSAdminApp {
     /**
      * Save workload settings
      */
-    saveWorkloadSettings() {
+    async saveWorkloadSettings() {
         // Get daily thresholds
         const dailyComfortable = parseFloat(document.getElementById('threshold-daily-comfortable').value);
         const dailyBusy = parseFloat(document.getElementById('threshold-daily-busy').value);
@@ -3154,8 +3221,8 @@ class GPSAdminApp {
         }
 
         // Re-render views with new thresholds
-        this.renderDashboard();
-        this.updateWorkloadIndicator();
+        await this.renderDashboard();
+        await this.updateWorkloadIndicator();
 
         alert('✅ Workload thresholds saved successfully!\n\nYour dashboard and calendar will now use the new thresholds.');
     }
@@ -3192,7 +3259,7 @@ class GPSAdminApp {
     /**
      * Update workload indicator in header
      */
-    updateWorkloadIndicator() {
+    async updateWorkloadIndicator() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -3217,7 +3284,15 @@ class GPSAdminApp {
             return sum + this.calculateEventDurationForDay(event, today);
         }, 0);
 
-        const hours = totalMinutes / 60;
+        // Calculate travel time
+        const travelMinutes = await this.calculateDailyTravelTime(today);
+
+        // Total workload includes travel time if enabled
+        const totalWorkloadMinutes = this.state.settings.includeTravelTime
+            ? totalMinutes + travelMinutes
+            : totalMinutes;
+
+        const hours = totalWorkloadMinutes / 60;
         const level = this.getWorkloadLevel(hours);
 
         const indicator = document.getElementById('workload-indicator');
@@ -3428,7 +3503,7 @@ class GPSAdminApp {
     /**
      * Handle logout from Google Calendar
      */
-    handleLogout() {
+    async handleLogout() {
         if (!this.state.isAuthenticated) {
             alert('You are not currently connected to Google Calendar.');
             return;
@@ -3466,8 +3541,8 @@ class GPSAdminApp {
             this.initMockData();
 
             // Re-render views
-            this.renderDashboard();
-            this.updateWorkloadIndicator();
+            await this.renderDashboard();
+            await this.updateWorkloadIndicator();
 
             // Update calendar selection in settings
             if (this.state.currentView === 'settings') {
@@ -3485,7 +3560,7 @@ class GPSAdminApp {
     /**
      * Handle clearing calendar data
      */
-    handleClearCalendarData() {
+    async handleClearCalendarData() {
         const confirmed = confirm(
             'Are you sure you want to clear all calendar data?\n\n' +
             'This will:\n' +
@@ -3511,8 +3586,8 @@ class GPSAdminApp {
             this.saveSettings();
 
             // Re-render views
-            this.renderDashboard();
-            this.updateWorkloadIndicator();
+            await this.renderDashboard();
+            await this.updateWorkloadIndicator();
 
             // Update calendar selection in settings
             if (this.state.currentView === 'settings') {

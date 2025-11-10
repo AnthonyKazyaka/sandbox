@@ -1970,11 +1970,33 @@ class GPSAdminApp {
                 return eventEnd > dayStart && eventStart <= dayEnd;
             });
 
-            const totalMinutes = dayEvents.reduce((sum, event) => {
+            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
+
+            const workMinutes = workEvents.reduce((sum, event) => {
                 return sum + this.calculateEventDurationForDay(event, dateKey);
             }, 0);
 
+            // Calculate travel time
+            let travelMinutes = 0;
+            if (workEvents.length > 0) {
+                // Travel to first appointment
+                if (workEvents[0].location) travelMinutes += 15;
+                
+                // Travel between appointments
+                for (let i = 0; i < workEvents.length - 1; i++) {
+                    if (workEvents[i].location && workEvents[i + 1].location) {
+                        travelMinutes += 15;
+                    }
+                }
+                
+                // Travel home
+                if (workEvents[workEvents.length - 1].location) travelMinutes += 15;
+            }
+
+            const totalMinutes = workMinutes + travelMinutes;
             const hours = (totalMinutes / 60).toFixed(1);
+            const workHours = (workMinutes / 60).toFixed(1);
+            const travelHours = (travelMinutes / 60).toFixed(1);
             const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
 
             const isToday = dateKey.getTime() === today.getTime();
@@ -1990,7 +2012,8 @@ class GPSAdminApp {
                     <div class="calendar-day-number">${currentDate.getDate()}</div>
                     ${dayEvents.length > 0 ? `
                         <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
-                        <div class="calendar-day-hours">${hours}h</div>
+                        <div class="calendar-day-hours">${workHours}h work${travelMinutes > 0 ? ` + ${travelHours}h travel` : ''}</div>
+                        <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours}h total</div>
                     ` : ''}
                 </div>
             `;

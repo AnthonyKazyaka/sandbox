@@ -1487,6 +1487,11 @@ class GPSAdminApp {
         document.getElementById('save-appointment')?.addEventListener('click', () => {
             this.saveAppointment();
         });
+
+        // Analytics time range selector
+        document.getElementById('analytics-range')?.addEventListener('change', () => {
+            this.renderAnalytics();
+        });
     }
 
     /**
@@ -1513,6 +1518,9 @@ class GPSAdminApp {
                 break;
             case 'calendar':
                 this.renderCalendar();
+                break;
+            case 'analytics':
+                this.renderAnalytics();
                 break;
             case 'templates':
                 this.renderTemplates();
@@ -3856,5 +3864,409 @@ class GPSAdminApp {
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
+    }
+
+    /**
+     * Render analytics view
+     */
+    renderAnalytics() {
+        const range = document.getElementById('analytics-range')?.value || 'month';
+        const result = this.getDateRange(range);
+        const startDate = result.startDate;
+        const endDate = result.endDate;
+
+        // Filter events within date range
+        const events = this.state.events.filter(event => {
+            if (event.ignored || event.isAllDay) return false;
+            const eventDate = new Date(event.start);
+            return eventDate >= startDate && eventDate <= endDate;
+        });
+
+        if (events.length === 0) {
+            this.renderAnalyticsEmpty();
+            return;
+        }
+
+        // Calculate overview stats
+        this.renderAnalyticsOverview(events, startDate, endDate, range);
+
+        // Render charts
+        this.renderWorkloadTrendChart(events, startDate, endDate, range);
+        this.renderAppointmentTypesChart(events);
+        this.renderBusiestDaysChart(events);
+        this.renderBusiestTimesChart(events);
+        this.renderTemplateUsageChart(events);
+        this.renderWeeklyInsights(events, range);
+    }
+
+    /**
+     * Get date range based on selection
+     */
+    getDateRange(range) {
+        const now = new Date();
+        let startDate, endDate;
+
+        switch (range) {
+            case 'week':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                startDate.setHours(0, 0, 0, 0);
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6); // End of week (Saturday)
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            case 'quarter':
+                const quarter = Math.floor(now.getMonth() / 3);
+                startDate = new Date(now.getFullYear(), quarter * 3, 1);
+                endDate = new Date(now.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+                break;
+            case 'year':
+                startDate = new Date(now.getFullYear(), 0, 1);
+                endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                break;
+            default:
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        }
+
+        return { startDate, endDate };
+    }
+
+    /**
+     * Render analytics overview cards
+     */
+    renderAnalyticsOverview(events, startDate, endDate, range) {
+        // Total appointments
+        document.getElementById('analytics-total-appointments').textContent = events.length;
+
+        // Total hours
+        const totalMinutes = events.reduce((sum, event) => {
+            return sum + ((event.end - event.start) / (1000 * 60));
+        }, 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = Math.round(totalMinutes % 60);
+        document.getElementById('analytics-total-hours').textContent = hours + 'h ' + minutes + 'm';
+
+        // Average daily workload
+        const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        const avgDaily = totalMinutes / days / 60;
+        document.getElementById('analytics-avg-daily').textContent = avgDaily.toFixed(1) + 'h';
+
+        // Busiest day
+        const dayWorkload = {};
+        events.forEach(event => {
+            const dayKey = new Date(event.start).toDateString();
+            dayWorkload[dayKey] = (dayWorkload[dayKey] || 0) + ((event.end - event.start) / (1000 * 60 * 60));
+        });
+
+        const busiestDay = Object.entries(dayWorkload).reduce((max, entry) => {
+            const day = entry[0];
+            const hours = entry[1];
+            return hours > max.hours ? { day, hours } : max;
+        }, { day: 'N/A', hours: 0 });
+
+        const busiestDate = busiestDay.day !== 'N/A' ? new Date(busiestDay.day) : null;
+        const busiestDayText = busiestDate
+            ? busiestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' (' + busiestDay.hours.toFixed(1) + 'h)'
+            : 'N/A';
+        document.getElementById('analytics-busiest-day').textContent = busiestDayText;
+    }
+
+    /**
+     * Render empty state
+     */
+    renderAnalyticsEmpty() {
+        const content = document.getElementById('analytics-content');
+        content.innerHTML = '<div class="analytics-empty"><div class="analytics-empty-icon">📊</div><h3>No Data Available</h3><p>No appointments found for the selected time period.</p></div>';
+    }
+
+    /**
+     * Render workload trend chart
+     */
+    renderWorkloadTrendChart(events, startDate, endDate, range) {
+        const container = document.getElementById('workload-trend-chart');
+        if (!container) return;
+
+        // Group by day or week depending on range
+        const groupByDay = range === 'week' || range === 'month';
+        const dataPoints = [];
+
+        if (groupByDay) {
+            // Daily grouping
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const dayKey = currentDate.toDateString();
+                const dayEvents = events.filter(e => new Date(e.start).toDateString() === dayKey);
+                const hours = dayEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60 * 60)), 0);
+
+                dataPoints.push({
+                    label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    value: hours,
+                    shortLabel: currentDate.getDate().toString()
+                });
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        } else {
+            // Weekly grouping for quarter/year
+            let weekStart = new Date(startDate);
+            let weekNum = 1;
+            while (weekStart <= endDate) {
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+
+                const weekEvents = events.filter(e => {
+                    const eventDate = new Date(e.start);
+                    return eventDate >= weekStart && eventDate <= weekEnd;
+                });
+
+                const hours = weekEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60 * 60)), 0);
+
+                dataPoints.push({
+                    label: 'Week ' + weekNum,
+                    value: hours,
+                    shortLabel: 'W' + weekNum
+                });
+
+                weekStart.setDate(weekStart.getDate() + 7);
+                weekNum++;
+            }
+        }
+
+        // Render bar chart
+        this.renderBarChart(container, dataPoints);
+    }
+
+    /**
+     * Render appointment types chart
+     */
+    renderAppointmentTypesChart(events) {
+        const container = document.getElementById('appointment-types-chart');
+        if (!container) return;
+
+        // Count by type
+        const typeCounts = {};
+        events.forEach(event => {
+            const type = event.type || 'Other';
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
+
+        // Convert to array and sort
+        const data = Object.entries(typeCounts).map(entry => {
+            const type = entry[0];
+            const count = entry[1];
+            return {
+                label: type.charAt(0).toUpperCase() + type.slice(1),
+                value: count,
+                percentage: (count / events.length * 100).toFixed(1)
+            };
+        }).sort((a, b) => b.value - a.value);
+
+        this.renderDonutChart(container, data);
+    }
+
+    /**
+     * Render busiest days chart
+     */
+    renderBusiestDaysChart(events) {
+        const container = document.getElementById('busiest-days-chart');
+        if (!container) return;
+
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayCounts = new Array(7).fill(0);
+
+        events.forEach(event => {
+            const day = new Date(event.start).getDay();
+            dayCounts[day]++;
+        });
+
+        const data = dayNames.map((name, idx) => ({
+            label: name,
+            value: dayCounts[idx],
+            shortLabel: name
+        }));
+
+        this.renderBarChart(container, data);
+    }
+
+    /**
+     * Render busiest times chart
+     */
+    renderBusiestTimesChart(events) {
+        const container = document.getElementById('busiest-times-chart');
+        if (!container) return;
+
+        const timeSlots = {
+            'Morning': [6, 9],
+            'Mid-Morning': [9, 12],
+            'Afternoon': [12, 15],
+            'Late Aft': [15, 18],
+            'Evening': [18, 21]
+        };
+
+        const data = Object.entries(timeSlots).map(entry => {
+            const label = entry[0];
+            const times = entry[1];
+            const start = times[0];
+            const end = times[1];
+            const count = events.filter(event => {
+                const hour = new Date(event.start).getHours();
+                return hour >= start && hour < end;
+            }).length;
+
+            return {
+                label,
+                value: count,
+                shortLabel: label.substring(0, 3)
+            };
+        });
+
+        this.renderBarChart(container, data);
+    }
+
+    /**
+     * Render template usage chart
+     */
+    renderTemplateUsageChart(events) {
+        const container = document.getElementById('template-usage-chart');
+        if (!container || !this.templatesManager) return;
+
+        // Count template usage
+        const templateCounts = {};
+        events.forEach(event => {
+            if (event.templateId) {
+                const template = this.templatesManager.getTemplateById(event.templateId);
+                if (template) {
+                    const key = template.name;
+                    templateCounts[key] = (templateCounts[key] || 0) + 1;
+                }
+            }
+        });
+
+        if (Object.keys(templateCounts).length === 0) {
+            container.innerHTML = '<p class="text-muted" style="text-align: center; padding: 48px;">No template usage data</p>';
+            return;
+        }
+
+        // Convert to sorted array
+        const data = Object.entries(templateCounts)
+            .map(entry => {
+                const name = entry[0];
+                const count = entry[1];
+                return {
+                    label: name,
+                    value: count,
+                    percentage: (count / events.length * 100).toFixed(1)
+                };
+            })
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5); // Top 5
+
+        this.renderDonutChart(container, data);
+    }
+
+    /**
+     * Render weekly insights
+     */
+    renderWeeklyInsights(events, range) {
+        const container = document.getElementById('weekly-insights');
+        if (!container) return;
+
+        const insights = [];
+
+        // Total workload insight
+        const totalHours = events.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60 * 60)), 0);
+        const avgPerDay = totalHours / (range === 'week' ? 7 : 30);
+
+        if (avgPerDay > 8) {
+            insights.push({
+                icon: '⚠️',
+                title: 'High Workload Alert',
+                description: 'You are averaging ' + avgPerDay.toFixed(1) + ' hours per day. Consider reducing your schedule.'
+            });
+        } else if (avgPerDay < 4) {
+            insights.push({
+                icon: '📈',
+                title: 'Capacity Available',
+                description: 'You are averaging ' + avgPerDay.toFixed(1) + ' hours per day. You have room for more appointments.'
+            });
+        }
+
+        // Busiest day insight
+        const dayWorkload = {};
+        events.forEach(event => {
+            const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
+            dayWorkload[day] = (dayWorkload[day] || 0) + 1;
+        });
+
+        const busiestDay = Object.entries(dayWorkload).reduce((max, entry) => {
+            const day = entry[0];
+            const count = entry[1];
+            return count > max.count ? { day, count } : max;
+        }, { day: '', count: 0 });
+
+        if (busiestDay.count > 0) {
+            insights.push({
+                icon: '📅',
+                title: busiestDay.day + 's are your busiest',
+                description: 'You have ' + busiestDay.count + ' appointments on average. Plan accordingly!'
+            });
+        }
+
+        // Template insight
+        if (this.templatesManager) {
+            const templateEvents = events.filter(e => e.templateId).length;
+            const percentage = (templateEvents / events.length * 100).toFixed(0);
+
+            if (percentage < 50) {
+                insights.push({
+                    icon: '⭐',
+                    title: 'Use Templates More',
+                    description: 'Only ' + percentage + '% of appointments use templates. Templates save time and ensure consistency!'
+                });
+            }
+        }
+
+        // Render insights
+        if (insights.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="text-align: center; padding: 24px;">No insights available</p>';
+        } else {
+            container.innerHTML = insights.map(insight => '<div class="insight-item"><div class="insight-icon">' + insight.icon + '</div><div class="insight-content"><div class="insight-title">' + insight.title + '</div><div class="insight-description">' + insight.description + '</div></div></div>').join('');
+        }
+    }
+
+    /**
+     * Render bar chart
+     */
+    renderBarChart(container, data) {
+        const maxValue = Math.max(...data.map(d => d.value), 1);
+
+        const html = '<div class="bar-chart">' + data.map(item => '<div class="bar-chart-item"><div class="bar" style="height: ' + (item.value / maxValue * 100) + '%;" title="' + item.label + ': ' + item.value + '"><div class="bar-value">' + item.value + '</div></div><div class="bar-label">' + (item.shortLabel || item.label) + '</div></div>').join('') + '</div>';
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Render donut chart
+     */
+    renderDonutChart(container, data) {
+        const colors = [
+            '#3b82f6', // blue
+            '#10b981', // green
+            '#f59e0b', // amber
+            '#ef4444', // red
+            '#8b5cf6', // purple
+            '#06b6d4', // cyan
+            '#f97316', // orange
+            '#ec4899'  // pink
+        ];
+
+        const html = '<div class="donut-legend">' + data.map((item, idx) => '<div class="donut-legend-item"><div class="donut-legend-color" style="background: ' + colors[idx % colors.length] + '"></div><div class="donut-legend-label">' + item.label + '</div><div class="donut-legend-value">' + item.value + ' (' + item.percentage + '%)</div></div>').join('') + '</div>';
+
+        container.innerHTML = html;
     }
 }

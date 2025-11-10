@@ -283,7 +283,64 @@
                 </div>
 
                 <div id="analytics-content">
-                    <p class="text-muted">Analytics features coming in Phase 4...</p>
+                    <!-- Overview Cards -->
+                    <div class="analytics-overview">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Appointments</div>
+                            <div class="stat-value" id="analytics-total-appointments">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Hours</div>
+                            <div class="stat-value" id="analytics-total-hours">0h</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg Daily Workload</div>
+                            <div class="stat-value" id="analytics-avg-daily">0h</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Busiest Day</div>
+                            <div class="stat-value" id="analytics-busiest-day">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="analytics-grid">
+                        <!-- Workload Trend -->
+                        <div class="analytics-card">
+                            <h3>Workload Trend</h3>
+                            <div id="workload-trend-chart" class="chart-container"></div>
+                        </div>
+
+                        <!-- Appointment Types -->
+                        <div class="analytics-card">
+                            <h3>Appointment Types</h3>
+                            <div id="appointment-types-chart" class="chart-container"></div>
+                        </div>
+
+                        <!-- Busiest Days -->
+                        <div class="analytics-card">
+                            <h3>Busiest Days of Week</h3>
+                            <div id="busiest-days-chart" class="chart-container"></div>
+                        </div>
+
+                        <!-- Busiest Times -->
+                        <div class="analytics-card">
+                            <h3>Busiest Times of Day</h3>
+                            <div id="busiest-times-chart" class="chart-container"></div>
+                        </div>
+
+                        <!-- Template Usage -->
+                        <div class="analytics-card">
+                            <h3>Template Usage</h3>
+                            <div id="template-usage-chart" class="chart-container"></div>
+                        </div>
+
+                        <!-- Weekly Insights -->
+                        <div class="analytics-card">
+                            <h3>Weekly Insights</h3>
+                            <div id="weekly-insights" class="insights-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

@@ -27,14 +27,19 @@
     --gray-900: #111827;
 
     /* Semantic Colors */
+    --success-50: #ECFDF5;
     --success-500: #10B981;
     --success-600: #059669;
+    --warning-50: #FFFBEB;
     --warning-500: #F59E0B;
     --warning-600: #D97706;
+    --danger-50: #FEF2F2;
     --danger-500: #EF4444;
     --danger-600: #DC2626;
+    --info-50: #EFF6FF;
     --info-500: #3B82F6;
     --info-600: #2563EB;
+    --info-700: #1D4ED8;
 
     /* Workload Colors */
     --workload-comfortable: #10B981;
@@ -395,6 +400,48 @@ body {
     font-size: 1.875rem;
     font-weight: 700;
     color: var(--gray-900);
+}
+
+/* Weekly Insights */
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+}
+
+.insight-card {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    text-align: center;
+    transition: background var(--transition-base);
+}
+
+.insight-card:hover {
+    background: var(--gray-100);
+}
+
+.insight-card-wide {
+    grid-column: span 2;
+}
+
+.insight-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+}
+
+.insight-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-xs);
+}
+
+.insight-sublabel {
+    font-size: 0.75rem;
+    color: var(--gray-500);
 }
 
 /* Section */
@@ -908,6 +955,14 @@ label {
 
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .insight-card-wide {
+        grid-column: span 1;
     }
 
     .week-overview {

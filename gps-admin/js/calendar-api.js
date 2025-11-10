@@ -1,6 +1,7 @@
 /**
  * Google Calendar API Integration
  * Handles authentication and calendar data synchronization
+ * Version: 2.0 - Fixed GIS initialization race condition
  */
 
 class CalendarAPI {
@@ -10,6 +11,8 @@ class CalendarAPI {
         this.tokenClient = null;
         this.gapiInited = false;
         this.gisInited = false;
+        this.version = '2.0';
+        console.log(`📦 CalendarAPI v${this.version} constructed`);
     }
 
     /**
@@ -17,19 +20,24 @@ class CalendarAPI {
      */
     async init() {
         try {
+            console.log('📦 Loading Google API libraries...');
+            
             // Load Google API libraries
             await this.loadGoogleAPIs();
+            console.log('✅ Google API scripts loaded');
 
             // Initialize GAPI client
             await this.initializeGapiClient();
+            console.log('✅ GAPI client initialized');
 
             // Initialize Google Identity Services
             await this.initializeGIS();
+            console.log('✅ Google Identity Services initialized');
 
-            console.log('✅ Calendar API initialized');
+            console.log('✅ Calendar API fully initialized');
             return true;
         } catch (error) {
-            console.error('Error initializing Calendar API:', error);
+            console.error('❌ Error initializing Calendar API:', error);
             return false;
         }
     }
@@ -79,21 +87,43 @@ class CalendarAPI {
      * Initialize Google Identity Services
      */
     initializeGIS() {
-        return new Promise((resolve) => {
-            this.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: this.clientId,
-                scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-                callback: (response) => {
-                    if (response.error !== undefined) {
-                        throw response;
-                    }
-                    this.accessToken = response.access_token;
-                    console.log('✅ Authenticated with Google Calendar');
-                },
-            });
+        return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max (50 * 100ms)
+            
+            // Wait for google.accounts to be available
+            const checkGIS = () => {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+                    try {
+                        this.tokenClient = google.accounts.oauth2.initTokenClient({
+                            client_id: this.clientId,
+                            scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+                            callback: (response) => {
+                                if (response.error !== undefined) {
+                                    throw response;
+                                }
+                                this.accessToken = response.access_token;
+                                console.log('✅ Authenticated with Google Calendar');
+                            },
+                        });
 
-            this.gisInited = true;
-            resolve();
+                        this.gisInited = true;
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                } else {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        reject(new Error('Timeout waiting for Google Identity Services to load'));
+                        return;
+                    }
+                    // Check again in 100ms
+                    setTimeout(checkGIS, 100);
+                }
+            };
+            
+            checkGIS();
         });
     }
 
@@ -101,25 +131,48 @@ class CalendarAPI {
      * Authenticate user with Google
      */
     async authenticate() {
+        console.log('🔐 Starting OAuth authentication...');
+        console.log(`   Version: ${this.version}`);
+        console.log(`   gapiInited: ${this.gapiInited}`);
+        console.log(`   gisInited: ${this.gisInited}`);
+        console.log(`   tokenClient: ${this.tokenClient ? 'initialized' : 'NULL'}`);
+        
         return new Promise((resolve, reject) => {
+            if (!this.gapiInited) {
+                console.error('❌ GAPI client not initialized');
+                reject(new Error('GAPI client not initialized'));
+                return;
+            }
+            
+            if (!this.gisInited) {
+                console.error('❌ Google Identity Services not initialized');
+                reject(new Error('Google Identity Services not initialized'));
+                return;
+            }
+            
             if (!this.tokenClient) {
+                console.error('❌ Token client not initialized');
                 reject(new Error('Token client not initialized'));
                 return;
             }
 
             this.tokenClient.callback = (response) => {
                 if (response.error !== undefined) {
+                    console.error('❌ OAuth error:', response);
                     reject(response);
                     return;
                 }
                 this.accessToken = response.access_token;
+                console.log('✅ OAuth authentication successful');
                 resolve(response);
             };
 
             // Check if we have a valid token
             if (this.accessToken && gapi.client.getToken()) {
+                console.log('✅ Using existing valid token');
                 resolve({ access_token: this.accessToken });
             } else {
+                console.log('🔑 Requesting new access token...');
                 this.tokenClient.requestAccessToken({ prompt: 'consent' });
             }
         });

@@ -9,7 +9,59 @@ class MapsAPI {
         this.service = null;
         this.geocoder = null;
         this.isLoaded = false;
-        this.cache = new Map(); // Cache for distance/duration results
+        this.cache = this.loadCache(); // Load cache from localStorage
+        this.cacheKey = 'gps-admin-maps-cache';
+        this.cacheExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    }
+
+    /**
+     * Load cache from localStorage
+     */
+    loadCache() {
+        try {
+            const cached = localStorage.getItem('gps-admin-maps-cache');
+            if (cached) {
+                const data = JSON.parse(cached);
+                // Convert plain object back to Map
+                return new Map(Object.entries(data));
+            }
+        } catch (error) {
+            console.warn('Failed to load Maps API cache:', error);
+        }
+        return new Map();
+    }
+
+    /**
+     * Save cache to localStorage
+     */
+    saveCache() {
+        try {
+            // Convert Map to plain object for JSON serialization
+            const cacheObj = Object.fromEntries(this.cache);
+            localStorage.setItem(this.cacheKey, JSON.stringify(cacheObj));
+        } catch (error) {
+            console.warn('Failed to save Maps API cache:', error);
+        }
+    }
+
+    /**
+     * Clear old cache entries
+     */
+    cleanCache() {
+        const now = Date.now();
+        let cleaned = false;
+        
+        for (const [key, value] of this.cache.entries()) {
+            if (now - value.timestamp > this.cacheExpiry) {
+                this.cache.delete(key);
+                cleaned = true;
+            }
+        }
+        
+        if (cleaned) {
+            this.saveCache();
+            console.log('🧹 Cleaned expired Maps API cache entries');
+        }
     }
 
     /**
@@ -21,6 +73,10 @@ class MapsAPI {
             this.service = new google.maps.DistanceMatrixService();
             this.geocoder = new google.maps.Geocoder();
             this.isLoaded = true;
+            
+            // Clean old cache entries on init
+            this.cleanCache();
+            
             console.log('✅ Maps API initialized');
             return true;
         } catch (error) {
@@ -62,12 +118,19 @@ class MapsAPI {
             throw new Error('Maps API not initialized');
         }
 
-        // Check cache
-        const cacheKey = `${origin}|${destination}`;
+        // Normalize locations for consistent caching
+        const normalizedOrigin = origin.trim().toLowerCase();
+        const normalizedDestination = destination.trim().toLowerCase();
+        
+        // Check cache (use 1 hour for time-sensitive traffic data)
+        const cacheKey = `${normalizedOrigin}|${normalizedDestination}`;
         if (this.cache.has(cacheKey)) {
             const cached = this.cache.get(cacheKey);
-            // Cache valid for 1 hour
-            if (Date.now() - cached.timestamp < 3600000) {
+            const cacheAge = Date.now() - cached.timestamp;
+            
+            // Use cached data if less than 1 hour old
+            if (cacheAge < 3600000) {
+                console.log(`📦 Using cached travel time (${Math.round(cacheAge / 60000)} min old)`);
                 return cached.data;
             }
         }
@@ -124,11 +187,14 @@ class MapsAPI {
                 destination: destination,
             };
 
-            // Cache result
+            // Cache result in memory and localStorage
             this.cache.set(cacheKey, {
                 data: data,
                 timestamp: Date.now(),
             });
+            this.saveCache();
+
+            console.log(`✅ Calculated travel time: ${data.duration.text} (${data.distance.miles} mi)`);
 
             return data;
         } catch (error) {
@@ -369,19 +435,33 @@ class MapsAPI {
     }
 
     /**
-     * Clear cache
+     * Clear all cached data
      */
     clearCache() {
         this.cache.clear();
+        localStorage.removeItem(this.cacheKey);
+        console.log('🧹 Maps API cache cleared');
     }
 
     /**
      * Get cache statistics
      */
     getCacheStats() {
+        const now = Date.now();
+        let totalEntries = 0;
+        let expiredEntries = 0;
+        
+        for (const [key, value] of this.cache.entries()) {
+            totalEntries++;
+            if (now - value.timestamp > this.cacheExpiry) {
+                expiredEntries++;
+            }
+        }
+        
         return {
-            size: this.cache.size,
-            entries: Array.from(this.cache.keys()),
+            totalEntries,
+            expiredEntries,
+            activeEntries: totalEntries - expiredEntries,
         };
     }
 }

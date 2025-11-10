@@ -46,6 +46,11 @@ class GPSAdminApp {
             }
         };
 
+        // Initialize TemplatesManager
+        if (window.TemplatesManager) {
+            this.templatesManager = new TemplatesManager();
+        }
+
         this.initMockData();
         this.loadSettings();
     }
@@ -1473,6 +1478,15 @@ class GPSAdminApp {
         document.getElementById('save-template')?.addEventListener('click', () => {
             this.saveTemplate();
         });
+
+        // Appointment form handlers
+        document.getElementById('appointment-template')?.addEventListener('change', (e) => {
+            this.handleTemplateSelection(e.target.value);
+        });
+
+        document.getElementById('save-appointment')?.addEventListener('click', () => {
+            this.saveAppointment();
+        });
     }
 
     /**
@@ -2698,23 +2712,40 @@ class GPSAdminApp {
     /**
      * Render templates view
      */
+    /**
+     * Render templates view
+     */
     renderTemplates() {
         const container = document.getElementById('templates-list');
-        if (!container) return;
+        if (!container || !this.templatesManager) return;
+
+        const templates = this.templatesManager.getAllTemplates();
+
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+                    <p>No templates yet.</p>
+                    <p>Click "Create Template" to get started!</p>
+                </div>
+            `;
+            return;
+        }
 
         let html = '';
 
-        this.state.templates.forEach(template => {
+        templates.forEach(template => {
             const hours = Math.floor(template.duration / 60);
             const minutes = template.duration % 60;
             const durationText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+            const canDelete = !template.isDefault;
 
             html += `
                 <div class="template-card" data-template-id="${template.id}">
                     <div class="template-header">
                         <div class="template-icon">${template.icon}</div>
                         <div class="template-info">
-                            <div class="template-name">${template.name}</div>
+                            <div class="template-name">${template.name}${template.isDefault ? ' <span style="font-size: 10px; color: var(--text-muted);">(Default)</span>' : ''}</div>
                             <div class="template-duration">${durationText}</div>
                         </div>
                     </div>
@@ -2731,7 +2762,7 @@ class GPSAdminApp {
                     <div class="template-actions">
                         <button class="btn btn-primary btn-sm" onclick="window.gpsApp.useTemplate('${template.id}')">Use Template</button>
                         <button class="btn btn-secondary btn-sm" onclick="window.gpsApp.showTemplateModal('${template.id}')">Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick="window.gpsApp.deleteTemplate('${template.id}')" style="margin-left: auto;">Delete</button>
+                        ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="window.gpsApp.deleteTemplate('${template.id}')" style="margin-left: auto;">Delete</button>` : ''}
                     </div>
                 </div>
             `;
@@ -2744,18 +2775,26 @@ class GPSAdminApp {
      * Show template modal for creating/editing
      */
     showTemplateModal(templateId = null) {
+        if (!this.templatesManager) return;
+
         const modal = document.getElementById('template-modal');
         const title = document.getElementById('template-modal-title');
         const form = document.getElementById('template-form');
-        
+
         // Reset form
         form.reset();
-        
+
         if (templateId) {
             // Edit mode
-            const template = this.state.templates.find(t => t.id === templateId);
+            const template = this.templatesManager.getTemplateById(templateId);
             if (!template) return;
-            
+
+            // Don't allow editing default templates
+            if (template.isDefault) {
+                this.showToast('Default templates cannot be edited. Use "Duplicate" to create a customized version.', 'info');
+                return;
+            }
+
             title.textContent = 'Edit Template';
             document.getElementById('template-name').value = template.name;
             document.getElementById('template-icon').value = template.icon;
@@ -2763,7 +2802,7 @@ class GPSAdminApp {
             document.getElementById('template-hours').value = Math.floor(template.duration / 60);
             document.getElementById('template-minutes').value = template.duration % 60;
             document.getElementById('template-include-travel').checked = template.includeTravel;
-            
+
             // Store template ID for editing
             modal.dataset.editingId = templateId;
         } else {
@@ -2774,7 +2813,7 @@ class GPSAdminApp {
             document.getElementById('template-include-travel').checked = true;
             delete modal.dataset.editingId;
         }
-        
+
         modal.classList.add('active');
     }
 
@@ -2782,9 +2821,11 @@ class GPSAdminApp {
      * Save template (create or update)
      */
     saveTemplate() {
+        if (!this.templatesManager) return;
+
         const modal = document.getElementById('template-modal');
         const editingId = modal.dataset.editingId;
-        
+
         // Get form values
         const name = document.getElementById('template-name').value.trim();
         const icon = document.getElementById('template-icon').value.trim();
@@ -2792,76 +2833,91 @@ class GPSAdminApp {
         const hours = parseInt(document.getElementById('template-hours').value) || 0;
         const minutes = parseInt(document.getElementById('template-minutes').value) || 0;
         const includeTravel = document.getElementById('template-include-travel').checked;
-        
-        // Validate
-        if (!name) {
-            alert('Please enter a template name');
-            return;
-        }
-        
+
         const duration = (hours * 60) + minutes;
-        if (duration <= 0) {
-            alert('Duration must be greater than 0');
+
+        // Validate using TemplatesManager
+        const validation = this.templatesManager.validateTemplate({
+            name,
+            duration,
+            travelBuffer: 0
+        });
+
+        if (!validation.valid) {
+            alert(validation.errors.join('\n'));
             return;
         }
-        
-        if (editingId) {
-            // Update existing template
-            const template = this.state.templates.find(t => t.id === editingId);
-            if (template) {
-                template.name = name;
-                template.icon = icon || '📋';
-                template.type = type;
-                template.duration = duration;
-                template.includeTravel = includeTravel;
+
+        try {
+            if (editingId) {
+                // Update existing template
+                this.templatesManager.updateTemplate(editingId, {
+                    name,
+                    icon: icon || '📋',
+                    type,
+                    duration,
+                    includeTravel
+                });
+                this.showToast('Template updated!', 'success');
+            } else {
+                // Create new template
+                this.templatesManager.createTemplate({
+                    name,
+                    icon: icon || '📋',
+                    type,
+                    duration,
+                    includeTravel
+                });
+                this.showToast('Template created!', 'success');
             }
-        } else {
-            // Create new template
-            const newTemplate = {
-                id: Date.now().toString(),
-                name,
-                icon: icon || '📋',
-                type,
-                duration,
-                includeTravel
-            };
-            this.state.templates.push(newTemplate);
+
+            // Close modal and re-render
+            modal.classList.remove('active');
+            this.renderTemplates();
+
+        } catch (error) {
+            console.error('Error saving template:', error);
+            this.showToast(error.message, 'error');
         }
-        
-        // Save to localStorage via saveSettings
-        this.saveSettings();
-        
-        // Close modal and re-render
-        modal.classList.remove('active');
-        this.renderTemplates();
-        
-        this.showToast(editingId ? 'Template updated!' : 'Template created!', 'success');
     }
 
     /**
      * Delete template
      */
     deleteTemplate(templateId) {
+        if (!this.templatesManager) return;
+
         if (!confirm('Are you sure you want to delete this template?')) {
             return;
         }
-        
-        this.state.templates = this.state.templates.filter(t => t.id !== templateId);
-        this.saveSettings();
-        this.renderTemplates();
-        this.showToast('Template deleted', 'success');
+
+        try {
+            this.templatesManager.deleteTemplate(templateId);
+            this.renderTemplates();
+            this.showToast('Template deleted', 'success');
+        } catch (error) {
+            console.error('Error deleting template:', error);
+            this.showToast(error.message, 'error');
+        }
     }
 
     /**
      * Use template to create appointment
      */
+    /**
+     * Use template to create appointment
+     */
     useTemplate(templateId) {
-        const template = this.state.templates.find(t => t.id === templateId);
-        if (!template) return;
-        
-        // For now, just show a toast
-        // In a full implementation, this would open the appointment modal pre-filled
-        this.showToast(`Template "${template.name}" ready to use. Full appointment creation coming soon!`, 'info');
+        if (!this.templatesManager) return;
+
+        const template = this.templatesManager.getTemplateById(templateId);
+        if (!template) {
+            this.showToast('Template not found', 'error');
+            return;
+        }
+
+        // Open appointment modal with template pre-selected
+        this.showAppointmentModal(templateId);
     }
 
     /**
@@ -3436,9 +3492,186 @@ class GPSAdminApp {
     /**
      * Show appointment modal
      */
-    showAppointmentModal() {
+    /**
+     * Show appointment modal
+     * @param {string} templateId - Optional template ID to pre-fill form
+     * @param {Date} date - Optional date to pre-fill
+     */
+    showAppointmentModal(templateId = null, date = null) {
         const modal = document.getElementById('appointment-modal');
+
+        // Populate template dropdown
+        this.populateTemplateDropdown();
+
+        // Reset form
+        document.getElementById('appointment-form')?.reset();
+
+        // Set default date and time
+        const defaultDate = date || new Date();
+        document.getElementById('appointment-date').value = defaultDate.toISOString().split('T')[0];
+        document.getElementById('appointment-time').value = '09:00';
+
+        // If template ID provided, select it and auto-fill
+        if (templateId) {
+            document.getElementById('appointment-template').value = templateId;
+            this.handleTemplateSelection(templateId);
+        }
+
         modal?.classList.add('active');
+    }
+
+    /**
+     * Populate template dropdown in appointment modal
+     */
+    populateTemplateDropdown() {
+        const select = document.getElementById('appointment-template');
+        if (!select || !this.templatesManager) return;
+
+        // Clear existing options except the first one
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        // Add templates grouped by type
+        const templates = this.templatesManager.getAllTemplates();
+        const templatesByType = {};
+
+        templates.forEach(template => {
+            if (!templatesByType[template.type]) {
+                templatesByType[template.type] = [];
+            }
+            templatesByType[template.type].push(template);
+        });
+
+        // Add options by type
+        Object.keys(templatesByType).forEach(type => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = type.charAt(0).toUpperCase() + type.slice(1);
+
+            templatesByType[type].forEach(template => {
+                const option = document.createElement('option');
+                option.value = template.id;
+                option.textContent = `${template.icon} ${template.name}`;
+                optgroup.appendChild(option);
+            });
+
+            select.appendChild(optgroup);
+        });
+    }
+
+    /**
+     * Handle template selection to auto-fill appointment form
+     */
+    handleTemplateSelection(templateId) {
+        if (!templateId || !this.templatesManager) {
+            return;
+        }
+
+        const template = this.templatesManager.getTemplateById(templateId);
+        if (!template) return;
+
+        // Auto-fill form fields
+        const titleInput = document.getElementById('appointment-title');
+        if (!titleInput.value) { // Only set if empty
+            titleInput.value = template.name;
+        }
+
+        // Set duration
+        const durationSelect = document.getElementById('appointment-duration');
+        const durationValue = template.duration.toString();
+        const matchingOption = Array.from(durationSelect.options).find(opt => opt.value === durationValue);
+
+        if (matchingOption) {
+            durationSelect.value = durationValue;
+        } else {
+            // Set to custom if duration not in dropdown
+            durationSelect.value = 'custom';
+        }
+
+        // Set travel time checkbox
+        document.getElementById('appointment-travel').checked = template.includeTravel;
+
+        // Set notes if not already filled
+        const notesInput = document.getElementById('appointment-notes');
+        if (!notesInput.value && template.defaultNotes) {
+            notesInput.value = template.defaultNotes;
+        }
+    }
+
+    /**
+     * Save appointment from modal form
+     */
+    async saveAppointment() {
+        const form = document.getElementById('appointment-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Get form values
+        const title = document.getElementById('appointment-title').value.trim();
+        const dateStr = document.getElementById('appointment-date').value;
+        const timeStr = document.getElementById('appointment-time').value;
+        const duration = parseInt(document.getElementById('appointment-duration').value);
+        const location = document.getElementById('appointment-location').value.trim();
+        const includeTravel = document.getElementById('appointment-travel').checked;
+        const notes = document.getElementById('appointment-notes').value.trim();
+        const templateId = document.getElementById('appointment-template').value;
+
+        if (!title || !dateStr || !timeStr) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Parse date and time
+        const start = new Date(dateStr + ' ' + timeStr);
+        const end = new Date(start);
+        end.setMinutes(end.getMinutes() + duration);
+
+        // Create event object
+        const newEvent = {
+            id: `local_${Date.now()}`,
+            title: title,
+            start: start,
+            end: end,
+            location: location,
+            notes: notes,
+            templateId: templateId || null,
+            includeTravel: includeTravel,
+            isLocal: true, // Mark as locally created (not from Google Calendar)
+            ignored: false
+        };
+
+        // If template was used, get additional info
+        if (templateId && this.templatesManager) {
+            const template = this.templatesManager.getTemplateById(templateId);
+            if (template) {
+                newEvent.type = template.type;
+                newEvent.color = template.color;
+            }
+        }
+
+        // Add to events
+        this.state.events.push(newEvent);
+
+        // Save to localStorage
+        this.saveSettings();
+
+        // Close modal
+        document.getElementById('appointment-modal').classList.remove('active');
+
+        // Re-render current view
+        switch (this.state.currentView) {
+            case 'dashboard':
+                await this.renderDashboard();
+                await this.updateWorkloadIndicator();
+                break;
+            case 'calendar':
+                this.renderCalendar();
+                break;
+        }
+
+        this.showToast(`✅ Appointment "${title}" created!`, 'success');
     }
 
     /**

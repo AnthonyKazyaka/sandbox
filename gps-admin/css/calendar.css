@@ -58,13 +58,17 @@
 
 .calendar-day {
     position: relative;
-    aspect-ratio: 1;
+    min-height: 100px;
+    max-height: 140px;
     border: 2px solid var(--gray-200);
     border-radius: var(--radius-md);
     padding: var(--spacing-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
     background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .calendar-day:hover {
@@ -108,19 +112,23 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--gray-900);
-    margin-bottom: var(--spacing-xs);
 }
 
 .calendar-day-events {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--gray-600);
-    margin-bottom: var(--spacing-xs);
 }
 
 .calendar-day-hours {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.calendar-day-total {
     font-size: 0.75rem;
     font-weight: 600;
-    margin-top: auto;
+    margin-top: 2px;
 }
 
 .calendar-day.comfortable .calendar-day-hours {
@@ -642,6 +650,8 @@
 
     .calendar-day {
         padding: var(--spacing-xs);
+        min-height: 80px;
+        max-height: 110px;
     }
 
     .calendar-day-number {
@@ -650,6 +660,10 @@
 
     .calendar-day-events,
     .calendar-day-hours {
+        font-size: 0.625rem;
+    }
+    
+    .calendar-day-total {
         font-size: 0.6875rem;
     }
 

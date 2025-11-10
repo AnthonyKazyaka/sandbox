@@ -1232,6 +1232,11 @@ class GPSAdminApp {
                     this.state.availableCalendars = settings.availableCalendars;
                 }
 
+                // Load templates
+                if (settings.templates) {
+                    this.state.templates = settings.templates;
+                }
+
                 console.log('✅ Loaded settings from localStorage');
             } catch (e) {
                 console.error('Error loading settings:', e);
@@ -1247,7 +1252,8 @@ class GPSAdminApp {
             ...this.state.settings,
             selectedCalendars: this.state.selectedCalendars,
             isAuthenticated: this.state.isAuthenticated,
-            availableCalendars: this.state.availableCalendars
+            availableCalendars: this.state.availableCalendars,
+            templates: this.state.templates
         };
         localStorage.setItem('gps-admin-settings', JSON.stringify(settingsToSave));
     }
@@ -1374,6 +1380,15 @@ class GPSAdminApp {
         // View in List button in day details modal
         document.getElementById('view-in-list-btn')?.addEventListener('click', () => {
             this.viewDateInList();
+        });
+
+        // Template management
+        document.getElementById('new-template-btn')?.addEventListener('click', () => {
+            this.showTemplateModal();
+        });
+
+        document.getElementById('save-template')?.addEventListener('click', () => {
+            this.saveTemplate();
         });
     }
 
@@ -2647,14 +2662,139 @@ class GPSAdminApp {
                         </div>
                     </div>
                     <div class="template-actions">
-                        <button class="btn btn-primary btn-sm">Use Template</button>
-                        <button class="btn btn-secondary btn-sm">Edit</button>
+                        <button class="btn btn-primary btn-sm" onclick="window.gpsApp.useTemplate('${template.id}')">Use Template</button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.gpsApp.showTemplateModal('${template.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="window.gpsApp.deleteTemplate('${template.id}')" style="margin-left: auto;">Delete</button>
                     </div>
                 </div>
             `;
         });
 
         container.innerHTML = html;
+    }
+
+    /**
+     * Show template modal for creating/editing
+     */
+    showTemplateModal(templateId = null) {
+        const modal = document.getElementById('template-modal');
+        const title = document.getElementById('template-modal-title');
+        const form = document.getElementById('template-form');
+        
+        // Reset form
+        form.reset();
+        
+        if (templateId) {
+            // Edit mode
+            const template = this.state.templates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            title.textContent = 'Edit Template';
+            document.getElementById('template-name').value = template.name;
+            document.getElementById('template-icon').value = template.icon;
+            document.getElementById('template-type').value = template.type;
+            document.getElementById('template-hours').value = Math.floor(template.duration / 60);
+            document.getElementById('template-minutes').value = template.duration % 60;
+            document.getElementById('template-include-travel').checked = template.includeTravel;
+            
+            // Store template ID for editing
+            modal.dataset.editingId = templateId;
+        } else {
+            // Create mode
+            title.textContent = 'Create Template';
+            document.getElementById('template-hours').value = 0;
+            document.getElementById('template-minutes').value = 30;
+            document.getElementById('template-include-travel').checked = true;
+            delete modal.dataset.editingId;
+        }
+        
+        modal.classList.add('active');
+    }
+
+    /**
+     * Save template (create or update)
+     */
+    saveTemplate() {
+        const modal = document.getElementById('template-modal');
+        const editingId = modal.dataset.editingId;
+        
+        // Get form values
+        const name = document.getElementById('template-name').value.trim();
+        const icon = document.getElementById('template-icon').value.trim();
+        const type = document.getElementById('template-type').value;
+        const hours = parseInt(document.getElementById('template-hours').value) || 0;
+        const minutes = parseInt(document.getElementById('template-minutes').value) || 0;
+        const includeTravel = document.getElementById('template-include-travel').checked;
+        
+        // Validate
+        if (!name) {
+            alert('Please enter a template name');
+            return;
+        }
+        
+        const duration = (hours * 60) + minutes;
+        if (duration <= 0) {
+            alert('Duration must be greater than 0');
+            return;
+        }
+        
+        if (editingId) {
+            // Update existing template
+            const template = this.state.templates.find(t => t.id === editingId);
+            if (template) {
+                template.name = name;
+                template.icon = icon || '📋';
+                template.type = type;
+                template.duration = duration;
+                template.includeTravel = includeTravel;
+            }
+        } else {
+            // Create new template
+            const newTemplate = {
+                id: Date.now().toString(),
+                name,
+                icon: icon || '📋',
+                type,
+                duration,
+                includeTravel
+            };
+            this.state.templates.push(newTemplate);
+        }
+        
+        // Save to localStorage via saveSettings
+        this.saveSettings();
+        
+        // Close modal and re-render
+        modal.classList.remove('active');
+        this.renderTemplates();
+        
+        this.showToast(editingId ? 'Template updated!' : 'Template created!', 'success');
+    }
+
+    /**
+     * Delete template
+     */
+    deleteTemplate(templateId) {
+        if (!confirm('Are you sure you want to delete this template?')) {
+            return;
+        }
+        
+        this.state.templates = this.state.templates.filter(t => t.id !== templateId);
+        this.saveSettings();
+        this.renderTemplates();
+        this.showToast('Template deleted', 'success');
+    }
+
+    /**
+     * Use template to create appointment
+     */
+    useTemplate(templateId) {
+        const template = this.state.templates.find(t => t.id === templateId);
+        if (!template) return;
+        
+        // For now, just show a toast
+        // In a full implementation, this would open the appointment modal pre-filled
+        this.showToast(`Template "${template.name}" ready to use. Full appointment creation coming soon!`, 'info');
     }
 
     /**
@@ -3385,5 +3525,28 @@ class GPSAdminApp {
             console.error('Clear data error:', error);
             alert('Error clearing data: ' + (error.message || 'Unknown error'));
         }
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, type = 'info') {
+        // Create toast element if it doesn't exist
+        let toast = document.getElementById('toast-notification');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+        }
+
+        // Set message and type
+        toast.textContent = message;
+        toast.className = `toast toast-${type} show`;
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
 }

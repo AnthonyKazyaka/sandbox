@@ -598,6 +598,62 @@
         </div>
     </div>
 
+    <!-- Template Modal -->
+    <div id="template-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="template-modal-title">Create Template</h3>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="template-form">
+                    <div class="form-group">
+                        <label for="template-name">Template Name</label>
+                        <input type="text" id="template-name" class="form-control" placeholder="e.g., Morning Drop-in" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="template-icon">Icon (Emoji)</label>
+                        <input type="text" id="template-icon" class="form-control" placeholder="e.g., 🐕" maxlength="2">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="template-type">Service Type</label>
+                        <select id="template-type" class="form-control" required>
+                            <option value="dropin">Drop-in Visit</option>
+                            <option value="walk">Dog Walk</option>
+                            <option value="overnight">Overnight Stay</option>
+                            <option value="meet-greet">Meet & Greet</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="template-hours">Hours</label>
+                            <input type="number" id="template-hours" class="form-control" min="0" max="24" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="template-minutes">Minutes</label>
+                            <input type="number" id="template-minutes" class="form-control" min="0" max="59" step="15" value="30">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="template-include-travel" checked>
+                            <span>Include travel time in workload calculations</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">Cancel</button>
+                <button id="save-template" class="btn btn-primary">Save Template</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Configuration (load first) -->
     <!-- Try to load local config, fall back to example if not found -->
     <script src="config.local.js" onerror="this.onerror=null; this.src='config.example.js';"></script>

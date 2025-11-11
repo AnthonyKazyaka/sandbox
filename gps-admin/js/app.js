@@ -1432,6 +1432,11 @@ class GPSAdminApp {
             this.showAppointmentModal();
         });
 
+        // Dashboard add appointment button
+        document.getElementById('add-appointment-btn')?.addEventListener('click', () => {
+            this.showAppointmentModal();
+        });
+
         // Settings form handlers
         document.getElementById('save-api-settings')?.addEventListener('click', () => {
             this.saveApiSettings();
@@ -1612,7 +1617,9 @@ class GPSAdminApp {
      */
     async renderDashboard() {
         await this.renderQuickStats();
-        this.renderWeekOverview();
+        this.renderUpcomingAppointments();
+        this.renderWeekComparison();
+        this.renderWeekOverviewEnhanced();
         this.renderWeeklyInsights();
         this.renderRecommendations();
     }
@@ -4268,5 +4275,252 @@ class GPSAdminApp {
         const html = '<div class="donut-legend">' + data.map((item, idx) => '<div class="donut-legend-item"><div class="donut-legend-color" style="background: ' + colors[idx % colors.length] + '"></div><div class="donut-legend-label">' + item.label + '</div><div class="donut-legend-value">' + item.value + ' (' + item.percentage + '%)</div></div>').join('') + '</div>';
 
         container.innerHTML = html;
+    }
+
+    /**
+     * Render upcoming appointments for today
+     */
+    renderUpcomingAppointments() {
+        const container = document.getElementById('upcoming-appointments');
+        if (!container) return;
+
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(today);
+        todayEnd.setHours(23, 59, 59, 999);
+
+        // Get today's appointments, sorted by time
+        const todayAppointments = this.state.events
+            .filter(event => {
+                if (event.ignored || event.isAllDay) return false;
+                const eventStart = new Date(event.start);
+                return eventStart >= today && eventStart <= todayEnd;
+            })
+            .sort((a, b) => a.start - b.start)
+            .slice(0, 5); // Show next 5 appointments
+
+        if (todayAppointments.length === 0) {
+            container.innerHTML = '<div class="upcoming-empty">📅 No appointments scheduled for today<br><small>Enjoy your free day!</small></div>';
+            return;
+        }
+
+        const html = todayAppointments.map(event => {
+            const startTime = new Date(event.start);
+            const endTime = new Date(event.end);
+            const isPast = now > endTime;
+            const duration = Math.round((endTime - startTime) / (1000 * 60));
+
+            return '<div class="appointment-item' + (isPast ? ' past' : '') + '" onclick="window.gpsApp.showEventDetails(\'' + event.id + '\')">' +
+                '<div class="appointment-time">' +
+                    '<div class="appointment-time-hour">' + startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false }) + '</div>' +
+                '</div>' +
+                '<div class="appointment-details">' +
+                    '<div class="appointment-title">' + event.title + '</div>' +
+                    '<div class="appointment-meta">' +
+                        '<span class="appointment-meta-item">⏱️ ' + duration + ' min</span>' +
+                        (event.location ? '<span class="appointment-meta-item">📍 ' + event.location + '</span>' : '') +
+                        (event.client ? '<span class="appointment-meta-item">👤 ' + event.client + '</span>' : '') +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Calculate comparison metrics vs last week
+     */
+    getWeekComparison() {
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+
+        // This week
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - today.getDay());
+        const thisWeekEnd = new Date(thisWeekStart);
+        thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+        thisWeekEnd.setHours(23, 59, 59, 999);
+
+        // Last week
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        lastWeekEnd.setHours(23, 59, 59, 999);
+
+        // Calculate this week hours
+        const thisWeekEvents = this.state.events.filter(event => {
+            if (event.ignored || event.isAllDay) return false;
+            const eventStart = new Date(event.start);
+            return eventStart >= thisWeekStart && eventStart <= thisWeekEnd;
+        });
+
+        const thisWeekHours = thisWeekEvents.reduce((sum, event) => {
+            return sum + ((event.end - event.start) / (1000 * 60 * 60));
+        }, 0);
+
+        // Calculate last week hours
+        const lastWeekEvents = this.state.events.filter(event => {
+            if (event.ignored || event.isAllDay) return false;
+            const eventStart = new Date(event.start);
+            return eventStart >= lastWeekStart && eventStart <= lastWeekEnd;
+        });
+
+        const lastWeekHours = lastWeekEvents.reduce((sum, event) => {
+            return sum + ((event.end - event.start) / (1000 * 60 * 60));
+        }, 0);
+
+        const diff = thisWeekHours - lastWeekHours;
+        const percentChange = lastWeekHours > 0 ? (diff / lastWeekHours * 100) : 0;
+
+        return {
+            thisWeek: thisWeekHours,
+            lastWeek: lastWeekHours,
+            diff: diff,
+            percentChange: percentChange,
+            trend: diff > 1 ? 'positive' : diff < -1 ? 'negative' : 'neutral'
+        };
+    }
+
+    /**
+     * Render week comparison badge
+     */
+    renderWeekComparison() {
+        const container = document.getElementById('week-comparison');
+        if (!container) return;
+
+        const comparison = this.getWeekComparison();
+        const arrow = comparison.trend === 'positive' ? '↗️' : comparison.trend === 'negative' ? '↘️' : '→';
+        const sign = comparison.diff >= 0 ? '+' : '';
+
+        container.className = 'comparison-badge ' + comparison.trend;
+        container.innerHTML = '<span class="trend-arrow">' + arrow + '</span> ' +
+                              sign + comparison.diff.toFixed(1) + 'h vs last week';
+    }
+
+    /**
+     * Enhanced week overview with color coding and workload bars
+     */
+    renderWeekOverviewEnhanced() {
+        const weekOverview = document.getElementById('week-overview');
+        if (!weekOverview) return;
+
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay()); // Start on Sunday
+
+        let html = '';
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + i);
+            date.setHours(0, 0, 0, 0);
+
+            const dayEvents = this.state.events.filter(event => {
+                const eventStart = new Date(event.start);
+                const eventEnd = new Date(event.end);
+
+                const dayStart = new Date(date);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(date);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                return eventEnd > dayStart && eventStart <= dayEnd;
+            });
+
+            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
+
+            const dayMinutes = workEvents.reduce((sum, event) => {
+                return sum + this.calculateEventDurationForDay(event, date);
+            }, 0);
+
+            const hours = dayMinutes / 60;
+            const level = this.getWorkloadLevel(hours);
+            const isToday = date.toDateString() === today.toDateString();
+
+            // Calculate workload bar percentage (max 12 hours = 100%)
+            const maxHours = 12;
+            const barPercentage = Math.min((hours / maxHours) * 100, 100);
+
+            html += '<div class="week-day' + (isToday ? ' today' : '') + '" onclick="window.gpsApp.showDayDetails(\'' + date.toISOString() + '\')">';
+            html += '  <div class="week-day-header">' + date.toLocaleDateString('en-US', { weekday: 'short' }) + '</div>';
+            html += '  <div class="week-day-date">' + date.getDate() + '</div>';
+
+            if (workEvents.length > 0) {
+                html += '  <div class="week-day-count">' + workEvents.length + '</div>';
+            }
+
+            html += '  <div class="week-day-hours">' + hours.toFixed(1) + 'h</div>';
+            html += '  <div class="week-day-level ' + level + '">' + this.getWorkloadLabel(level) + '</div>';
+            html += '  <div class="week-day-workload-bar">';
+            html += '    <div class="week-day-workload-fill ' + level + '" style="width: ' + barPercentage + '%"></div>';
+            html += '  </div>';
+            html += '</div>';
+        }
+
+        weekOverview.innerHTML = html;
+    }
+
+    /**
+     * Animate stat value with count-up effect
+     */
+    animateStatValue(elementId, endValue, duration = 1000) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Parse numeric value from string like "5h 30m" or "32"
+        const numericValue = parseInt(endValue);
+        if (isNaN(numericValue)) {
+            element.textContent = endValue;
+            return;
+        }
+
+        const startValue = 0;
+        const startTime = Date.now();
+
+        const animate = () => {
+            const currentTime = Date.now();
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (ease-out)
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = Math.floor(startValue + (numericValue - startValue) * eased);
+
+            element.textContent = current;
+            element.classList.add('counting');
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                element.textContent = endValue;
+                element.classList.remove('counting');
+            }
+        };
+
+        animate();
+    }
+
+    /**
+     * Show event details modal (stub for appointment click)
+     */
+    showEventDetails(eventId) {
+        const event = this.state.events.find(e => e.id === eventId);
+        if (!event) return;
+
+        // For now, just show an alert
+        // In full implementation, this would open a detail modal
+        const startTime = new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const endTime = new Date(event.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        alert('Appointment Details\n\n' +
+              event.title + '\n' +
+              startTime + ' - ' + endTime + '\n' +
+              (event.location ? 'Location: ' + event.location + '\n' : '') +
+              (event.client ? 'Client: ' + event.client + '\n' : '') +
+              (event.notes ? '\nNotes: ' + event.notes : ''));
     }
 }

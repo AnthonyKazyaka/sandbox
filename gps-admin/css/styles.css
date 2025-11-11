@@ -1292,3 +1292,312 @@ label {
         gap: 4px;
     }
 }
+
+/* ===================================
+   Dashboard Improvements - Phase 1
+   =================================== */
+
+/* Upcoming Appointments */
+.upcoming-appointments {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.appointment-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary-500);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    cursor: pointer;
+}
+
+.appointment-item:hover {
+    border-left-color: var(--primary-600);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(2px);
+}
+
+.appointment-item.past {
+    opacity: 0.6;
+    border-left-color: var(--gray-300);
+}
+
+.appointment-time {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+    padding: var(--spacing-sm);
+    background: var(--primary-50);
+    border-radius: var(--radius-sm);
+}
+
+.appointment-time-hour {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-700);
+    line-height: 1;
+}
+
+.appointment-time-period {
+    font-size: 0.75rem;
+    color: var(--primary-600);
+    text-transform: uppercase;
+}
+
+.appointment-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.appointment-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.appointment-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.appointment-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.appointment-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.appointment-action-btn {
+    padding: 6px;
+    border: none;
+    background: var(--gray-100);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    color: var(--text-muted);
+}
+
+.appointment-action-btn:hover {
+    background: var(--gray-200);
+    color: var(--text);
+}
+
+.upcoming-empty {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-muted);
+}
+
+/* Comparison Badges */
+.comparison-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--text-muted);
+}
+
+.comparison-badge.positive {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.comparison-badge.negative {
+    background: var(--danger-100);
+    color: var(--danger-700);
+}
+
+.comparison-badge.neutral {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.trend-arrow {
+    font-size: 0.75rem;
+}
+
+/* Enhanced Week Overview */
+.week-day {
+    position: relative;
+}
+
+.week-day-workload-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gray-200);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    overflow: hidden;
+}
+
+.week-day-workload-fill {
+    height: 100%;
+    transition: width var(--transition-base);
+}
+
+.week-day-workload-fill.light {
+    background: var(--success-500);
+}
+
+.week-day-workload-fill.comfortable {
+    background: var(--primary-500);
+}
+
+.week-day-workload-fill.busy {
+    background: var(--warning-500);
+}
+
+.week-day-workload-fill.overload {
+    background: var(--danger-500);
+}
+
+.week-day-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-500);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0 6px;
+}
+
+/* Count-up Animation */
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-value.counting {
+    animation: countUp 0.3s ease-out;
+}
+
+/* Skeleton Loading */
+.skeleton {
+    background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: 8px;
+}
+
+.skeleton-title {
+    height: 1.5em;
+    width: 60%;
+    margin-bottom: 12px;
+}
+
+.skeleton-card {
+    height: 100px;
+}
+
+/* Enhanced Chart Gradients */
+.bar {
+    background: linear-gradient(to top, var(--primary-600), var(--primary-400));
+}
+
+.bar.animated {
+    animation: barGrow 0.6s ease-out;
+}
+
+@keyframes barGrow {
+    from {
+        transform: scaleY(0);
+        transform-origin: bottom;
+    }
+    to {
+        transform: scaleY(1);
+        transform-origin: bottom;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .appointment-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .appointment-time {
+        flex-direction: row;
+        gap: 4px;
+    }
+    
+    .appointment-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+/* Analytics Comparison Styles */
+.stat-comparison {
+    margin-top: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-comparison.positive {
+    color: var(--success-700);
+}
+
+.stat-comparison.negative {
+    color: var(--danger-700);
+}
+
+.stat-comparison.neutral {
+    color: var(--gray-600);
+}
+
+.stat-comparison:empty {
+    display: none;
+}

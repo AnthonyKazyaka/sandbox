@@ -177,9 +177,29 @@
                     </div>
                 </div>
 
+                <!-- Upcoming Appointments -->
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                        <h3 style="margin: 0;">Today's Schedule</h3>
+                        <button id="add-appointment-btn" class="btn btn-sm btn-primary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add
+                        </button>
+                    </div>
+                    <div id="upcoming-appointments" class="upcoming-appointments">
+                        <!-- Upcoming appointments will be rendered here -->
+                    </div>
+                </div>
+
                 <!-- Week Overview -->
                 <div class="section">
-                    <h3>This Week</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                        <h3 style="margin: 0;">This Week</h3>
+                        <span id="week-comparison" class="comparison-badge"></span>
+                    </div>
                     <div id="week-overview" class="week-overview">
                         <!-- Week calendar will be rendered here -->
                     </div>
@@ -272,7 +292,11 @@
             <div id="view-analytics" class="view">
                 <div class="view-header">
                     <h2>Analytics</h2>
-                    <div class="view-actions">
+                    <div class="view-actions" style="display: flex; gap: var(--spacing-md); align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" id="analytics-compare-toggle">
+                            <span>Compare periods</span>
+                        </label>
                         <select id="analytics-range" class="select">
                             <option value="week">This Week</option>
                             <option value="month" selected>This Month</option>
@@ -288,18 +312,22 @@
                         <div class="stat-card">
                             <div class="stat-label">Total Appointments</div>
                             <div class="stat-value" id="analytics-total-appointments">0</div>
+                            <div id="analytics-total-appointments-comparison" class="stat-comparison"></div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Total Hours</div>
                             <div class="stat-value" id="analytics-total-hours">0h</div>
+                            <div id="analytics-total-hours-comparison" class="stat-comparison"></div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Avg Daily Workload</div>
                             <div class="stat-value" id="analytics-avg-daily">0h</div>
+                            <div id="analytics-avg-daily-comparison" class="stat-comparison"></div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Busiest Day</div>
                             <div class="stat-value" id="analytics-busiest-day">-</div>
+                            <div id="analytics-busiest-day-comparison" class="stat-comparison"></div>
                         </div>
                     </div>
 

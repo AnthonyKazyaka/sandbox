@@ -1497,6 +1497,11 @@ class GPSAdminApp {
         document.getElementById('analytics-range')?.addEventListener('change', () => {
             this.renderAnalytics();
         });
+
+        // Analytics comparison toggle
+        document.getElementById('analytics-compare-toggle')?.addEventListener('change', () => {
+            this.renderAnalytics();
+        });
     }
 
     /**
@@ -1901,7 +1906,10 @@ class GPSAdminApp {
                 <div class="insight-card">
                     <div class="insight-label">Weekly Workload</div>
                     <div class="insight-value" style="color: ${workloadColor};">${workloadStatus}</div>
-                    <div class="insight-sublabel">${avgWeeklyHours.toFixed(1)} total hours this week</div>
+                    <div class="insight-sublabel">${avgWeeklyHours.toFixed(1)} / ${this.state.settings.thresholds.weekly.comfortable}h capacity</div>
+                    <div class="progress-bar" style="margin-top: 8px;">
+                        <div class="progress-fill" style="width: ${Math.min((avgWeeklyHours / this.state.settings.thresholds.weekly.comfortable * 100), 100)}%; background: ${workloadColor};"></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -3878,6 +3886,8 @@ class GPSAdminApp {
      */
     renderAnalytics() {
         const range = document.getElementById('analytics-range')?.value || 'month';
+        const compareMode = document.getElementById('analytics-compare-toggle')?.checked || false;
+
         const result = this.getDateRange(range);
         const startDate = result.startDate;
         const endDate = result.endDate;
@@ -3891,11 +3901,30 @@ class GPSAdminApp {
 
         if (events.length === 0) {
             this.renderAnalyticsEmpty();
+            this.clearAnalyticsComparison();
             return;
         }
 
         // Calculate overview stats
         this.renderAnalyticsOverview(events, startDate, endDate, range);
+
+        // Handle comparison mode
+        if (compareMode) {
+            const prevResult = this.getPreviousPeriodRange(range);
+            const prevEvents = this.state.events.filter(event => {
+                if (event.ignored || event.isAllDay) return false;
+                const eventDate = new Date(event.start);
+                return eventDate >= prevResult.startDate && eventDate <= prevResult.endDate;
+            });
+
+            const currentDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const previousDays = Math.ceil((prevResult.endDate - prevResult.startDate) / (1000 * 60 * 60 * 24));
+
+            const comparison = this.calculatePeriodComparison(events, prevEvents, currentDays, previousDays);
+            this.renderAnalyticsComparison(comparison, range);
+        } else {
+            this.clearAnalyticsComparison();
+        }
 
         // Render charts
         this.renderWorkloadTrendChart(events, startDate, endDate, range);
@@ -4044,8 +4073,38 @@ class GPSAdminApp {
             }
         }
 
-        // Render bar chart
-        this.renderBarChart(container, dataPoints);
+        // Render bar chart with thresholds
+        this.renderBarChartWithThresholds(container, dataPoints);
+    }
+
+    /**
+     * Render bar chart with threshold lines
+     */
+    renderBarChartWithThresholds(container, data) {
+        const maxValue = Math.max(...data.map(d => d.value), this.state.settings.thresholds.daily.burnout);
+        const thresholds = this.state.settings.thresholds.daily;
+
+        // Calculate threshold positions (as percentage from bottom)
+        const comfortablePos = (thresholds.comfortable / maxValue * 100);
+        const busyPos = (thresholds.busy / maxValue * 100);
+        const burnoutPos = (thresholds.high / maxValue * 100);
+
+        const html = '<div class="chart-with-thresholds" style="position: relative; height: 250px;">' +
+            // Threshold lines
+            '<div class="threshold-line comfortable" style="bottom: ' + comfortablePos + '%;" data-label="' + thresholds.comfortable + 'h comfortable"></div>' +
+            '<div class="threshold-line busy" style="bottom: ' + busyPos + '%;" data-label="' + thresholds.busy + 'h busy"></div>' +
+            '<div class="threshold-line" style="bottom: ' + burnoutPos + '%;" data-label="' + thresholds.high + 'h overload"></div>' +
+            // Bar chart
+            '<div class="bar-chart">' + data.map(item => '<div class="bar-chart-item"><div class="bar animated" style="height: ' + (item.value / maxValue * 100) + '%;" title="' + item.label + ': ' + item.value + '"><div class="bar-value">' + item.value.toFixed(1) + '</div></div><div class="bar-label">' + (item.shortLabel || item.label) + '</div></div>').join('') + '</div>' +
+        '</div>';
+
+        container.innerHTML = html;
+
+        // Trigger animation
+        setTimeout(() => {
+            const bars = container.querySelectorAll('.bar');
+            bars.forEach(bar => bar.style.animationPlayState = 'running');
+        }, 50);
     }
 
     /**
@@ -4252,9 +4311,15 @@ class GPSAdminApp {
     renderBarChart(container, data) {
         const maxValue = Math.max(...data.map(d => d.value), 1);
 
-        const html = '<div class="bar-chart">' + data.map(item => '<div class="bar-chart-item"><div class="bar" style="height: ' + (item.value / maxValue * 100) + '%;" title="' + item.label + ': ' + item.value + '"><div class="bar-value">' + item.value + '</div></div><div class="bar-label">' + (item.shortLabel || item.label) + '</div></div>').join('') + '</div>';
+        const html = '<div class="bar-chart">' + data.map(item => '<div class="bar-chart-item"><div class="bar animated" style="height: ' + (item.value / maxValue * 100) + '%;" title="' + item.label + ': ' + item.value + '"><div class="bar-value">' + item.value + '</div></div><div class="bar-label">' + (item.shortLabel || item.label) + '</div></div>').join('') + '</div>';
 
         container.innerHTML = html;
+
+        // Trigger animation after a small delay to ensure DOM is ready
+        setTimeout(() => {
+            const bars = container.querySelectorAll('.bar');
+            bars.forEach(bar => bar.style.animationPlayState = 'running');
+        }, 50);
     }
 
     /**
@@ -4522,5 +4587,141 @@ class GPSAdminApp {
               (event.location ? 'Location: ' + event.location + '\n' : '') +
               (event.client ? 'Client: ' + event.client + '\n' : '') +
               (event.notes ? '\nNotes: ' + event.notes : ''));
+    }
+
+    /**
+     * Get previous period date range based on current selection
+     */
+    getPreviousPeriodRange(range) {
+        const now = new Date();
+        let prevStartDate, prevEndDate;
+
+        switch (range) {
+            case 'week':
+                const thisWeekStart = new Date(now);
+                thisWeekStart.setDate(now.getDate() - now.getDay());
+                thisWeekStart.setHours(0, 0, 0, 0);
+
+                prevStartDate = new Date(thisWeekStart);
+                prevStartDate.setDate(thisWeekStart.getDate() - 7);
+                prevEndDate = new Date(prevStartDate);
+                prevEndDate.setDate(prevStartDate.getDate() + 6);
+                prevEndDate.setHours(23, 59, 59, 999);
+                break;
+            case 'month':
+                const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+                break;
+            case 'quarter':
+                const quarter = Math.floor(now.getMonth() / 3);
+                prevStartDate = new Date(now.getFullYear(), (quarter - 1) * 3, 1);
+                prevEndDate = new Date(now.getFullYear(), quarter * 3, 0, 23, 59, 59, 999);
+                break;
+            case 'year':
+                prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
+                prevEndDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+                break;
+            default:
+                prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        }
+
+        return { startDate: prevStartDate, endDate: prevEndDate };
+    }
+
+    /**
+     * Calculate comparison metrics between current and previous period
+     */
+    calculatePeriodComparison(currentEvents, previousEvents, currentDays, previousDays) {
+        // Total appointments
+        const currentAppointments = currentEvents.length;
+        const previousAppointments = previousEvents.length;
+        const appointmentsDiff = currentAppointments - previousAppointments;
+        const appointmentsPercent = previousAppointments > 0
+            ? (appointmentsDiff / previousAppointments * 100)
+            : 0;
+
+        // Total hours
+        const currentMinutes = currentEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60)), 0);
+        const previousMinutes = previousEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60)), 0);
+        const currentHours = currentMinutes / 60;
+        const previousHours = previousMinutes / 60;
+        const hoursDiff = currentHours - previousHours;
+        const hoursPercent = previousHours > 0 ? (hoursDiff / previousHours * 100) : 0;
+
+        // Average daily
+        const currentAvgDaily = currentHours / currentDays;
+        const previousAvgDaily = previousHours / previousDays;
+        const avgDailyDiff = currentAvgDaily - previousAvgDaily;
+        const avgDailyPercent = previousAvgDaily > 0 ? (avgDailyDiff / previousAvgDaily * 100) : 0;
+
+        return {
+            appointments: {
+                current: currentAppointments,
+                previous: previousAppointments,
+                diff: appointmentsDiff,
+                percent: appointmentsPercent,
+                trend: appointmentsDiff > 0 ? 'positive' : appointmentsDiff < 0 ? 'negative' : 'neutral'
+            },
+            hours: {
+                current: currentHours,
+                previous: previousHours,
+                diff: hoursDiff,
+                percent: hoursPercent,
+                trend: hoursDiff > 1 ? 'positive' : hoursDiff < -1 ? 'negative' : 'neutral'
+            },
+            avgDaily: {
+                current: currentAvgDaily,
+                previous: previousAvgDaily,
+                diff: avgDailyDiff,
+                percent: avgDailyPercent,
+                trend: avgDailyDiff > 0.5 ? 'positive' : avgDailyDiff < -0.5 ? 'negative' : 'neutral'
+            }
+        };
+    }
+
+    /**
+     * Render comparison data for analytics stats
+     */
+    renderAnalyticsComparison(comparison, range) {
+        const rangeLabel = range === 'week' ? 'last week' : range === 'month' ? 'last month' : range === 'quarter' ? 'last quarter' : 'last year';
+
+        // Appointments comparison
+        const apptEl = document.getElementById('analytics-total-appointments-comparison');
+        if (apptEl) {
+            const arrow = comparison.appointments.trend === 'positive' ? '↗️' : comparison.appointments.trend === 'negative' ? '↘️' : '→';
+            const sign = comparison.appointments.diff >= 0 ? '+' : '';
+            apptEl.className = 'stat-comparison ' + comparison.appointments.trend;
+            apptEl.innerHTML = arrow + ' ' + sign + comparison.appointments.diff + ' vs ' + rangeLabel;
+        }
+
+        // Hours comparison
+        const hoursEl = document.getElementById('analytics-total-hours-comparison');
+        if (hoursEl) {
+            const arrow = comparison.hours.trend === 'positive' ? '↗️' : comparison.hours.trend === 'negative' ? '↘️' : '→';
+            const sign = comparison.hours.diff >= 0 ? '+' : '';
+            hoursEl.className = 'stat-comparison ' + comparison.hours.trend;
+            hoursEl.innerHTML = arrow + ' ' + sign + comparison.hours.diff.toFixed(1) + 'h vs ' + rangeLabel;
+        }
+
+        // Avg daily comparison
+        const avgEl = document.getElementById('analytics-avg-daily-comparison');
+        if (avgEl) {
+            const arrow = comparison.avgDaily.trend === 'positive' ? '↗️' : comparison.avgDaily.trend === 'negative' ? '↘️' : '→';
+            const sign = comparison.avgDaily.diff >= 0 ? '+' : '';
+            avgEl.className = 'stat-comparison ' + comparison.avgDaily.trend;
+            avgEl.innerHTML = arrow + ' ' + sign + comparison.avgDaily.diff.toFixed(1) + 'h avg vs ' + rangeLabel;
+        }
+    }
+
+    /**
+     * Clear analytics comparison data
+     */
+    clearAnalyticsComparison() {
+        document.getElementById('analytics-total-appointments-comparison').innerHTML = '';
+        document.getElementById('analytics-total-hours-comparison').innerHTML = '';
+        document.getElementById('analytics-avg-daily-comparison').innerHTML = '';
+        document.getElementById('analytics-busiest-day-comparison').innerHTML = '';
     }
 }

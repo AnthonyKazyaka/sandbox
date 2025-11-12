@@ -1,44 +1,26 @@
-# Environment and configuration files
-config.local.js
-.env
-.env.local
-.env.*.local
+# Dependencies
+node_modules/
+package-lock.json
 
-# API Keys and Secrets
-secrets.js
-credentials.json
+# Test coverage
+coverage/
+.nyc_output/
 
-# Testing artifacts (generated during testing)
-TEST_REPORT.md
-TESTING_SUMMARY.md
-test-functionality.js
+# Logs
+*.log
+npm-debug.log*
 
-# OS Files
+# OS files
 .DS_Store
 Thumbs.db
 
-# Editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Logs
-*.log
-npm-debug.log*
-
-# Dependencies (if you add build tools later)
-node_modules/
-
-# Build outputs (if you add build process later)
+# Build outputs
 dist/
 build/
-
-# Test outputs
-coverage/
-.nyc_output/
-
-# Temporary files
-.tmp/
-temp/

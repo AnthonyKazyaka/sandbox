@@ -4160,17 +4160,17 @@ class GPSAdminApp {
         const busyPos = (thresholds.busy / maxValue * 100);
         const burnoutPos = (thresholds.high / maxValue * 100);
 
-        const html = '<div class="chart-with-thresholds" style="position: relative; height: 250px;">' +
+        const html = '<div class="chart-with-thresholds">' +
             // Background zones for visual clarity
-            '<div class="threshold-zone comfortable" style="bottom: 0; height: ' + comfortablePos + '%;"></div>' +
-            '<div class="threshold-zone busy" style="bottom: ' + comfortablePos + '%; height: ' + (busyPos - comfortablePos) + '%;"></div>' +
-            '<div class="threshold-zone overload" style="bottom: ' + busyPos + '%; height: ' + (100 - busyPos) + '%;"></div>' +
+            '<div class="threshold-zone comfortable" style="position: absolute; bottom: 0; left: 0; right: 0; height: ' + comfortablePos + '%;"></div>' +
+            '<div class="threshold-zone busy" style="position: absolute; bottom: ' + comfortablePos + '%; left: 0; right: 0; height: ' + (busyPos - comfortablePos) + '%;"></div>' +
+            '<div class="threshold-zone overload" style="position: absolute; bottom: ' + busyPos + '%; left: 0; right: 0; height: ' + (100 - busyPos) + '%;"></div>' +
             // Threshold lines
-            '<div class="threshold-line comfortable" style="bottom: ' + comfortablePos + '%;" data-label="' + thresholds.comfortable + 'h comfortable"></div>' +
-            '<div class="threshold-line busy" style="bottom: ' + busyPos + '%;" data-label="' + thresholds.busy + 'h busy"></div>' +
-            '<div class="threshold-line overload" style="bottom: ' + burnoutPos + '%;" data-label="' + thresholds.high + 'h overload"></div>' +
+            '<div class="threshold-line comfortable" style="position: absolute; bottom: ' + comfortablePos + '%; left: 0; right: 0;" data-label="' + thresholds.comfortable + 'h comfortable"></div>' +
+            '<div class="threshold-line busy" style="position: absolute; bottom: ' + busyPos + '%; left: 0; right: 0;" data-label="' + thresholds.busy + 'h busy"></div>' +
+            '<div class="threshold-line overload" style="position: absolute; bottom: ' + burnoutPos + '%; left: 0; right: 0;" data-label="' + thresholds.high + 'h overload"></div>' +
             // Bar chart
-            '<div class="bar-chart">' + data.map(item => {
+            '<div class="bar-chart" style="position: absolute; bottom: 16px; left: 0; right: 0; height: 200px;">' + data.map(item => {
                 const displayValue = Math.min(item.value, displayCap);
                 const isOverflow = item.value > displayCap;
                 const heightPercent = (displayValue / maxValue * 100);

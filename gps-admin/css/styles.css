@@ -1133,9 +1133,8 @@ label {
     display: flex;
     align-items: flex-end;
     justify-content: space-around;
-    height: 200px;
     gap: 8px;
-    padding: 16px 0;
+    z-index: 2;
 }
 
 .bar-chart-item {
@@ -1697,13 +1696,12 @@ label {
 /* Chart Threshold Lines */
 .chart-with-thresholds {
     position: relative;
+    height: 100%;
+    min-height: 250px;
 }
 
 /* Background zones for threshold visualization */
 .threshold-zone {
-    position: absolute;
-    left: 0;
-    right: 0;
     pointer-events: none;
     z-index: 0;
     transition: opacity var(--transition-base);
@@ -1722,9 +1720,6 @@ label {
 }
 
 .threshold-line {
-    position: absolute;
-    left: 0;
-    right: 0;
     height: 2px;
     background: transparent;
     border-top: 2px dashed var(--danger-400);

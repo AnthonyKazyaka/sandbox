@@ -16,6 +16,7 @@ class GPSAdminApp {
             availableCalendars: [], // List of calendars from Google
             selectedCalendars: ['primary'], // Calendar IDs to sync with
             ignoredEventPatterns: [], // Patterns for events to ignore (title matches)
+            isManagingTemplates: false, // Track if in template management mode
             settings: {
                 thresholds: {
                     daily: {
@@ -1476,6 +1477,10 @@ class GPSAdminApp {
         });
 
         // Template management
+        document.getElementById('manage-templates-btn')?.addEventListener('click', () => {
+            this.toggleManageTemplatesMode();
+        });
+
         document.getElementById('new-template-btn')?.addEventListener('click', () => {
             this.showTemplateModal();
         });
@@ -1508,6 +1513,23 @@ class GPSAdminApp {
      * Switch between views
      */
     async switchView(viewName) {
+        // Reset manage templates mode when leaving templates view
+        if (this.state.currentView === 'templates' && viewName !== 'templates' && this.state.isManagingTemplates) {
+            this.state.isManagingTemplates = false;
+            const btn = document.getElementById('manage-templates-btn');
+            if (btn) {
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Manage Templates
+                `;
+            }
+        }
+
         // Update state
         this.state.currentView = viewName;
 
@@ -1771,9 +1793,15 @@ class GPSAdminApp {
         const container = document.getElementById('weekly-insights');
         if (!container) return;
 
+        // Defensive check for events
+        if (!this.state || !this.state.events || !Array.isArray(this.state.events)) {
+            container.innerHTML = '<p class="text-muted" style="text-align: center; padding: 24px;">No appointments data available</p>';
+            return;
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         // Calculate for next 7 days (current week)
         const weekData = [];
         let totalAppointments = 0;
@@ -2090,6 +2118,13 @@ class GPSAdminApp {
             });
 
             const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
+            
+            // Check for housesits on this day
+            const housesits = workEvents.filter(event => 
+                event.type === 'overnight' || 
+                event.title?.toLowerCase().includes('overnight') ||
+                event.title?.toLowerCase().includes('housesit')
+            );
 
             const workMinutes = workEvents.reduce((sum, event) => {
                 return sum + this.calculateEventDurationForDay(event, dateKey);
@@ -2125,13 +2160,15 @@ class GPSAdminApp {
             if (isToday) classes += ' today';
             if (isOtherMonth) classes += ' other-month';
             if (!isOtherMonth && dayEvents.length > 0) classes += ` ${workloadLevel}`;
+            if (housesits.length > 0) classes += ' has-housesit';
 
             html += `
                 <div class="${classes}" data-date="${dateKey.toISOString()}">
+                    ${housesits.length > 0 ? '<div class="calendar-day-housesit-bar" title="House sit scheduled"></div>' : ''}
                     <div class="calendar-day-number">${currentDate.getDate()}</div>
                     ${dayEvents.length > 0 ? `
                         <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
-                        <div class="calendar-day-hours">${workHours}h work${travelMinutes > 0 ? ` + ${travelHours}h travel` : ''}</div>
+                        <div class="calendar-day-hours">${workHours}h work${travelMinutes > 0 ? ` + ${travelHours}h travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
                         <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours}h total</div>
                     ` : ''}
                 </div>
@@ -2485,6 +2522,13 @@ class GPSAdminApp {
         // Calculate totals
         const workEvents = sortedEvents.filter(event => !event.ignored && !event.isAllDay);
         
+        // Check for housesits
+        const housesits = workEvents.filter(event => 
+            event.type === 'overnight' || 
+            event.title?.toLowerCase().includes('overnight') ||
+            event.title?.toLowerCase().includes('housesit')
+        );
+        
         const workMinutes = workEvents.reduce((sum, event) => {
             return sum + this.calculateEventDurationForDay(event, dateKey);
         }, 0);
@@ -2517,7 +2561,8 @@ class GPSAdminApp {
             <span>${sortedEvents.length} appointment${sortedEvents.length !== 1 ? 's' : ''}</span> •
             <span>${workHours}h work</span> •
             <span>${travelHours}h travel</span> •
-            <span>${totalHours}h total</span> •
+            <span>${totalHours}h total</span>
+            ${housesits.length > 0 ? ' • <span style="color: #8B5CF6; font-weight: 600;">+ housesit</span>' : ''} •
             <span class="workload-badge ${workloadLevel}">${workloadLabel}</span>
         `;
 
@@ -2735,9 +2780,6 @@ class GPSAdminApp {
     /**
      * Render templates view
      */
-    /**
-     * Render templates view
-     */
     renderTemplates() {
         const container = document.getElementById('templates-list');
         if (!container || !this.templatesManager) return;
@@ -2754,6 +2796,7 @@ class GPSAdminApp {
             return;
         }
 
+        const isManaging = this.state.isManagingTemplates;
         let html = '';
 
         templates.forEach(template => {
@@ -2764,7 +2807,8 @@ class GPSAdminApp {
             const canDelete = !template.isDefault;
 
             html += `
-                <div class="template-card" data-template-id="${template.id}">
+                <div class="template-card ${isManaging ? 'manage-mode' : ''}" data-template-id="${template.id}">
+                    ${isManaging && canDelete ? '<div class="template-delete-overlay"><span class="delete-hint">Click delete button below to remove</span></div>' : ''}
                     <div class="template-header">
                         <div class="template-icon">${template.icon}</div>
                         <div class="template-info">
@@ -2782,10 +2826,25 @@ class GPSAdminApp {
                             <span class="template-detail-value">${template.includeTravel ? 'Included' : 'Not included'}</span>
                         </div>
                     </div>
-                    <div class="template-actions">
-                        <button class="btn btn-primary btn-sm" onclick="window.gpsApp.useTemplate('${template.id}')">Use Template</button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.gpsApp.showTemplateModal('${template.id}')">Edit</button>
-                        ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="window.gpsApp.deleteTemplate('${template.id}')" style="margin-left: auto;">Delete</button>` : ''}
+                    <div class="template-actions ${isManaging ? 'manage-mode' : ''}">
+                        ${!isManaging ? `
+                            <button class="btn btn-primary btn-sm" onclick="window.gpsApp.useTemplate('${template.id}')">Use Template</button>
+                            <button class="btn btn-secondary btn-sm" onclick="window.gpsApp.showTemplateModal('${template.id}')">Edit</button>
+                        ` : ''}
+                        ${isManaging && canDelete ? `
+                            <button class="btn btn-danger btn-sm" onclick="window.gpsApp.deleteTemplate('${template.id}')" style="width: 100%;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Delete Template
+                            </button>
+                        ` : ''}
+                        ${isManaging && !canDelete ? `
+                            <div style="text-align: center; padding: var(--spacing-md); color: var(--gray-500); font-size: 0.875rem;">
+                                Default templates cannot be deleted
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -2941,6 +3000,47 @@ class GPSAdminApp {
 
         // Open appointment modal with template pre-selected
         this.showAppointmentModal(templateId);
+    }
+
+    /**
+     * Toggle template management mode
+     */
+    toggleManageTemplatesMode() {
+        this.state.isManagingTemplates = !this.state.isManagingTemplates;
+        
+        // Update button appearance
+        const btn = document.getElementById('manage-templates-btn');
+        if (btn) {
+            if (this.state.isManagingTemplates) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-danger');
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Done Managing
+                `;
+            } else {
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Manage Templates
+                `;
+            }
+        }
+        
+        // Re-render templates
+        this.renderTemplates();
+        
+        // Show toast
+        if (this.state.isManagingTemplates) {
+            this.showToast('Management mode enabled. You can now delete templates.', 'info');
+        }
     }
 
     /**
@@ -3932,7 +4032,7 @@ class GPSAdminApp {
         this.renderBusiestDaysChart(events);
         this.renderBusiestTimesChart(events);
         this.renderTemplateUsageChart(events);
-        this.renderWeeklyInsights(events, range);
+        this.renderAnalyticsInsights(events, range);
     }
 
     /**
@@ -4236,11 +4336,19 @@ class GPSAdminApp {
     }
 
     /**
-     * Render weekly insights
+     * Render analytics insights for a given period
+     * @param {Array} events - Array of event objects to analyze
+     * @param {string} range - Time range ('week', 'month', 'quarter', 'year')
      */
-    renderWeeklyInsights(events, range) {
+    renderAnalyticsInsights(events, range) {
         const container = document.getElementById('weekly-insights');
         if (!container) return;
+
+        // Defensive check for undefined/null events
+        if (!events || !Array.isArray(events) || events.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="text-align: center; padding: 24px;">No data available for insights</p>';
+            return;
+        }
 
         const insights = [];
 
@@ -4496,6 +4604,16 @@ class GPSAdminApp {
                 return eventEnd > dayStart && eventStart <= dayEnd;
             });
 
+            // Check for housesits on this day
+            const housesits = dayEvents.filter(event => 
+                !event.ignored && 
+                !event.isAllDay && 
+                (event.type === 'overnight' || 
+                 event.title?.toLowerCase().includes('overnight') ||
+                 event.title?.toLowerCase().includes('housesit'))
+            );
+
+            // Work events are everything except housesits (but cap housesit hours)
             const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
 
             const dayMinutes = workEvents.reduce((sum, event) => {
@@ -4510,7 +4628,15 @@ class GPSAdminApp {
             const maxHours = 12;
             const barPercentage = Math.min((hours / maxHours) * 100, 100);
 
-            html += '<div class="week-day' + (isToday ? ' today' : '') + '" onclick="window.gpsApp.showDayDetails(\'' + date.toISOString() + '\')">';
+            html += '<div class="week-day' + (isToday ? ' today' : '') + (housesits.length > 0 ? ' has-housesit' : '') + '" onclick="window.gpsApp.showDayDetails(\'' + date.toISOString() + '\')">';
+            
+            // Housesit indicator bar at top
+            if (housesits.length > 0) {
+                html += '  <div class="week-day-housesit-indicator" title="House sit scheduled">';
+                html += '    <span class="housesit-icon">🏠</span>';
+                html += '  </div>';
+            }
+            
             html += '  <div class="week-day-header">' + date.toLocaleDateString('en-US', { weekday: 'short' }) + '</div>';
             html += '  <div class="week-day-date">' + date.getDate() + '</div>';
 
@@ -4518,7 +4644,11 @@ class GPSAdminApp {
                 html += '  <div class="week-day-count">' + workEvents.length + '</div>';
             }
 
-            html += '  <div class="week-day-hours">' + hours.toFixed(1) + 'h</div>';
+            html += '  <div class="week-day-hours">' + hours.toFixed(1) + 'h';
+            if (housesits.length > 0) {
+                html += ' <span class="housesit-label">+ housesit</span>';
+            }
+            html += '</div>';
             html += '  <div class="week-day-level ' + level + '">' + this.getWorkloadLabel(level) + '</div>';
             html += '  <div class="week-day-workload-bar">';
             html += '    <div class="week-day-workload-fill ' + level + '" style="width: ' + barPercentage + '%"></div>';

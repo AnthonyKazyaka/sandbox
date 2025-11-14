@@ -1489,6 +1489,43 @@ label {
     padding: 0 6px;
 }
 
+/* Housesit Indicator Styles */
+.week-day-housesit-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8B5CF6 0%, #A78BFA 100%);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.housesit-icon {
+    position: absolute;
+    top: -2px;
+    font-size: 0.75rem;
+    background: white;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.week-day.has-housesit {
+    padding-top: 8px;
+}
+
+.housesit-label {
+    font-size: 0.7rem;
+    color: #8B5CF6;
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+}
+
 /* Count-up Animation */
 @keyframes countUp {
     from {

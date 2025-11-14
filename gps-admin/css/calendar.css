@@ -147,6 +147,22 @@
     color: var(--workload-burnout);
 }
 
+/* Housesit Indicator Bar for Calendar Days */
+.calendar-day-housesit-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8B5CF6 0%, #A78BFA 100%);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    z-index: 1;
+}
+
+.calendar-day.has-housesit {
+    padding-top: 6px;
+}
+
 /* Event Dots */
 .calendar-day-dots {
     display: flex;
@@ -429,6 +445,59 @@
 
 .template-actions .btn {
     flex: 1;
+}
+
+.template-actions.manage-mode {
+    display: block;
+}
+
+.template-actions.manage-mode .btn {
+    flex: none;
+}
+
+/* Template Management Mode */
+.template-card.manage-mode {
+    position: relative;
+    cursor: default;
+    border-color: var(--danger-300);
+}
+
+.template-card.manage-mode:hover {
+    border-color: var(--danger-500);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    transform: translateY(-2px);
+}
+
+.template-delete-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+    padding: var(--spacing-sm);
+    text-align: center;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    z-index: 1;
+    border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.delete-hint {
+    font-size: 0.75rem;
+    color: var(--danger-700);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.delete-hint::before {
+    content: "⚠️";
+    font-size: 1rem;
+}
+
+.template-card.manage-mode .template-header {
+    margin-top: var(--spacing-md);
 }
 
 /* List View */

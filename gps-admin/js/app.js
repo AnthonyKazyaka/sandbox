@@ -43,8 +43,10 @@ class GPSAdminApp {
                     mapsApiKey: ''
                 },
                 homeAddress: '',
-                includeTravelTime: true // Include travel time in workload calculations
-            }
+                includeTravelTime: true, // Include travel time in workload calculations
+                eventCacheExpiry: 15 // Minutes before cache is considered stale
+            },
+            lastEventSync: null // Timestamp of last event sync
         };
 
         // Initialize TemplatesManager
@@ -79,6 +81,11 @@ class GPSAdminApp {
         // Initialize Maps API if available
         if (window.MapsAPI && this.state.settings.api.mapsApiKey) {
             await this.initMapsAPI();
+        }
+
+        // Load cached events if authenticated
+        if (this.state.isAuthenticated && !this.state.useMockData) {
+            await this.initializeCalendarEvents();
         }
 
         // Render initial view
@@ -1348,10 +1355,150 @@ class GPSAdminApp {
     }
 
     /**
+     * Save events cache to localStorage
+     */
+    saveEventsCache() {
+        try {
+            const cacheData = {
+                events: this.state.events,
+                timestamp: new Date().toISOString(),
+                selectedCalendars: this.state.selectedCalendars
+            };
+            localStorage.setItem('gps-admin-events-cache', JSON.stringify(cacheData));
+            this.state.lastEventSync = new Date();
+            console.log(`💾 Cached ${this.state.events.length} events`);
+        } catch (error) {
+            console.error('Error saving events cache:', error);
+        }
+    }
+
+    /**
+     * Load events cache from localStorage
+     * @returns {Object|null} Cache data or null if not available
+     */
+    loadEventsCache() {
+        try {
+            const cached = localStorage.getItem('gps-admin-events-cache');
+            if (!cached) return null;
+
+            const cacheData = JSON.parse(cached);
+            return {
+                events: cacheData.events || [],
+                timestamp: new Date(cacheData.timestamp),
+                selectedCalendars: cacheData.selectedCalendars || []
+            };
+        } catch (error) {
+            console.error('Error loading events cache:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Check if events cache is valid (not stale)
+     * @returns {boolean} True if cache is fresh, false if stale or missing
+     */
+    isCacheValid() {
+        const cache = this.loadEventsCache();
+        if (!cache || !cache.timestamp) {
+            return false;
+        }
+
+        const now = new Date();
+        const cacheAge = (now - cache.timestamp) / 1000 / 60; // Minutes
+        const expiryMinutes = this.state.settings.eventCacheExpiry || 15;
+
+        // Check if calendars have changed
+        const calendarsChanged = JSON.stringify(cache.selectedCalendars) !==
+                                JSON.stringify(this.state.selectedCalendars);
+
+        if (calendarsChanged) {
+            console.log('📅 Calendar selection changed, cache invalidated');
+            return false;
+        }
+
+        const isValid = cacheAge < expiryMinutes;
+        if (!isValid) {
+            console.log(`⏰ Cache is stale (${Math.round(cacheAge)} minutes old, max ${expiryMinutes})`);
+        }
+
+        return isValid;
+    }
+
+    /**
+     * Clear events cache
+     */
+    clearEventsCache() {
+        localStorage.removeItem('gps-admin-events-cache');
+        this.state.lastEventSync = null;
+        console.log('🗑️ Events cache cleared');
+    }
+
+    /**
+     * Initialize calendar events on app startup
+     * Loads from cache if valid, otherwise fetches from Google Calendar
+     */
+    async initializeCalendarEvents() {
+        try {
+            // Try loading from cache first
+            const cache = this.loadEventsCache();
+
+            if (this.isCacheValid() && cache) {
+                // Use cached events
+                this.state.events = cache.events.map(event => ({
+                    ...event,
+                    start: new Date(event.start),
+                    end: new Date(event.end)
+                }));
+                this.state.lastEventSync = cache.timestamp;
+                console.log(`✅ Loaded ${this.state.events.length} events from cache (${Math.round((new Date() - cache.timestamp) / 1000 / 60)} minutes old)`);
+            } else {
+                // Cache is stale or missing - initialize Calendar API and fetch
+                console.log('📡 Initializing Calendar API and fetching events...');
+
+                // Initialize Calendar API if not already done
+                if (!this.calendarAPI && window.CalendarAPI) {
+                    const clientId = this.state.settings.api.calendarClientId;
+                    if (clientId) {
+                        this.calendarAPI = new CalendarAPI(clientId);
+                        await this.calendarAPI.init();
+
+                        // Check if still authenticated after init
+                        this.state.isAuthenticated = this.calendarAPI.isAuthenticated();
+
+                        if (this.state.isAuthenticated) {
+                            await this.loadCalendarEvents();
+                        } else {
+                            console.warn('⚠️ Calendar API initialized but user is not authenticated');
+                            this.state.isAuthenticated = false;
+                            this.saveSettings();
+                        }
+                    }
+                } else if (this.calendarAPI) {
+                    // Calendar API already initialized, just load events
+                    await this.loadCalendarEvents();
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing calendar events:', error);
+            // Fall back to cached events if available, even if stale
+            const cache = this.loadEventsCache();
+            if (cache && cache.events && cache.events.length > 0) {
+                console.log('⚠️ Using stale cache as fallback');
+                this.state.events = cache.events.map(event => ({
+                    ...event,
+                    start: new Date(event.start),
+                    end: new Date(event.end)
+                }));
+            }
+        }
+    }
+
+    /**
      * Update the connect button state based on authentication status
      */
     updateConnectButtonState() {
         const btn = document.getElementById('connect-calendar-btn');
+        const refreshBtn = document.getElementById('refresh-calendar-btn');
         if (!btn) return;
 
         if (this.state.isAuthenticated) {
@@ -1364,6 +1511,12 @@ class GPSAdminApp {
             `;
             btn.classList.add('btn-success');
             btn.classList.remove('btn-primary');
+
+            // Show refresh button
+            if (refreshBtn) {
+                refreshBtn.style.display = 'block';
+                this.updateRefreshButtonState();
+            }
         } else {
             btn.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1376,6 +1529,36 @@ class GPSAdminApp {
             `;
             btn.classList.add('btn-primary');
             btn.classList.remove('btn-success');
+
+            // Hide refresh button
+            if (refreshBtn) {
+                refreshBtn.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Update refresh button text based on cache status
+     */
+    updateRefreshButtonState() {
+        const refreshBtnText = document.getElementById('refresh-btn-text');
+        if (!refreshBtnText) return;
+
+        const cache = this.loadEventsCache();
+        if (cache && cache.timestamp) {
+            const minutesAgo = Math.round((new Date() - cache.timestamp) / 1000 / 60);
+            if (minutesAgo < 1) {
+                refreshBtnText.textContent = 'Refresh Events (just now)';
+            } else if (minutesAgo === 1) {
+                refreshBtnText.textContent = 'Refresh Events (1 min ago)';
+            } else if (minutesAgo < 60) {
+                refreshBtnText.textContent = `Refresh Events (${minutesAgo} mins ago)`;
+            } else {
+                const hoursAgo = Math.floor(minutesAgo / 60);
+                refreshBtnText.textContent = `Refresh Events (${hoursAgo}h ago)`;
+            }
+        } else {
+            refreshBtnText.textContent = 'Refresh Events';
         }
     }
 
@@ -1402,6 +1585,11 @@ class GPSAdminApp {
         // Connect calendar button
         document.getElementById('connect-calendar-btn')?.addEventListener('click', () => {
             this.handleCalendarConnect();
+        });
+
+        // Refresh calendar button
+        document.getElementById('refresh-calendar-btn')?.addEventListener('click', async () => {
+            await this.handleCalendarRefresh();
         });
 
         // Calendar controls
@@ -3454,6 +3642,53 @@ class GPSAdminApp {
     }
 
     /**
+     * Handle manual calendar refresh
+     */
+    async handleCalendarRefresh() {
+        if (!this.state.isAuthenticated || !this.calendarAPI) {
+            alert('Please connect to Google Calendar first.');
+            return;
+        }
+
+        try {
+            const refreshBtn = document.getElementById('refresh-calendar-btn');
+            const refreshBtnText = document.getElementById('refresh-btn-text');
+
+            // Show loading state
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.classList.add('loading');
+            }
+            if (refreshBtnText) {
+                refreshBtnText.textContent = 'Refreshing...';
+            }
+
+            console.log('🔄 Manually refreshing calendar events...');
+
+            // Force re-fetch from Google Calendar
+            await this.loadCalendarEvents();
+
+            // Re-render views
+            this.renderDashboard();
+            this.updateWorkloadIndicator();
+            this.updateRefreshButtonState();
+
+            console.log('✅ Events refreshed successfully');
+
+        } catch (error) {
+            console.error('Error refreshing calendar:', error);
+            alert('Failed to refresh calendar events.\n\nError: ' + (error.message || 'Unknown error'));
+        } finally {
+            // Restore button state
+            const refreshBtn = document.getElementById('refresh-calendar-btn');
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('loading');
+            }
+        }
+    }
+
+    /**
      * Handle calendar connection
      */
     async handleCalendarConnect() {
@@ -3574,6 +3809,9 @@ class GPSAdminApp {
 
             this.state.events = allEvents;
             console.log(`✅ Loaded ${allEvents.length} events from ${this.state.selectedCalendars.length} calendar(s)`);
+
+            // Save to cache
+            this.saveEventsCache();
 
         } catch (error) {
             console.error('Error loading calendar events:', error);

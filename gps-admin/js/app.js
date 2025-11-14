@@ -1576,6 +1576,15 @@ class GPSAdminApp {
             return 0;
         }
         
+        // Overnight events are displayed separately, not included in work hours
+        const isOvernightType = event.type === 'overnight' || 
+                               event.title?.toLowerCase().includes('overnight') ||
+                               event.title?.toLowerCase().includes('housesit');
+        
+        if (isOvernightType) {
+            return 0;
+        }
+        
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
         
@@ -1586,19 +1595,8 @@ class GPSAdminApp {
         const dayEnd = new Date(targetDate);
         dayEnd.setHours(23, 59, 59, 999);
         
-        console.log('📊 calculateEventDurationForDay:', {
-            eventTitle: event.title,
-            eventType: event.type,
-            eventStart: eventStart.toLocaleString(),
-            eventEnd: eventEnd.toLocaleString(),
-            targetDate: targetDate.toLocaleDateString(),
-            dayStart: dayStart.toLocaleString(),
-            dayEnd: dayEnd.toLocaleString()
-        });
-        
         // If event doesn't overlap with this day at all, return 0
         if (eventEnd <= dayStart || eventStart > dayEnd) {
-            console.log('  ❌ No overlap - returning 0');
             return 0;
         }
         
@@ -1606,35 +1604,6 @@ class GPSAdminApp {
         const overlapStart = eventStart > dayStart ? eventStart : dayStart;
         const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
         const minutes = (overlapEnd - overlapStart) / (1000 * 60);
-        
-        console.log('  📏 Overlap calculation:', {
-            overlapStart: overlapStart.toLocaleString(),
-            overlapEnd: overlapEnd.toLocaleString(),
-            rawMinutes: minutes,
-            rawHours: (minutes / 60).toFixed(2)
-        });
-        
-        // For overnight appointments, cap at 12 hours per day
-        // This represents the typical overnight care window (9 PM to 9 AM)
-        const isOvernightType = event.type === 'overnight' || 
-                               event.title?.toLowerCase().includes('overnight') ||
-                               event.title?.toLowerCase().includes('boarding');
-        
-        if (isOvernightType) {
-            // Cap at 12 hours (720 minutes) per day for overnight stays
-            const cappedMinutes = Math.min(Math.max(0, minutes), 12 * 60);
-            console.log('  🌙 Overnight event - capping at 12h:', {
-                beforeCap: (minutes / 60).toFixed(2) + 'h',
-                afterCap: (cappedMinutes / 60).toFixed(2) + 'h',
-                finalMinutes: cappedMinutes
-            });
-            return cappedMinutes;
-        }
-        
-        console.log('  ✅ Regular event - returning:', {
-            minutes: Math.max(0, minutes),
-            hours: (Math.max(0, minutes) / 60).toFixed(2)
-        });
         
         return Math.max(0, minutes);
     }
@@ -4181,8 +4150,10 @@ class GPSAdminApp {
      * Render bar chart with threshold lines
      */
     renderBarChartWithThresholds(container, data) {
-        const maxValue = Math.max(...data.map(d => d.value), this.state.settings.thresholds.daily.burnout);
         const thresholds = this.state.settings.thresholds.daily;
+        const displayCap = 20; // Cap display at 20h for better scale
+        const actualMax = Math.max(...data.map(d => d.value), thresholds.burnout);
+        const maxValue = Math.min(actualMax, displayCap);
 
         // Calculate threshold positions (as percentage from bottom)
         const comfortablePos = (thresholds.comfortable / maxValue * 100);
@@ -4190,12 +4161,38 @@ class GPSAdminApp {
         const burnoutPos = (thresholds.high / maxValue * 100);
 
         const html = '<div class="chart-with-thresholds" style="position: relative; height: 250px;">' +
+            // Background zones for visual clarity
+            '<div class="threshold-zone comfortable" style="bottom: 0; height: ' + comfortablePos + '%;"></div>' +
+            '<div class="threshold-zone busy" style="bottom: ' + comfortablePos + '%; height: ' + (busyPos - comfortablePos) + '%;"></div>' +
+            '<div class="threshold-zone overload" style="bottom: ' + busyPos + '%; height: ' + (100 - busyPos) + '%;"></div>' +
             // Threshold lines
             '<div class="threshold-line comfortable" style="bottom: ' + comfortablePos + '%;" data-label="' + thresholds.comfortable + 'h comfortable"></div>' +
             '<div class="threshold-line busy" style="bottom: ' + busyPos + '%;" data-label="' + thresholds.busy + 'h busy"></div>' +
-            '<div class="threshold-line" style="bottom: ' + burnoutPos + '%;" data-label="' + thresholds.high + 'h overload"></div>' +
+            '<div class="threshold-line overload" style="bottom: ' + burnoutPos + '%;" data-label="' + thresholds.high + 'h overload"></div>' +
             // Bar chart
-            '<div class="bar-chart">' + data.map(item => '<div class="bar-chart-item"><div class="bar animated" style="height: ' + (item.value / maxValue * 100) + '%;" title="' + item.label + ': ' + item.value + '"><div class="bar-value">' + item.value.toFixed(1) + '</div></div><div class="bar-label">' + (item.shortLabel || item.label) + '</div></div>').join('') + '</div>' +
+            '<div class="bar-chart">' + data.map(item => {
+                const displayValue = Math.min(item.value, displayCap);
+                const isOverflow = item.value > displayCap;
+                const heightPercent = (displayValue / maxValue * 100);
+                const valueText = item.value < 1 ? item.value.toFixed(1) : Math.round(item.value);
+                
+                // Determine bar status based on thresholds
+                let barStatus = 'comfortable';
+                if (item.value >= thresholds.high || isOverflow) {
+                    barStatus = 'overload';
+                } else if (item.value >= thresholds.busy) {
+                    barStatus = 'busy';
+                } else if (item.value >= thresholds.comfortable) {
+                    barStatus = 'moderate';
+                }
+                
+                return '<div class="bar-chart-item">' +
+                    '<div class="bar animated ' + barStatus + (isOverflow ? ' overflow' : '') + '" style="height: ' + heightPercent + '%;" title="' + item.label + ': ' + item.value.toFixed(1) + 'h">' +
+                    '<div class="bar-value">' + valueText + (isOverflow ? '+' : '') + '</div>' +
+                    '</div>' +
+                    '<div class="bar-label">' + (item.shortLabel || item.label) + '</div>' +
+                    '</div>';
+            }).join('') + '</div>' +
         '</div>';
 
         container.innerHTML = html;
@@ -4270,7 +4267,7 @@ class GPSAdminApp {
             'Morning': [6, 9],
             'Mid-Morning': [9, 12],
             'Afternoon': [12, 15],
-            'Late Aft': [15, 18],
+            'Late Afternoon': [15, 18],
             'Evening': [18, 21]
         };
 
@@ -4287,7 +4284,7 @@ class GPSAdminApp {
             return {
                 label,
                 value: count,
-                shortLabel: label.substring(0, 3)
+                shortLabel: label // Use full label
             };
         });
 
@@ -4341,7 +4338,7 @@ class GPSAdminApp {
      * @param {string} range - Time range ('week', 'month', 'quarter', 'year')
      */
     renderAnalyticsInsights(events, range) {
-        const container = document.getElementById('weekly-insights');
+        const container = document.getElementById('analytics-insights');
         if (!container) return;
 
         // Defensive check for undefined/null events

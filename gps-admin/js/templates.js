@@ -6,6 +6,7 @@
 class TemplatesManager {
     constructor() {
         this.templates = [];
+        this.TEMPLATES_VERSION = 2; // Increment this when defaults change
         this.loadTemplates();
     }
 
@@ -14,15 +15,21 @@ class TemplatesManager {
      */
     loadTemplates() {
         const saved = localStorage.getItem('gps-admin-templates');
-        if (saved) {
+        const savedVersion = parseInt(localStorage.getItem('gps-admin-templates-version') || '0');
+        
+        if (saved && savedVersion === this.TEMPLATES_VERSION) {
             try {
                 this.templates = JSON.parse(saved);
             } catch (e) {
                 console.error('Error loading templates:', e);
                 this.templates = this.getDefaultTemplates();
+                this.saveTemplates();
             }
         } else {
+            // Version mismatch or no saved templates - reset to new defaults
+            console.log('Templates version updated, resetting to new defaults');
             this.templates = this.getDefaultTemplates();
+            this.saveTemplates();
         }
     }
 
@@ -31,6 +38,7 @@ class TemplatesManager {
      */
     saveTemplates() {
         localStorage.setItem('gps-admin-templates', JSON.stringify(this.templates));
+        localStorage.setItem('gps-admin-templates-version', this.TEMPLATES_VERSION.toString());
     }
 
     /**

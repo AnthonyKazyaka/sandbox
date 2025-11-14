@@ -1144,6 +1144,7 @@ label {
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    min-width: 0; /* Allow flex items to shrink below content size */
 }
 
 .bar {
@@ -1153,6 +1154,7 @@ label {
     position: relative;
     transition: all var(--transition-base);
     cursor: pointer;
+    z-index: 2;
 }
 
 .bar:hover {
@@ -1160,21 +1162,74 @@ label {
     transform: translateY(-2px);
 }
 
-.bar-value {
+/* Status-based bar colors */
+.bar.comfortable {
+    background: linear-gradient(to top, var(--primary-500), var(--primary-400));
+}
+
+.bar.comfortable:hover {
+    background: linear-gradient(to top, var(--primary-600), var(--primary-500));
+}
+
+.bar.moderate {
+    background: linear-gradient(to top, var(--primary-600), var(--primary-500));
+}
+
+.bar.moderate:hover {
+    background: linear-gradient(to top, var(--primary-700), var(--primary-600));
+}
+
+.bar.busy {
+    background: linear-gradient(to top, var(--warning-500), var(--warning-400));
+}
+
+.bar.busy:hover {
+    background: linear-gradient(to top, var(--warning-600), var(--warning-500));
+}
+
+.bar.overload {
+    background: linear-gradient(to top, var(--danger-500), var(--danger-400));
+}
+
+.bar.overload:hover {
+    background: linear-gradient(to top, var(--danger-600), var(--danger-500));
+}
+
+.bar.overflow {
+    background: linear-gradient(to top, var(--red-600), var(--red-500));
+    position: relative;
+}
+
+.bar.overflow::after {
+    content: '';
     position: absolute;
-    top: -24px;
+    top: -4px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.75rem;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 6px solid var(--red-600);
+}
+
+.bar-value {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--text);
     white-space: nowrap;
 }
 
 .bar-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Donut Chart Styles */
@@ -1644,12 +1699,34 @@ label {
     position: relative;
 }
 
+/* Background zones for threshold visualization */
+.threshold-zone {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--transition-base);
+}
+
+.threshold-zone.comfortable {
+    background: linear-gradient(to top, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+}
+
+.threshold-zone.busy {
+    background: linear-gradient(to top, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.02));
+}
+
+.threshold-zone.overload {
+    background: linear-gradient(to top, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02));
+}
+
 .threshold-line {
     position: absolute;
     left: 0;
     right: 0;
     height: 2px;
-    background: rgba(239, 68, 68, 0.3);
+    background: transparent;
     border-top: 2px dashed var(--danger-400);
     pointer-events: none;
     z-index: 1;
@@ -1665,11 +1742,11 @@ label {
     background: var(--surface);
     padding: 2px 6px;
     border-radius: var(--radius-sm);
+    font-weight: 500;
 }
 
 .threshold-line.comfortable {
     border-color: var(--primary-400);
-    background: rgba(59, 130, 246, 0.2);
 }
 
 .threshold-line.comfortable::after {
@@ -1678,11 +1755,18 @@ label {
 
 .threshold-line.busy {
     border-color: var(--warning-400);
-    background: rgba(245, 158, 11, 0.2);
 }
 
 .threshold-line.busy::after {
     color: var(--warning-600);
+}
+
+.threshold-line.overload {
+    border-color: var(--danger-400);
+}
+
+.threshold-line.overload::after {
+    color: var(--danger-600);
 }
 
 /* Progress Bar */

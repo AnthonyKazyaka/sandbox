@@ -54,8 +54,110 @@ class GPSAdminApp {
             this.templatesManager = new TemplatesManager();
         }
 
+        // Work event detection patterns
+        this.workEventPatterns = {
+            meetAndGreet: /\b(MG|M&G|Meet\s*&\s*Greet)\b/i,
+            minutesSuffix: /\b(15|20|30|45|60)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i,
+            houseSitSuffix: /\b(HS|Housesit)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i
+        };
+
         this.initMockData();
         this.loadSettings();
+    }
+
+    /**
+     * Check if an event is a work event based on title patterns
+     * @param {string} title - Event title/summary
+     * @returns {boolean} True if work event, false otherwise
+     */
+    isWorkEvent(title) {
+        if (!title || typeof title !== 'string') return false;
+
+        const trimmedTitle = title.trim();
+
+        // Check for Meet & Greet
+        if (this.workEventPatterns.meetAndGreet.test(trimmedTitle)) {
+            return true;
+        }
+
+        // Check for timed visit (ends with minutes)
+        if (this.workEventPatterns.minutesSuffix.test(trimmedTitle)) {
+            return true;
+        }
+
+        // Check for house sit
+        if (this.workEventPatterns.houseSitSuffix.test(trimmedTitle)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect service type from event title
+     * @param {string} title - Event title/summary
+     * @returns {string} Service type: 'meet-greet', 'dropin', 'housesit', or 'other'
+     */
+    detectServiceType(title) {
+        if (!title || typeof title !== 'string') return 'other';
+
+        const trimmedTitle = title.trim();
+
+        // Meet & Greet
+        if (this.workEventPatterns.meetAndGreet.test(trimmedTitle)) {
+            return 'meet-greet';
+        }
+
+        // House Sit
+        if (this.workEventPatterns.houseSitSuffix.test(trimmedTitle)) {
+            return 'housesit';
+        }
+
+        // Timed visit (drop-in)
+        if (this.workEventPatterns.minutesSuffix.test(trimmedTitle)) {
+            return 'dropin';
+        }
+
+        return 'other';
+    }
+
+    /**
+     * Extract duration from event title (for timed visits)
+     * @param {string} title - Event title/summary
+     * @returns {number|null} Duration in minutes, or null if not found
+     */
+    extractDurationFromTitle(title) {
+        if (!title || typeof title !== 'string') return null;
+
+        const match = this.workEventPatterns.minutesSuffix.exec(title.trim());
+        if (match && match[1]) {
+            return parseInt(match[1], 10);
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract sequence marker from event title
+     * @param {string} title - Event title/summary
+     * @returns {string|null} Sequence marker: 'Start', '1st', '2nd', '3rd', 'Last', or null
+     */
+    extractSequenceMarker(title) {
+        if (!title || typeof title !== 'string') return null;
+
+        // Check minutes suffix pattern
+        let match = this.workEventPatterns.minutesSuffix.exec(title.trim());
+        if (match && match[2]) {
+            return match[2];
+        }
+
+        // Check house sit pattern
+        match = this.workEventPatterns.houseSitSuffix.exec(title.trim());
+        if (match && match[2]) {
+            return match[2];
+        }
+
+        return null;
     }
 
     /**
@@ -1434,6 +1536,21 @@ class GPSAdminApp {
     }
 
     /**
+     * Mark events with work event flags and metadata
+     * @param {Array} events - Array of events to mark
+     */
+    markWorkEvents(events) {
+        events.forEach(event => {
+            event.isWorkEvent = this.isWorkEvent(event.title);
+            if (event.isWorkEvent) {
+                event.serviceType = this.detectServiceType(event.title);
+                event.extractedDuration = this.extractDurationFromTitle(event.title);
+                event.sequenceMarker = this.extractSequenceMarker(event.title);
+            }
+        });
+    }
+
+    /**
      * Initialize calendar events on app startup
      * Loads from cache if valid, otherwise fetches from Google Calendar
      */
@@ -1449,6 +1566,10 @@ class GPSAdminApp {
                     start: new Date(event.start),
                     end: new Date(event.end)
                 }));
+
+                // Mark work events (since this isn't stored in cache)
+                this.markWorkEvents(this.state.events);
+
                 this.state.lastEventSync = cache.timestamp;
                 console.log(`✅ Loaded ${this.state.events.length} events from cache (${Math.round((new Date() - cache.timestamp) / 1000 / 60)} minutes old)`);
             } else {
@@ -1489,6 +1610,9 @@ class GPSAdminApp {
                     start: new Date(event.start),
                     end: new Date(event.end)
                 }));
+
+                // Mark work events
+                this.markWorkEvents(this.state.events);
             }
         }
     }
@@ -1693,6 +1817,11 @@ class GPSAdminApp {
 
         // Analytics comparison toggle
         document.getElementById('analytics-compare-toggle')?.addEventListener('change', () => {
+            this.renderAnalytics();
+        });
+
+        // Analytics work events filter toggle
+        document.getElementById('analytics-work-only-toggle')?.addEventListener('change', () => {
             this.renderAnalytics();
         });
     }
@@ -3797,6 +3926,9 @@ class GPSAdminApp {
                                        this.isEventIgnoredByPattern(event);
                     });
 
+                    // Mark work events with metadata
+                    this.markWorkEvents(events);
+
                     allEvents.push(...events);
                 } catch (error) {
                     console.error(`Failed to fetch from calendar ${calendarId}:`, error);
@@ -3808,7 +3940,10 @@ class GPSAdminApp {
             allEvents.sort((a, b) => a.start - b.start);
 
             this.state.events = allEvents;
-            console.log(`✅ Loaded ${allEvents.length} events from ${this.state.selectedCalendars.length} calendar(s)`);
+
+            // Count work events
+            const workEventCount = allEvents.filter(e => e.isWorkEvent).length;
+            console.log(`✅ Loaded ${allEvents.length} events from ${this.state.selectedCalendars.length} calendar(s) (${workEventCount} work events)`);
 
             // Save to cache
             this.saveEventsCache();
@@ -4194,17 +4329,23 @@ class GPSAdminApp {
     renderAnalytics() {
         const range = document.getElementById('analytics-range')?.value || 'month';
         const compareMode = document.getElementById('analytics-compare-toggle')?.checked || false;
+        const workOnlyMode = document.getElementById('analytics-work-only-toggle')?.checked || false;
 
         const result = this.getDateRange(range);
         const startDate = result.startDate;
         const endDate = result.endDate;
 
         // Filter events within date range
-        const events = this.state.events.filter(event => {
+        let events = this.state.events.filter(event => {
             if (event.ignored || event.isAllDay) return false;
             const eventDate = new Date(event.start);
             return eventDate >= startDate && eventDate <= endDate;
         });
+
+        // Apply work events filter if enabled
+        if (workOnlyMode) {
+            events = events.filter(event => event.isWorkEvent);
+        }
 
         if (events.length === 0) {
             this.renderAnalyticsEmpty();
@@ -4218,11 +4359,16 @@ class GPSAdminApp {
         // Handle comparison mode
         if (compareMode) {
             const prevResult = this.getPreviousPeriodRange(range);
-            const prevEvents = this.state.events.filter(event => {
+            let prevEvents = this.state.events.filter(event => {
                 if (event.ignored || event.isAllDay) return false;
                 const eventDate = new Date(event.start);
                 return eventDate >= prevResult.startDate && eventDate <= prevResult.endDate;
             });
+
+            // Apply work events filter to previous period if enabled
+            if (workOnlyMode) {
+                prevEvents = prevEvents.filter(event => event.isWorkEvent);
+            }
 
             const currentDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
             const previousDays = Math.ceil((prevResult.endDate - prevResult.startDate) / (1000 * 60 * 60 * 24));

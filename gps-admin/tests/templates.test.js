@@ -30,9 +30,9 @@ describe('TemplatesManager', () => {
       expect(manager.templates.length).toBeGreaterThan(0);
     });
 
-    test('should have 8 default templates', () => {
+    test('should have 4 default templates', () => {
       const defaults = manager.getDefaultTemplates();
-      expect(defaults.length).toBe(8);
+      expect(defaults.length).toBe(4);
     });
 
     test('should mark default templates correctly', () => {
@@ -121,7 +121,7 @@ describe('TemplatesManager', () => {
     describe('getAllTemplates', () => {
       test('should return all templates including defaults', () => {
         const all = manager.getAllTemplates();
-        expect(all.length).toBe(8); // Default templates
+        expect(all.length).toBe(4); // Default templates
       });
 
       test('should include custom templates', () => {
@@ -129,7 +129,7 @@ describe('TemplatesManager', () => {
         manager.createTemplate({ name: 'Custom 2' });
 
         const all = manager.getAllTemplates();
-        expect(all.length).toBe(10); // 8 defaults + 2 custom
+        expect(all.length).toBe(6); // 4 defaults + 2 custom
       });
     });
 
@@ -415,7 +415,7 @@ describe('TemplatesManager', () => {
       const defaultCount = templates.filter(t => t.isDefault).length;
       const customCount = templates.filter(t => !t.isDefault).length;
 
-      expect(defaultCount).toBe(8); // Defaults should remain
+      expect(defaultCount).toBe(4); // Defaults should remain
       expect(customCount).toBe(1); // Only the imported template
     });
 
@@ -451,7 +451,7 @@ describe('TemplatesManager', () => {
       const manager = new TemplatesManager();
 
       // Should fall back to defaults
-      expect(manager.templates.length).toBe(8);
+      expect(manager.templates.length).toBe(4);
     });
 
     test('should initialize with defaults when localStorage is empty', () => {
@@ -459,7 +459,7 @@ describe('TemplatesManager', () => {
 
       const manager = new TemplatesManager();
 
-      expect(manager.templates.length).toBe(8);
+      expect(manager.templates.length).toBe(4);
       expect(manager.templates.every(t => t.isDefault)).toBe(true);
     });
   });

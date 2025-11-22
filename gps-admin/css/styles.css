@@ -766,6 +766,43 @@ label {
     color: var(--gray-500);
 }
 
+/* Layout Utilities - Prevent Overflow Issues */
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-x-hidden {
+    overflow-x: hidden;
+}
+
+.overflow-y-auto {
+    overflow-y: auto;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.max-w-full {
+    max-width: 100%;
+}
+
+.max-w-screen {
+    max-width: 100vw;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+/* Container Constraints */
+.container-constrained {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
 /* Modal */
 .modal {
     display: none;

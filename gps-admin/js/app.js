@@ -4,6 +4,12 @@
  */
 
 class GPSAdminApp {
+    // Class constants
+    static DAY_NAMES_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    static DAY_NAMES_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    static MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+
     constructor() {
         this.state = {
             currentView: 'dashboard',
@@ -74,6 +80,11 @@ class GPSAdminApp {
         if (!title || typeof title !== 'string') return false;
 
         const trimmedTitle = title.trim();
+
+        // Exclude lunch events
+        if (/\blunch\b/i.test(trimmedTitle)) {
+            return false;
+        }
 
         // Check for Meet & Greet
         if (this.workEventPatterns.meetAndGreet.test(trimmedTitle)) {
@@ -158,6 +169,250 @@ class GPSAdminApp {
         }
 
         return null;
+    }
+
+    /**
+     * Check if an event is an overnight/housesit appointment
+     * Centralized logic to avoid duplication
+     * @param {Object} event - The event object
+     * @returns {boolean} True if overnight/housesit, false otherwise
+     */
+    isOvernightEvent(event) {
+        if (!event || !event.title) return false;
+        
+        const titleLower = event.title.toLowerCase();
+        return event.type === 'overnight' || 
+               titleLower.includes('overnight') ||
+               titleLower.includes('housesit') ||
+               titleLower.includes('house sit') ||
+               titleLower.includes('house-sit') ||
+               titleLower.match(/\bhs\b/) ||  // "HS" as separate word
+               titleLower.includes('sitting');
+    }
+
+    /**
+     * Calculate estimated travel time for a list of work events
+     * Uses a simple 15-minute estimate per trip (can be enhanced with Maps API)
+     * @param {Array} workEvents - Array of work events (already filtered, sorted by start time)
+     * @returns {number} Total travel time in minutes
+     */
+    calculateEstimatedTravelTime(workEvents) {
+        if (!workEvents || workEvents.length === 0) {
+            return 0;
+        }
+
+        let travelMinutes = 0;
+
+        // Travel to first appointment from home
+        if (workEvents[0].location) {
+            travelMinutes += 15;
+        }
+
+        // Travel between consecutive appointments
+        for (let i = 0; i < workEvents.length - 1; i++) {
+            if (workEvents[i].location && workEvents[i + 1].location) {
+                travelMinutes += 15;
+            }
+        }
+
+        // Travel home from last appointment
+        if (workEvents[workEvents.length - 1].location) {
+            travelMinutes += 15;
+        }
+
+        return travelMinutes;
+    }
+
+    /**
+     * Get all events for a specific date
+     * Centralized event filtering to eliminate duplication
+     * @param {Date} targetDate - The date to get events for
+     * @param {Object} options - Filter options
+     * @returns {Array} Filtered events for the date
+     */
+    getEventsForDate(targetDate, options = {}) {
+        const {
+            includeIgnored = true,
+            includeAllDay = true,
+            workEventsOnly = false
+        } = options;
+
+        const dayStart = new Date(targetDate);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        const dayEnd = new Date(targetDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        let events = this.state.events.filter(event => {
+            const eventStart = new Date(event.start);
+            const eventEnd = new Date(event.end);
+            
+            // Check if event overlaps with this day (handles multi-day events)
+            return eventEnd > dayStart && eventStart <= dayEnd;
+        });
+
+        // Apply filters
+        if (!includeIgnored) {
+            events = events.filter(event => !event.ignored);
+        }
+
+        if (!includeAllDay) {
+            events = events.filter(event => !event.isAllDay);
+        }
+
+        if (workEventsOnly) {
+            events = events.filter(event => !event.ignored && !event.isAllDay);
+        }
+
+        return events;
+    }
+
+    /**
+     * Calculate workload metrics for a set of events
+     * Centralized workload calculation logic
+     * @param {Array} events - Events to calculate workload for
+     * @param {Date} targetDate - Date to calculate for (for multi-day events)
+     * @param {Object} options - Calculation options
+     * @returns {Object} Workload metrics
+     */
+    calculateWorkloadMetrics(events, targetDate, options = {}) {
+        const { includeTravel = true } = options;
+
+        // Filter to work events only
+        const workEvents = events.filter(event => !event.ignored && !event.isAllDay);
+
+        // Calculate work minutes
+        const workMinutes = workEvents.reduce((sum, event) => {
+            return sum + this.calculateEventDurationForDay(event, targetDate);
+        }, 0);
+
+        // Calculate travel time
+        const travelMinutes = includeTravel ? this.calculateEstimatedTravelTime(workEvents) : 0;
+
+        // Calculate totals
+        const totalMinutes = workMinutes + travelMinutes;
+        const workHours = workMinutes / 60;
+        const travelHours = travelMinutes / 60;
+        const totalHours = totalMinutes / 60;
+
+        // Get workload level
+        const level = this.getWorkloadLevel(totalHours);
+        const label = this.getWorkloadLabel(level);
+
+        // Check for housesits
+        const housesits = workEvents.filter(event => this.isOvernightEvent(event));
+
+        return {
+            workEvents,
+            workMinutes,
+            travelMinutes,
+            totalMinutes,
+            workHours,
+            travelHours,
+            totalHours,
+            level,
+            label,
+            housesits,
+            eventCount: events.length,
+            workEventCount: workEvents.length
+        };
+    }
+
+    /**
+     * Format duration in minutes to human-readable string
+     * @param {number} minutes - Duration in minutes
+     * @param {Object} options - Formatting options
+     * @returns {string} Formatted duration
+     */
+    formatDuration(minutes, options = {}) {
+        const {
+            includeMinutes = true,
+            compact = false,
+            precision = 1
+        } = options;
+
+        if (minutes === 0) return '0h';
+
+        const hours = Math.floor(minutes / 60);
+        const mins = Math.round(minutes % 60);
+
+        if (compact) {
+            if (hours === 0) return `${mins}m`;
+            if (mins === 0) return `${hours}h`;
+            return `${hours}h ${mins}m`;
+        }
+
+        if (!includeMinutes || mins === 0) {
+            return `${hours}h`;
+        }
+
+        return `${hours}h ${mins}m`;
+    }
+
+    /**
+     * Format hours with decimal precision
+     * @param {number} hours - Hours as decimal
+     * @param {number} precision - Decimal places
+     * @returns {string} Formatted hours
+     */
+    formatHours(hours, precision = 1) {
+        return hours.toFixed(precision) + 'h';
+    }
+
+    /**
+     * Create a date at specific time
+     * @param {Date} baseDate - Base date to use
+     * @param {number} hours - Hour (0-23)
+     * @param {number} minutes - Minutes (0-59)
+     * @returns {Date} New date at specified time
+     */
+    createDateAtTime(baseDate, hours, minutes = 0) {
+        return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
+    }
+
+    /**
+     * Add days to a date
+     * @param {Date} date - Starting date
+     * @param {number} days - Number of days to add
+     * @returns {Date} New date with days added
+     */
+    addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    /**
+     * Show a modal by ID
+     * @param {string} modalId - The modal element ID
+     */
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('active');
+    }
+
+    /**
+     * Hide a modal by ID
+     * @param {string} modalId - The modal element ID
+     */
+    hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('active');
+    }
+
+    /**
+     * Create day boundaries for date filtering
+     * @param {Date} date - The date
+     * @returns {Object} Object with dayStart and dayEnd
+     */
+    getDayBoundaries(date) {
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        return { dayStart, dayEnd };
     }
 
     /**
@@ -1894,17 +2149,7 @@ class GPSAdminApp {
         }
         
         // Overnight events are displayed separately, not included in work hours
-        // Check both type field and title patterns (including HS abbreviation)
-        const titleLower = event.title?.toLowerCase() || '';
-        const isOvernightType = event.type === 'overnight' || 
-                               titleLower.includes('overnight') ||
-                               titleLower.includes('housesit') ||
-                               titleLower.includes('house sit') ||
-                               titleLower.includes('house-sit') ||
-                               titleLower.match(/\bhs\b/) ||  // "HS" as separate word
-                               titleLower.includes('sitting');
-        
-        if (isOvernightType) {
+        if (this.isOvernightEvent(event)) {
             return 0;
         }
         
@@ -1949,49 +2194,20 @@ class GPSAdminApp {
     async renderQuickStats() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(today);
-        todayEnd.setHours(23, 59, 59, 999);
 
-        const todayEvents = this.state.events.filter(event => {
-            const eventStart = new Date(event.start);
-            const eventEnd = new Date(event.end);
-            // Check if event overlaps with today (handles multi-day events)
-            return eventEnd > today && eventStart <= todayEnd;
+        const todayEvents = this.getEventsForDate(today);
+        const metrics = this.calculateWorkloadMetrics(todayEvents, today, {
+            includeTravel: this.state.settings.includeTravelTime
         });
 
-        // Filter out ignored events for workload calculations
-        const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
-
-        const totalMinutes = workEvents.reduce((sum, event) => {
-            return sum + this.calculateEventDurationForDay(event, today);
-        }, 0);
-
-        // Calculate travel time
+        // Calculate travel time (enhanced with Maps API if available)
         const travelMinutes = await this.calculateDailyTravelTime(today);
-
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = Math.round(totalMinutes % 60);
-
-        const driveHours = Math.floor(travelMinutes / 60);
-        const driveMinutes = Math.round(travelMinutes % 60);
-
-        // Total workload includes travel time if enabled
-        const totalWorkloadMinutes = this.state.settings.includeTravelTime
-            ? totalMinutes + travelMinutes
-            : totalMinutes;
-
-        // Calculate total hours for display (always includes work + travel for the stat)
-        const totalHours = Math.floor((totalMinutes + travelMinutes) / 60);
-        const totalMins = Math.round((totalMinutes + travelMinutes) % 60);
 
         // Update stats
         document.getElementById('stat-today').textContent = todayEvents.length;
-        document.getElementById('stat-hours').textContent = `${totalHours}h ${totalMins}m`;
-        document.getElementById('stat-drive').textContent = driveHours > 0 ? `${driveHours}h ${driveMinutes}m` : `${driveMinutes}m`;
-
-        // Workload level includes travel time
-        const workloadLevel = this.getWorkloadLevel(totalWorkloadMinutes / 60);
-        document.getElementById('stat-workload').textContent = this.getWorkloadLabel(workloadLevel);
+        document.getElementById('stat-hours').textContent = this.formatDuration(metrics.workMinutes + travelMinutes);
+        document.getElementById('stat-drive').textContent = this.formatDuration(travelMinutes);
+        document.getElementById('stat-workload').textContent = metrics.label;
     }
 
     /**
@@ -2012,57 +2228,20 @@ class GPSAdminApp {
             date.setDate(startOfWeek.getDate() + i);
             date.setHours(0, 0, 0, 0);
 
-            const dayEvents = this.state.events.filter(event => {
-                const eventStart = new Date(event.start);
-                const eventEnd = new Date(event.end);
-                
-                // Set day boundaries
-                const dayStart = new Date(date);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(date);
-                dayEnd.setHours(23, 59, 59, 999);
-                
-                // Check if event overlaps with this day (handles multi-day events)
-                return eventEnd > dayStart && eventStart <= dayEnd;
-            });
-
-            // Filter out ignored events and all-day events for workload calculations
-            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
-
-            const totalMinutes = workEvents.reduce((sum, event) => {
-                return sum + this.calculateEventDurationForDay(event, date);
-            }, 0);
-
-            // Calculate travel time for this day
-            let travelMinutes = 0;
-            if (workEvents.length > 0) {
-                // Travel to first appointment from home
-                if (workEvents[0].location) travelMinutes += 15;
-                
-                // Travel between consecutive appointments
-                for (let j = 0; j < workEvents.length - 1; j++) {
-                    if (workEvents[j].location && workEvents[j + 1].location) {
-                        travelMinutes += 15;
-                    }
-                }
-                
-                // Travel home from last appointment
-                if (workEvents[workEvents.length - 1].location) travelMinutes += 15;
-            }
-
-            const totalWithTravel = totalMinutes + travelMinutes;
-            const hours = (totalWithTravel / 60).toFixed(1);
-            const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayEvents = this.getEventsForDate(date);
+            const metrics = this.calculateWorkloadMetrics(dayEvents, date, { includeTravel: true });
+            
+            const hours = this.formatHours(metrics.totalHours);
+            const workloadLevel = metrics.level;
 
             // Store date for click handler
             const dateStr = date.toISOString();
 
             html += `
                 <div class="week-day ${workloadLevel}" data-date="${dateStr}" style="cursor: pointer;">
-                    <div class="week-day-name">${dayNames[i]}</div>
+                    <div class="week-day-name">${GPSAdminApp.DAY_NAMES_SHORT[i]}</div>
                     <div class="week-day-date">${date.getDate()}</div>
-                    <div class="week-day-hours">${hours}h</div>
+                    <div class="week-day-hours">${hours}</div>
                 </div>
             `;
         }
@@ -2106,54 +2285,19 @@ class GPSAdminApp {
             date.setDate(today.getDate() + i);
             date.setHours(0, 0, 0, 0);
 
-            const dayEvents = this.state.events.filter(event => {
-                const eventStart = new Date(event.start);
-                const eventEnd = new Date(event.end);
-                
-                // Set day boundaries
-                const dayStart = new Date(date);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(date);
-                dayEnd.setHours(23, 59, 59, 999);
-                
-                // Check if event overlaps with this day (handles multi-day events)
-                return eventEnd > dayStart && eventStart <= dayEnd;
-            });
+            const dayEvents = this.getEventsForDate(date);
+            const metrics = this.calculateWorkloadMetrics(dayEvents, date, { includeTravel: true });
 
-            // Filter work events (excluding ignored and all-day)
-            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
-
-            const dayMinutes = workEvents.reduce((sum, event) => {
-                return sum + this.calculateEventDurationForDay(event, date);
-            }, 0);
-
-            // Calculate travel time for this day
-            let dayTravelMinutes = 0;
-            if (workEvents.length > 0) {
-                // Travel to first appointment from home
-                if (workEvents[0].location) dayTravelMinutes += 15;
-                
-                // Travel between consecutive appointments
-                for (let j = 0; j < workEvents.length - 1; j++) {
-                    if (workEvents[j].location && workEvents[j + 1].location) {
-                        dayTravelMinutes += 15;
-                    }
-                }
-                
-                // Travel home from last appointment
-                if (workEvents[workEvents.length - 1].location) dayTravelMinutes += 15;
-            }
-
-            totalAppointments += workEvents.length;
-            totalWorkMinutes += dayMinutes;
-            totalTravelMinutes += dayTravelMinutes;
-            if (workEvents.length > 0) daysWithAppointments++;
+            totalAppointments += metrics.workEventCount;
+            totalWorkMinutes += metrics.workMinutes;
+            totalTravelMinutes += metrics.travelMinutes;
+            if (metrics.workEventCount > 0) daysWithAppointments++;
 
             weekData.push({
                 date,
-                appointments: workEvents.length,
-                workMinutes: dayMinutes,
-                travelMinutes: dayTravelMinutes
+                appointments: metrics.workEventCount,
+                workMinutes: metrics.workMinutes,
+                travelMinutes: metrics.travelMinutes
             });
         }
 
@@ -2167,16 +2311,15 @@ class GPSAdminApp {
         const totalHours = Math.floor(totalCombinedMinutes / 60);
         const totalMinutes = Math.round(totalCombinedMinutes % 60);
         
-        const avgHoursPerDay = daysWithAppointments > 0 ? (totalCombinedMinutes / 60 / daysWithAppointments).toFixed(1) : 0;
+        const avgHoursPerDay = daysWithAppointments > 0 ? this.formatHours(totalCombinedMinutes / 60 / daysWithAppointments) : '0h';
 
         // Find busiest day (including travel)
         const busiestDay = weekData.reduce((max, day) => 
             (day.workMinutes + day.travelMinutes) > (max.workMinutes + max.travelMinutes) ? day : max
         , weekData[0]);
 
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const busiestDayName = dayNames[busiestDay.date.getDay()];
-        const busiestHours = ((busiestDay.workMinutes + busiestDay.travelMinutes) / 60).toFixed(1);
+        const busiestDayName = GPSAdminApp.DAY_NAMES_LONG[busiestDay.date.getDay()];
+        const busiestHours = this.formatHours((busiestDay.workMinutes + busiestDay.travelMinutes) / 60);
 
         // Workload assessment (including travel time)
         const avgWeeklyHours = totalCombinedMinutes / 60;
@@ -2216,17 +2359,17 @@ class GPSAdminApp {
                 <div class="insight-card">
                     <div class="insight-label">Total Hours</div>
                     <div class="insight-value">${totalHours}h ${totalMinutes}m</div>
-                    <div class="insight-sublabel">${avgHoursPerDay}h avg per day</div>
+                    <div class="insight-sublabel">${avgHoursPerDay} avg per day</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-label">Busiest Day</div>
                     <div class="insight-value">${busiestDayName}</div>
-                    <div class="insight-sublabel">${busiestHours}h total • ${busiestDay.appointments} appointments</div>
+                    <div class="insight-sublabel">${busiestHours} total • ${busiestDay.appointments} appointments</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-label">Weekly Workload</div>
                     <div class="insight-value" style="color: ${workloadColor};">${workloadStatus}</div>
-                    <div class="insight-sublabel">${avgWeeklyHours.toFixed(1)} / ${this.state.settings.thresholds.weekly.comfortable}h capacity</div>
+                    <div class="insight-sublabel">${this.formatHours(avgWeeklyHours)} / ${this.formatHours(this.state.settings.thresholds.weekly.comfortable)} capacity</div>
                     <div class="progress-bar" style="margin-top: 8px;">
                         <div class="progress-fill" style="width: ${Math.min((avgWeeklyHours / this.state.settings.thresholds.weekly.comfortable * 100), 100)}%; background: ${workloadColor};"></div>
                     </div>
@@ -2341,9 +2484,7 @@ class GPSAdminApp {
 
         // Update title
         const title = document.getElementById('calendar-title');
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-        title.textContent = `${monthNames[this.state.currentDate.getMonth()]} ${this.state.currentDate.getFullYear()}`;
+        title.textContent = `${GPSAdminApp.MONTH_NAMES[this.state.currentDate.getMonth()]} ${this.state.currentDate.getFullYear()}`;
 
         // Render based on view mode
         switch (this.state.calendarView) {
@@ -2381,8 +2522,7 @@ class GPSAdminApp {
 
         // Weekday headers
         html += '<div class="calendar-weekdays">';
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        dayNames.forEach(day => {
+        GPSAdminApp.DAY_NAMES_SHORT.forEach(day => {
             html += `<div class="calendar-weekday">${day}</div>`;
         });
         html += '</div>';
@@ -2395,60 +2535,14 @@ class GPSAdminApp {
             const dateKey = new Date(currentDate);
             dateKey.setHours(0, 0, 0, 0);
 
-            const dayEvents = this.state.events.filter(event => {
-                const eventStart = new Date(event.start);
-                const eventEnd = new Date(event.end);
-                
-                // Set day boundaries
-                const dayStart = new Date(dateKey);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(dateKey);
-                dayEnd.setHours(23, 59, 59, 999);
-                
-                // Check if event overlaps with this day (handles multi-day events)
-                return eventEnd > dayStart && eventStart <= dayEnd;
-            });
+            const dayEvents = this.getEventsForDate(dateKey);
+            const metrics = this.calculateWorkloadMetrics(dayEvents, dateKey, { includeTravel: true });
 
-            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
-            
-            // Check for housesits on this day
-            const housesits = workEvents.filter(event => {
-                const titleLower = event.title?.toLowerCase() || '';
-                return event.type === 'overnight' || 
-                       titleLower.includes('overnight') ||
-                       titleLower.includes('housesit') ||
-                       titleLower.includes('house sit') ||
-                       titleLower.includes('house-sit') ||
-                       titleLower.match(/\bhs\b/) ||  // "HS" as separate word
-                       titleLower.includes('sitting');
-            });
-
-            const workMinutes = workEvents.reduce((sum, event) => {
-                return sum + this.calculateEventDurationForDay(event, dateKey);
-            }, 0);
-
-            // Calculate travel time
-            let travelMinutes = 0;
-            if (workEvents.length > 0) {
-                // Travel to first appointment
-                if (workEvents[0].location) travelMinutes += 15;
-                
-                // Travel between appointments
-                for (let i = 0; i < workEvents.length - 1; i++) {
-                    if (workEvents[i].location && workEvents[i + 1].location) {
-                        travelMinutes += 15;
-                    }
-                }
-                
-                // Travel home
-                if (workEvents[workEvents.length - 1].location) travelMinutes += 15;
-            }
-
-            const totalMinutes = workMinutes + travelMinutes;
-            const hours = (totalMinutes / 60).toFixed(1);
-            const workHours = (workMinutes / 60).toFixed(1);
-            const travelHours = (travelMinutes / 60).toFixed(1);
-            const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
+            const hours = this.formatHours(metrics.totalHours);
+            const workHours = this.formatHours(metrics.workHours);
+            const travelHours = this.formatHours(metrics.travelHours);
+            const workloadLevel = metrics.level;
+            const housesits = metrics.housesits;
 
             const isToday = dateKey.getTime() === today.getTime();
             const isOtherMonth = currentDate.getMonth() !== month;
@@ -2465,8 +2559,8 @@ class GPSAdminApp {
                     <div class="calendar-day-number">${currentDate.getDate()}</div>
                     ${dayEvents.length > 0 ? `
                         <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
-                        <div class="calendar-day-hours">${workHours}h work${travelMinutes > 0 ? ` + ${travelHours}h travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
-                        <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours}h total</div>
+                        <div class="calendar-day-hours">${workHours} work${metrics.travelMinutes > 0 ? ` + ${travelHours} travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
+                        <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours} total</div>
                     ` : ''}
                 </div>
             `;
@@ -2593,10 +2687,6 @@ class GPSAdminApp {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-
         // Render each day
         Object.keys(eventsByDay).sort().forEach(dateKey => {
             const date = new Date(dateKey + 'T00:00:00');
@@ -2605,47 +2695,26 @@ class GPSAdminApp {
             const isToday = date.getTime() === today.getTime();
 
             // Calculate daily totals (excluding ignored and all-day events)
-            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
-            const workMinutes = workEvents.reduce((sum, event) => {
-                return sum + (event.end - event.start) / (1000 * 60);
-            }, 0);
+            const metrics = this.calculateWorkloadMetrics(dayEvents, date, { includeTravel: true });
 
-            // Calculate travel time for the day
-            let travelMinutes = 0;
-            if (workEvents.length > 0) {
-                // Travel to first appointment
-                if (workEvents[0].location) travelMinutes += 15;
-                
-                // Travel between appointments
-                for (let i = 0; i < workEvents.length - 1; i++) {
-                    if (workEvents[i].location && workEvents[i + 1].location) {
-                        travelMinutes += 15;
-                    }
-                }
-                
-                // Travel home
-                if (workEvents[workEvents.length - 1].location) travelMinutes += 15;
-            }
-
-            const totalMinutes = workMinutes + travelMinutes;
-            const hours = (totalMinutes / 60).toFixed(1);
-            const workHours = (workMinutes / 60).toFixed(1);
-            const travelHours = (travelMinutes / 60).toFixed(1);
-            const workloadLevel = this.getWorkloadLevel(parseFloat(hours));
-            const workloadLabel = this.getWorkloadLabel(workloadLevel);
+            const hours = this.formatHours(metrics.totalHours);
+            const workHours = this.formatHours(metrics.workHours);
+            const travelHours = this.formatHours(metrics.travelHours);
+            const workloadLevel = metrics.level;
+            const workloadLabel = metrics.label;
 
             html += `
                 <div class="calendar-list-day">
                     <div class="calendar-list-day-header ${isToday ? 'today' : ''}">
                         <div>
                             <div class="calendar-list-day-title ${isToday ? 'today' : ''}">
-                                ${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}
+                                ${GPSAdminApp.DAY_NAMES_LONG[date.getDay()]}, ${GPSAdminApp.MONTH_NAMES[date.getMonth()]} ${date.getDate()}
                                 ${isToday ? '<span style="margin-left: 8px; font-size: 0.75rem; background: var(--primary-600); color: white; padding: 2px 8px; border-radius: 4px;">Today</span>' : ''}
                             </div>
                         </div>
                         <div class="calendar-list-day-summary">
                             <span>${dayEvents.length} appointment${dayEvents.length !== 1 ? 's' : ''}</span>
-                            <span>${workHours}h work + ${travelHours}h travel = ${hours}h total</span>
+                            <span>${workHours} work + ${travelHours} travel = ${hours} total</span>
                             <span class="workload-badge ${workloadLevel}">${workloadLabel}</span>
                         </div>
                     </div>
@@ -2782,28 +2851,12 @@ class GPSAdminApp {
         this.selectedDate = new Date(dateKey);
 
         // Get events for this day
-        const dayEvents = this.state.events.filter(event => {
-            const eventStart = new Date(event.start);
-            const eventEnd = new Date(event.end);
-            
-            // Set day boundaries
-            const dayStart = new Date(dateKey);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(dateKey);
-            dayEnd.setHours(23, 59, 59, 999);
-            
-            // Check if event overlaps with this day (handles multi-day events)
-            return eventEnd > dayStart && eventStart <= dayEnd;
-        });
+        const dayEvents = this.getEventsForDate(dateKey);
 
         // Sort events by start time
         const sortedEvents = dayEvents.sort((a, b) => a.start - b.start);
 
         // Update modal title
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const isToday = dateKey.getTime() === today.getTime();
@@ -2811,59 +2864,26 @@ class GPSAdminApp {
         const titleElement = document.getElementById('day-details-title');
         const subtitleElement = document.getElementById('day-details-subtitle');
 
-        titleElement.textContent = `${dayNames[dateKey.getDay()]}, ${monthNames[dateKey.getMonth()]} ${dateKey.getDate()}`;
+        titleElement.textContent = `${GPSAdminApp.DAY_NAMES_LONG[dateKey.getDay()]}, ${GPSAdminApp.MONTH_NAMES[dateKey.getMonth()]} ${dateKey.getDate()}`;
         if (isToday) {
             titleElement.textContent += ' (Today)';
         }
 
         // Calculate totals
-        const workEvents = sortedEvents.filter(event => !event.ignored && !event.isAllDay);
+        const metrics = this.calculateWorkloadMetrics(sortedEvents, dateKey, { includeTravel: true });
         
-        // Check for housesits
-        const housesits = workEvents.filter(event => {
-            const titleLower = event.title?.toLowerCase() || '';
-            return event.type === 'overnight' || 
-                   titleLower.includes('overnight') ||
-                   titleLower.includes('housesit') ||
-                   titleLower.includes('house sit') ||
-                   titleLower.includes('house-sit') ||
-                   titleLower.match(/\bhs\b/) ||  // "HS" as separate word
-                   titleLower.includes('sitting');
-        });
-        
-        const workMinutes = workEvents.reduce((sum, event) => {
-            return sum + this.calculateEventDurationForDay(event, dateKey);
-        }, 0);
-        
-        // Calculate travel time
-        let travelMinutes = 0;
-        if (workEvents.length > 0) {
-            // Travel to first appointment
-            if (workEvents[0].location) travelMinutes += 15;
-            
-            // Travel between appointments
-            for (let i = 0; i < workEvents.length - 1; i++) {
-                if (workEvents[i].location && workEvents[i + 1].location) {
-                    travelMinutes += 15;
-                }
-            }
-            
-            // Travel home
-            if (workEvents[workEvents.length - 1].location) travelMinutes += 15;
-        }
-        
-        const totalMinutes = workMinutes + travelMinutes;
-        const workHours = (workMinutes / 60).toFixed(1);
-        const travelHours = (travelMinutes / 60).toFixed(1);
-        const totalHours = (totalMinutes / 60).toFixed(1);
-        const workloadLevel = this.getWorkloadLevel(parseFloat(totalHours));
-        const workloadLabel = this.getWorkloadLabel(workloadLevel);
+        const workHours = this.formatHours(metrics.workHours);
+        const travelHours = this.formatHours(metrics.travelHours);
+        const totalHours = this.formatHours(metrics.totalHours);
+        const workloadLevel = metrics.level;
+        const workloadLabel = metrics.label;
+        const housesits = metrics.housesits;
 
         subtitleElement.innerHTML = `
             <span>${sortedEvents.length} appointment${sortedEvents.length !== 1 ? 's' : ''}</span> •
-            <span>${workHours}h work</span> •
-            <span>${travelHours}h travel</span> •
-            <span>${totalHours}h total</span>
+            <span>${workHours} work</span> •
+            <span>${travelHours} travel</span> •
+            <span>${totalHours} total</span>
             ${housesits.length > 0 ? ' • <span style="color: #8B5CF6; font-weight: 600;">+ housesit</span>' : ''} •
             <span class="workload-badge ${workloadLevel}">${workloadLabel}</span>
         `;
@@ -2872,8 +2892,7 @@ class GPSAdminApp {
         this.renderDayDetailsEvents(sortedEvents);
 
         // Show modal
-        const modal = document.getElementById('day-details-modal');
-        modal.classList.add('active');
+        this.showModal('day-details-modal');
     }
 
     /**
@@ -3744,37 +3763,13 @@ class GPSAdminApp {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const todayEvents = this.state.events.filter(event => {
-            const eventStart = new Date(event.start);
-            const eventEnd = new Date(event.end);
-            
-            // Set day boundaries
-            const dayStart = new Date(today);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(today);
-            dayEnd.setHours(23, 59, 59, 999);
-            
-            // Check if event overlaps with this day (handles multi-day events)
-            return eventEnd > dayStart && eventStart <= dayEnd;
+        const todayEvents = this.getEventsForDate(today);
+        const metrics = this.calculateWorkloadMetrics(todayEvents, today, {
+            includeTravel: this.state.settings.includeTravelTime
         });
 
-        // Filter out ignored events and all-day events for workload calculations
-        const workEvents = todayEvents.filter(event => !event.ignored && !event.isAllDay);
-
-        const totalMinutes = workEvents.reduce((sum, event) => {
-            return sum + this.calculateEventDurationForDay(event, today);
-        }, 0);
-
-        // Calculate travel time
-        const travelMinutes = await this.calculateDailyTravelTime(today);
-
-        // Total workload includes travel time if enabled
-        const totalWorkloadMinutes = this.state.settings.includeTravelTime
-            ? totalMinutes + travelMinutes
-            : totalMinutes;
-
-        const hours = totalWorkloadMinutes / 60;
-        const level = this.getWorkloadLevel(hours);
+        const hours = metrics.totalHours;
+        const level = metrics.level;
 
         const indicator = document.getElementById('workload-indicator');
         const dot = indicator?.querySelector('.workload-dot');
@@ -4459,7 +4454,7 @@ class GPSAdminApp {
         // Average daily workload
         const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
         const avgDaily = totalMinutes / days / 60;
-        document.getElementById('analytics-avg-daily').textContent = avgDaily.toFixed(1) + 'h';
+        document.getElementById('analytics-avg-daily').textContent = this.formatHours(avgDaily);
 
         // Busiest day
         const dayWorkload = {};
@@ -4476,7 +4471,7 @@ class GPSAdminApp {
 
         const busiestDate = busiestDay.day !== 'N/A' ? new Date(busiestDay.day) : null;
         const busiestDayText = busiestDate
-            ? busiestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' (' + busiestDay.hours.toFixed(1) + 'h)'
+            ? busiestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' (' + this.formatHours(busiestDay.hours) + ')'
             : 'N/A';
         document.getElementById('analytics-busiest-day').textContent = busiestDayText;
     }
@@ -4587,7 +4582,7 @@ class GPSAdminApp {
                 }
                 
                 return '<div class="bar-chart-item">' +
-                    '<div class="bar animated ' + barStatus + (isOverflow ? ' overflow' : '') + '" style="height: ' + heightPercent + '%;" title="' + item.label + ': ' + item.value.toFixed(1) + 'h">' +
+                    '<div class="bar animated ' + barStatus + (isOverflow ? ' overflow' : '') + '" style="height: ' + heightPercent + '%;" title="' + item.label + ': ' + this.formatHours(item.value) + '">' +
                     '<div class="bar-value">' + valueText + (isOverflow ? '+' : '') + '</div>' +
                     '</div>' +
                     '<div class="bar-label">' + (item.shortLabel || item.label) + '</div>' +
@@ -4757,13 +4752,13 @@ class GPSAdminApp {
             insights.push({
                 icon: '⚠️',
                 title: 'High Workload Alert',
-                description: 'You are averaging ' + avgPerDay.toFixed(1) + ' hours per day. Consider reducing your schedule.'
+                description: 'You are averaging ' + this.formatHours(avgPerDay) + ' per day. Consider reducing your schedule.'
             });
         } else if (avgPerDay < 4) {
             insights.push({
                 icon: '📈',
                 title: 'Capacity Available',
-                description: 'You are averaging ' + avgPerDay.toFixed(1) + ' hours per day. You have room for more appointments.'
+                description: 'You are averaging ' + this.formatHours(avgPerDay) + ' per day. You have room for more appointments.'
             });
         }
 
@@ -4968,7 +4963,7 @@ class GPSAdminApp {
 
         container.className = 'comparison-badge ' + comparison.trend;
         container.innerHTML = '<span class="trend-arrow">' + arrow + '</span> ' +
-                              sign + comparison.diff.toFixed(1) + 'h vs last week';
+                              sign + this.formatHours(Math.abs(comparison.diff)) + ' vs last week';
     }
 
     /**
@@ -4989,40 +4984,12 @@ class GPSAdminApp {
             date.setDate(startOfWeek.getDate() + i);
             date.setHours(0, 0, 0, 0);
 
-            const dayEvents = this.state.events.filter(event => {
-                const eventStart = new Date(event.start);
-                const eventEnd = new Date(event.end);
+            const dayEvents = this.getEventsForDate(date);
+            const metrics = this.calculateWorkloadMetrics(dayEvents, date, { includeTravel: false });
 
-                const dayStart = new Date(date);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(date);
-                dayEnd.setHours(23, 59, 59, 999);
-
-                return eventEnd > dayStart && eventStart <= dayEnd;
-            });
-
-            // Check for housesits on this day
-            const housesits = dayEvents.filter(event => {
-                if (event.ignored || event.isAllDay) return false;
-                const titleLower = event.title?.toLowerCase() || '';
-                return event.type === 'overnight' || 
-                       titleLower.includes('overnight') ||
-                       titleLower.includes('housesit') ||
-                       titleLower.includes('house sit') ||
-                       titleLower.includes('house-sit') ||
-                       titleLower.match(/\bhs\b/) ||  // "HS" as separate word
-                       titleLower.includes('sitting');
-            });
-
-            // Work events are everything except housesits (but cap housesit hours)
-            const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
-
-            const dayMinutes = workEvents.reduce((sum, event) => {
-                return sum + this.calculateEventDurationForDay(event, date);
-            }, 0);
-
-            const hours = dayMinutes / 60;
-            const level = this.getWorkloadLevel(hours);
+            const hours = metrics.workHours;
+            const level = metrics.level;
+            const housesits = metrics.housesits;
             const isToday = date.toDateString() === today.toDateString();
 
             // Calculate workload bar percentage (max 12 hours = 100%)
@@ -5041,11 +5008,11 @@ class GPSAdminApp {
             html += '  <div class="week-day-header">' + date.toLocaleDateString('en-US', { weekday: 'short' }) + '</div>';
             html += '  <div class="week-day-date">' + date.getDate() + '</div>';
 
-            if (workEvents.length > 0) {
-                html += '  <div class="week-day-count">' + workEvents.length + '</div>';
+            if (metrics.workEventCount > 0) {
+                html += '  <div class="week-day-count">' + metrics.workEventCount + '</div>';
             }
 
-            html += '  <div class="week-day-hours">' + hours.toFixed(1) + 'h';
+            html += '  <div class="week-day-hours">' + this.formatHours(hours);
             if (housesits.length > 0) {
                 html += ' <span class="housesit-label">+ housesit</span>';
             }
@@ -5233,7 +5200,7 @@ class GPSAdminApp {
             const arrow = comparison.hours.trend === 'positive' ? '↗️' : comparison.hours.trend === 'negative' ? '↘️' : '→';
             const sign = comparison.hours.diff >= 0 ? '+' : '';
             hoursEl.className = 'stat-comparison ' + comparison.hours.trend;
-            hoursEl.innerHTML = arrow + ' ' + sign + comparison.hours.diff.toFixed(1) + 'h vs ' + rangeLabel;
+            hoursEl.innerHTML = arrow + ' ' + sign + this.formatHours(Math.abs(comparison.hours.diff)) + ' vs ' + rangeLabel;
         }
 
         // Avg daily comparison
@@ -5242,7 +5209,7 @@ class GPSAdminApp {
             const arrow = comparison.avgDaily.trend === 'positive' ? '↗️' : comparison.avgDaily.trend === 'negative' ? '↘️' : '→';
             const sign = comparison.avgDaily.diff >= 0 ? '+' : '';
             avgEl.className = 'stat-comparison ' + comparison.avgDaily.trend;
-            avgEl.innerHTML = arrow + ' ' + sign + comparison.avgDaily.diff.toFixed(1) + 'h avg vs ' + rangeLabel;
+            avgEl.innerHTML = arrow + ' ' + sign + this.formatHours(Math.abs(comparison.avgDaily.diff)) + ' avg vs ' + rangeLabel;
         }
     }
 

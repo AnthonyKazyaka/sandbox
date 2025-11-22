@@ -26,12 +26,17 @@
     border-radius: var(--radius-lg);
     padding: var(--spacing-xl);
     box-shadow: var(--shadow-sm);
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 /* Month View */
 .calendar-month {
     display: grid;
     gap: var(--spacing-sm);
+    width: 100%;
+    max-width: 100%;
 }
 
 .calendar-weekdays {
@@ -54,6 +59,7 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: var(--spacing-sm);
+    width: 100%;
 }
 
 .calendar-day {
@@ -69,6 +75,9 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .calendar-day:hover {
@@ -713,6 +722,10 @@
 
 /* Responsive Calendar */
 @media (max-width: 768px) {
+    .calendar-container {
+        padding: var(--spacing-md);
+    }
+
     .calendar-days {
         gap: 2px;
     }

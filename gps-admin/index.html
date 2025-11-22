@@ -764,8 +764,15 @@
     <!-- Try to load local config, fall back to example if not found -->
     <script src="config.local.js" onerror="this.onerror=null; this.src='config.example.js';"></script>
 
-    <!-- Scripts -->
-    <script src="js/app.js?v=2.8"></script>
+    <!-- Core Modules (order matters) -->
+    <script src="js/utils.js?v=3.0"></script>
+    <script src="js/data.js?v=3.0"></script>
+    <script src="js/events.js?v=3.0"></script>
+    <script src="js/calculations.js?v=3.0"></script>
+    <script src="js/rendering.js?v=3.0"></script>
+    <script src="js/core.js?v=3.0"></script>
+    
+    <!-- API Modules -->
     <script src="js/calendar-api.js?v=2.8"></script>
     <script src="js/maps-api.js?v=2.8"></script>
     <script src="js/workload-analyzer.js?v=2.8"></script>

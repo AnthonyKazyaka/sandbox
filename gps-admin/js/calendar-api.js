@@ -293,7 +293,7 @@ class CalendarAPI {
         }
 
         // Try to determine event type from title/description and time span
-        const type = this.detectEventType(gcalEvent.summary, gcalEvent.description, start, end);
+        const type = this.detectEventType(gcalEvent.summary, gcalEvent.description, start, end, isAllDay);
 
         return {
             id: gcalEvent.id,
@@ -318,9 +318,20 @@ class CalendarAPI {
 
     /**
      * Detect event type from title/description
+     * @param {string} title - Event title
+     * @param {string} description - Event description
+     * @param {Date} startDate - Event start date
+     * @param {Date} endDate - Event end date
+     * @param {boolean} isAllDay - Whether event is all-day (required)
+     * @returns {string} Event type
      */
-    detectEventType(title = '', description = '', startDate = null, endDate = null) {
-        const text = `${title} ${description}`.toLowerCase();
+    detectEventType(title, description, startDate, endDate, isAllDay) {
+        // All-day events (birthdays, anniversaries) should never be 'overnight' work type
+        if (isAllDay) {
+            return 'other';
+        }
+
+        const text = `${title || ''} ${description || ''}`.toLowerCase();
 
         // Check for overnight/housesit patterns
         // Include common abbreviations and variations

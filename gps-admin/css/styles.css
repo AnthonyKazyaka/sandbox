@@ -142,7 +142,7 @@ body {
         "header header"
         "sidebar main";
     height: 100vh;
-    overflow: hidden;
+    width: 100%;
 }
 
 /* Header */
@@ -305,7 +305,9 @@ body {
 .main-content {
     grid-area: main;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--spacing-xl);
+    height: calc(100vh - var(--header-height));
 }
 
 /* Views */
@@ -971,6 +973,13 @@ label {
         grid-template-areas:
             "header"
             "main";
+        height: 100vh;
+    }
+
+    .main-content {
+        height: calc(100vh - var(--header-height));
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .sidebar {

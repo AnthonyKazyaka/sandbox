@@ -46,7 +46,7 @@ class GPSAdminApp {
         const loadingScreen = document.getElementById('loading-screen');
         const app = document.getElementById('app');
         if (loadingScreen) loadingScreen.style.display = 'none';
-        if (app) app.style.display = 'block';
+        if (app) app.style.display = 'grid';
     }
 
     /**
@@ -66,7 +66,7 @@ class GPSAdminApp {
         const sidebar = document.querySelector('.sidebar');
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
+                sidebar.classList.toggle('open');
             });
         }
 
@@ -86,6 +86,9 @@ class GPSAdminApp {
                 }
             });
         });
+
+        // Setup calendar controls (only once)
+        this.setupCalendarControls();
     }
 
     /**
@@ -198,16 +201,196 @@ class GPSAdminApp {
     }
 
     /**
-     * Placeholder methods for views not yet modularized
+     * Render calendar view
      */
     renderCalendar() {
-        console.log('Calendar view - to be modularized');
+        const container = document.getElementById('calendar-container');
+        if (!container) return;
+
+        // Update title
+        const title = document.getElementById('calendar-title');
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+        title.textContent = `${monthNames[this.state.currentDate.getMonth()]} ${this.state.currentDate.getFullYear()}`;
+
+        // Render based on view mode
+        switch (this.state.calendarView) {
+            case 'month':
+                this.renderMonthView(container);
+                break;
+            case 'week':
+                this.renderWeekView(container);
+                break;
+            case 'day':
+                this.renderDayView(container);
+                break;
+            case 'list':
+                this.renderListView(container);
+                break;
+        }
     }
 
+    /**
+     * Render month calendar view
+     */
+    renderMonthView(container) {
+        const year = this.state.currentDate.getFullYear();
+        const month = this.state.currentDate.getMonth();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let html = '<div class="calendar-month">';
+
+        // Weekday headers
+        html += '<div class="calendar-weekdays">';
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        dayNames.forEach(day => {
+            html += `<div class="calendar-weekday">${day}</div>`;
+        });
+        html += '</div>';
+
+        // Days grid
+        html += '<div class="calendar-days">';
+
+        const currentDate = new Date(startDate);
+        while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+            const dateKey = new Date(currentDate);
+            dateKey.setHours(0, 0, 0, 0);
+
+            const dayEvents = this.eventProcessor.getEventsForDate(this.state.events, dateKey);
+            const metrics = this.calculator.calculateWorkloadMetrics(dayEvents, dateKey, { 
+                includeTravel: this.state.settings.includeTravelTime 
+            });
+
+            const hours = Utils.formatHours(metrics.totalHours);
+            const workHours = Utils.formatHours(metrics.workHours);
+            const travelHours = Utils.formatHours(metrics.travelHours);
+            const workloadLevel = metrics.level;
+            const housesits = metrics.housesits;
+
+            const isToday = dateKey.getTime() === today.getTime();
+            const isOtherMonth = currentDate.getMonth() !== month;
+
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+            if (isOtherMonth) classes += ' other-month';
+            if (!isOtherMonth && dayEvents.length > 0) classes += ` ${workloadLevel}`;
+            if (housesits.length > 0) classes += ' has-housesit';
+
+            html += `
+                <div class="${classes}" data-date="${dateKey.toISOString()}">
+                    ${housesits.length > 0 ? '<div class="calendar-day-housesit-bar" title="House sit scheduled"></div>' : ''}
+                    <div class="calendar-day-number">${currentDate.getDate()}</div>
+                    ${dayEvents.length > 0 ? `
+                        <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
+                        <div class="calendar-day-hours">${workHours} work${metrics.travelMinutes > 0 ? ` + ${travelHours} travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
+                        <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours} total</div>
+                    ` : ''}
+                </div>
+            `;
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        html += '</div></div>';
+        container.innerHTML = html;
+
+        // Add click handlers to calendar days
+        container.querySelectorAll('.calendar-day').forEach(dayElement => {
+            dayElement.addEventListener('click', () => {
+                const dateStr = dayElement.dataset.date;
+                console.log('Day clicked:', dateStr);
+                // TODO: Show day details modal
+            });
+        });
+    }
+
+    /**
+     * Render week calendar view
+     */
+    renderWeekView(container) {
+        container.innerHTML = '<p class="text-muted">Week view coming soon...</p>';
+    }
+
+    /**
+     * Render day calendar view
+     */
+    renderDayView(container) {
+        container.innerHTML = '<p class="text-muted">Day view coming soon...</p>';
+    }
+
+    /**
+     * Render list view
+     */
+    renderListView(container) {
+        container.innerHTML = '<p class="text-muted">List view coming soon...</p>';
+    }
+
+    /**
+     * Setup calendar navigation controls
+     */
+    setupCalendarControls() {
+        // Calendar view buttons
+        document.querySelectorAll('[data-calendar-view]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const view = e.currentTarget.dataset.calendarView;
+                this.state.calendarView = view;
+                
+                // Update button states
+                document.querySelectorAll('[data-calendar-view]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                e.currentTarget.classList.add('active');
+                
+                // Re-render calendar
+                this.renderCalendar();
+            });
+        });
+
+        // Previous month
+        const prevBtn = document.getElementById('calendar-prev');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                this.state.currentDate.setMonth(this.state.currentDate.getMonth() - 1);
+                this.renderCalendar();
+            });
+        }
+
+        // Next month
+        const nextBtn = document.getElementById('calendar-next');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                this.state.currentDate.setMonth(this.state.currentDate.getMonth() + 1);
+                this.renderCalendar();
+            });
+        }
+
+        // Today button
+        const todayBtn = document.getElementById('calendar-today');
+        if (todayBtn) {
+            todayBtn.addEventListener('click', () => {
+                this.state.currentDate = new Date();
+                this.renderCalendar();
+            });
+        }
+    }
+
+    /**
+     * Placeholder for analytics view
+     */
     renderAnalytics() {
         console.log('Analytics view - to be modularized');
     }
 
+    /**
+     * Placeholder for settings view
+     */
     renderSettings() {
         console.log('Settings view - to be modularized');
     }

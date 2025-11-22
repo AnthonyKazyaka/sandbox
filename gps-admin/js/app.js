@@ -1894,9 +1894,15 @@ class GPSAdminApp {
         }
         
         // Overnight events are displayed separately, not included in work hours
+        // Check both type field and title patterns (including HS abbreviation)
+        const titleLower = event.title?.toLowerCase() || '';
         const isOvernightType = event.type === 'overnight' || 
-                               event.title?.toLowerCase().includes('overnight') ||
-                               event.title?.toLowerCase().includes('housesit');
+                               titleLower.includes('overnight') ||
+                               titleLower.includes('housesit') ||
+                               titleLower.includes('house sit') ||
+                               titleLower.includes('house-sit') ||
+                               titleLower.match(/\bhs\b/) ||  // "HS" as separate word
+                               titleLower.includes('sitting');
         
         if (isOvernightType) {
             return 0;
@@ -2406,11 +2412,16 @@ class GPSAdminApp {
             const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);
             
             // Check for housesits on this day
-            const housesits = workEvents.filter(event => 
-                event.type === 'overnight' || 
-                event.title?.toLowerCase().includes('overnight') ||
-                event.title?.toLowerCase().includes('housesit')
-            );
+            const housesits = workEvents.filter(event => {
+                const titleLower = event.title?.toLowerCase() || '';
+                return event.type === 'overnight' || 
+                       titleLower.includes('overnight') ||
+                       titleLower.includes('housesit') ||
+                       titleLower.includes('house sit') ||
+                       titleLower.includes('house-sit') ||
+                       titleLower.match(/\bhs\b/) ||  // "HS" as separate word
+                       titleLower.includes('sitting');
+            });
 
             const workMinutes = workEvents.reduce((sum, event) => {
                 return sum + this.calculateEventDurationForDay(event, dateKey);
@@ -2809,11 +2820,16 @@ class GPSAdminApp {
         const workEvents = sortedEvents.filter(event => !event.ignored && !event.isAllDay);
         
         // Check for housesits
-        const housesits = workEvents.filter(event => 
-            event.type === 'overnight' || 
-            event.title?.toLowerCase().includes('overnight') ||
-            event.title?.toLowerCase().includes('housesit')
-        );
+        const housesits = workEvents.filter(event => {
+            const titleLower = event.title?.toLowerCase() || '';
+            return event.type === 'overnight' || 
+                   titleLower.includes('overnight') ||
+                   titleLower.includes('housesit') ||
+                   titleLower.includes('house sit') ||
+                   titleLower.includes('house-sit') ||
+                   titleLower.match(/\bhs\b/) ||  // "HS" as separate word
+                   titleLower.includes('sitting');
+        });
         
         const workMinutes = workEvents.reduce((sum, event) => {
             return sum + this.calculateEventDurationForDay(event, dateKey);
@@ -4986,13 +5002,17 @@ class GPSAdminApp {
             });
 
             // Check for housesits on this day
-            const housesits = dayEvents.filter(event => 
-                !event.ignored && 
-                !event.isAllDay && 
-                (event.type === 'overnight' || 
-                 event.title?.toLowerCase().includes('overnight') ||
-                 event.title?.toLowerCase().includes('housesit'))
-            );
+            const housesits = dayEvents.filter(event => {
+                if (event.ignored || event.isAllDay) return false;
+                const titleLower = event.title?.toLowerCase() || '';
+                return event.type === 'overnight' || 
+                       titleLower.includes('overnight') ||
+                       titleLower.includes('housesit') ||
+                       titleLower.includes('house sit') ||
+                       titleLower.includes('house-sit') ||
+                       titleLower.match(/\bhs\b/) ||  // "HS" as separate word
+                       titleLower.includes('sitting');
+            });
 
             // Work events are everything except housesits (but cap housesit hours)
             const workEvents = dayEvents.filter(event => !event.ignored && !event.isAllDay);

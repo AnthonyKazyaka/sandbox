@@ -292,8 +292,8 @@ class CalendarAPI {
             end = new Date(gcalEvent.end.dateTime);
         }
 
-        // Try to determine event type from title/description
-        const type = this.detectEventType(gcalEvent.summary, gcalEvent.description);
+        // Try to determine event type from title/description and time span
+        const type = this.detectEventType(gcalEvent.summary, gcalEvent.description, start, end);
 
         return {
             id: gcalEvent.id,
@@ -319,12 +319,35 @@ class CalendarAPI {
     /**
      * Detect event type from title/description
      */
-    detectEventType(title = '', description = '') {
+    detectEventType(title = '', description = '', startDate = null, endDate = null) {
         const text = `${title} ${description}`.toLowerCase();
 
-        if (text.includes('overnight') || text.includes('boarding')) {
+        // Check for overnight/housesit patterns
+        // Include common abbreviations and variations
+        if (text.includes('overnight') || 
+            text.includes('boarding') || 
+            text.includes('housesit') || 
+            text.includes('house sit') ||
+            text.includes('house-sit') ||
+            text.match(/\bhs\b/) ||  // "HS" as separate word (house sit abbreviation)
+            text.includes('sitting')) {
             return 'overnight';
-        } else if (text.includes('walk') || text.includes('walking')) {
+        }
+        
+        // Also detect based on time span - events spanning >12 hours or crossing midnight are likely overnight
+        if (startDate && endDate) {
+            const durationHours = (endDate - startDate) / (1000 * 60 * 60);
+            const startDay = new Date(startDate).setHours(0, 0, 0, 0);
+            const endDay = new Date(endDate).setHours(0, 0, 0, 0);
+            const spansDays = startDay !== endDay;
+            
+            // If event spans multiple days or is >12 hours, likely overnight/housesit
+            if (spansDays && durationHours >= 10) {
+                return 'overnight';
+            }
+        }
+        
+        if (text.includes('walk') || text.includes('walking')) {
             return 'walk';
         } else if (text.includes('meet') || text.includes('greet') || text.includes('consultation')) {
             return 'meet-greet';

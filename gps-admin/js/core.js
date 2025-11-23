@@ -25,7 +25,8 @@ class GPSAdminApp {
         };
 
         // Initialize APIs if available
-        this.calendarApi = window.CalendarAPI ? new CalendarAPI() : null;
+        const calendarClientId = window.GPSConfig?.calendar?.clientId;
+        this.calendarApi = window.CalendarAPI && calendarClientId ? new CalendarAPI(calendarClientId) : null;
         this.mapsApi = window.MapsAPI ? new MapsAPI() : null;
         this.templatesManager = window.TemplatesManager ? new TemplatesManager() : null;
 
@@ -67,6 +68,33 @@ class GPSAdminApp {
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
+            });
+        }
+
+        // Connect calendar button
+        const connectBtn = document.getElementById('connect-calendar-btn');
+        if (connectBtn) {
+            connectBtn.addEventListener('click', () => {
+                console.log('🔘 Connect calendar button clicked');
+                this.handleCalendarConnect();
+            });
+        }
+
+        // Refresh calendar button
+        const refreshBtn = document.getElementById('refresh-calendar-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                console.log('🔘 Refresh calendar button clicked');
+                await this.handleCalendarRefresh();
+            });
+        }
+
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                console.log('🚪 Logout button clicked');
+                this.handleLogout();
             });
         }
 
@@ -204,132 +232,21 @@ class GPSAdminApp {
      * Render calendar view
      */
     renderCalendar() {
-        const container = document.getElementById('calendar-container');
-        if (!container) return;
-
-        // Update title
-        const title = document.getElementById('calendar-title');
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-        title.textContent = `${monthNames[this.state.currentDate.getMonth()]} ${this.state.currentDate.getFullYear()}`;
-
-        // Render based on view mode
-        switch (this.state.calendarView) {
-            case 'month':
-                this.renderMonthView(container);
-                break;
-            case 'week':
-                this.renderWeekView(container);
-                break;
-            case 'day':
-                this.renderDayView(container);
-                break;
-            case 'list':
-                this.renderListView(container);
-                break;
-        }
+        this.renderer.renderCalendar(this.state);
     }
 
     /**
-     * Render month calendar view
+     * Render analytics view
      */
-    renderMonthView(container) {
-        const year = this.state.currentDate.getFullYear();
-        const month = this.state.currentDate.getMonth();
-
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - startDate.getDay());
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        let html = '<div class="calendar-month">';
-
-        // Weekday headers
-        html += '<div class="calendar-weekdays">';
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        dayNames.forEach(day => {
-            html += `<div class="calendar-weekday">${day}</div>`;
-        });
-        html += '</div>';
-
-        // Days grid
-        html += '<div class="calendar-days">';
-
-        const currentDate = new Date(startDate);
-        while (currentDate <= lastDay || currentDate.getDay() !== 0) {
-            const dateKey = new Date(currentDate);
-            dateKey.setHours(0, 0, 0, 0);
-
-            const dayEvents = this.eventProcessor.getEventsForDate(this.state.events, dateKey);
-            const metrics = this.calculator.calculateWorkloadMetrics(dayEvents, dateKey, { 
-                includeTravel: this.state.settings.includeTravelTime 
-            });
-
-            const hours = Utils.formatHours(metrics.totalHours);
-            const workHours = Utils.formatHours(metrics.workHours);
-            const travelHours = Utils.formatHours(metrics.travelHours);
-            const workloadLevel = metrics.level;
-            const housesits = metrics.housesits;
-
-            const isToday = dateKey.getTime() === today.getTime();
-            const isOtherMonth = currentDate.getMonth() !== month;
-
-            let classes = 'calendar-day';
-            if (isToday) classes += ' today';
-            if (isOtherMonth) classes += ' other-month';
-            if (!isOtherMonth && dayEvents.length > 0) classes += ` ${workloadLevel}`;
-            if (housesits.length > 0) classes += ' has-housesit';
-
-            html += `
-                <div class="${classes}" data-date="${dateKey.toISOString()}">
-                    ${housesits.length > 0 ? '<div class="calendar-day-housesit-bar" title="House sit scheduled"></div>' : ''}
-                    <div class="calendar-day-number">${currentDate.getDate()}</div>
-                    ${dayEvents.length > 0 ? `
-                        <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
-                        <div class="calendar-day-hours">${workHours} work${metrics.travelMinutes > 0 ? ` + ${travelHours} travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
-                        <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours} total</div>
-                    ` : ''}
-                </div>
-            `;
-
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        html += '</div></div>';
-        container.innerHTML = html;
-
-        // Add click handlers to calendar days
-        container.querySelectorAll('.calendar-day').forEach(dayElement => {
-            dayElement.addEventListener('click', () => {
-                const dateStr = dayElement.dataset.date;
-                console.log('Day clicked:', dateStr);
-                // TODO: Show day details modal
-            });
-        });
+    renderAnalytics() {
+        this.renderer.renderAnalytics(this.state, this.templatesManager);
     }
 
     /**
-     * Render week calendar view
+     * Render settings view
      */
-    renderWeekView(container) {
-        container.innerHTML = '<p class="text-muted">Week view coming soon...</p>';
-    }
-
-    /**
-     * Render day calendar view
-     */
-    renderDayView(container) {
-        container.innerHTML = '<p class="text-muted">Day view coming soon...</p>';
-    }
-
-    /**
-     * Render list view
-     */
-    renderListView(container) {
-        container.innerHTML = '<p class="text-muted">List view coming soon...</p>';
+    renderSettings() {
+        this.renderer.renderSettings(this.state);
     }
 
     /**
@@ -382,16 +299,288 @@ class GPSAdminApp {
     }
 
     /**
-     * Placeholder for analytics view
+     * Handle calendar connection - initiate OAuth flow
      */
-    renderAnalytics() {
-        console.log('Analytics view - to be modularized');
+    async handleCalendarConnect() {
+        try {
+            // Get Client ID from state or config
+            const clientId = this.state.settings?.api?.calendarClientId || 
+                           window.GPSConfig?.calendar?.clientId;
+
+            // Validate Client ID is configured
+            if (!clientId || clientId === 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com') {
+                alert(
+                    '⚠️ Calendar Client ID not configured.\n\n' +
+                    'Please configure your Google OAuth Client ID in Settings before connecting.'
+                );
+                this.switchView('settings');
+                return;
+            }
+
+            // Show connecting message
+            Utils.showToast('Connecting to Google Calendar...', 'info');
+
+            // Initialize Calendar API if needed
+            if (!this.calendarApi || !this.calendarApi.gapiInited) {
+                console.log('📦 Initializing Calendar API...');
+                this.calendarApi = new CalendarAPI(clientId);
+                await this.calendarApi.init();
+            }
+
+            // Authenticate user (triggers OAuth flow)
+            console.log('🔐 Starting OAuth authentication...');
+            await this.calendarApi.authenticate();
+
+            // Mark as authenticated
+            this.state.isAuthenticated = true;
+            this.state.useMockData = false;
+
+            // Get available calendars
+            console.log('📅 Fetching calendar list...');
+            const calendars = await this.calendarApi.listCalendars();
+            this.state.availableCalendars = calendars;
+
+            // Select primary calendar by default if none selected
+            if (!this.state.selectedCalendars || this.state.selectedCalendars.length === 0) {
+                this.state.selectedCalendars = ['primary'];
+            }
+
+            // Save authentication state
+            this.dataManager.saveData(this.state);
+
+            // Load calendar events
+            console.log('📡 Loading calendar events...');
+            await this.loadCalendarEvents();
+
+            // Update UI
+            this.updateConnectButtonState();
+            await this.renderCurrentView();
+            this.renderer.updateWorkloadIndicator(this.state);
+
+            // Update calendar selection in settings if viewing settings
+            if (this.state.currentView === 'settings') {
+                this.renderer.renderCalendarSelection(this.state);
+            }
+
+            Utils.showToast('✅ Successfully connected to Google Calendar!', 'success');
+            console.log('✅ Calendar connection successful');
+
+        } catch (error) {
+            console.error('Calendar connection error:', error);
+            
+            // Handle specific error cases
+            let errorMessage = 'Failed to connect to Google Calendar.';
+            
+            if (error.error === 'popup_closed_by_user') {
+                errorMessage = 'Authentication cancelled. Please try again.';
+            } else if (error.error === 'access_denied') {
+                errorMessage = 'Access denied. Please grant calendar permissions.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            Utils.showToast(errorMessage, 'error');
+            
+            // Reset authentication state on error
+            this.state.isAuthenticated = false;
+            this.updateConnectButtonState();
+        }
     }
 
     /**
-     * Placeholder for settings view
+     * Handle manual calendar refresh
      */
-    renderSettings() {
-        console.log('Settings view - to be modularized');
+    async handleCalendarRefresh() {
+        if (!this.state.isAuthenticated) {
+            Utils.showToast('⚠️ Please connect to Google Calendar first', 'warning');
+            return;
+        }
+
+        try {
+            // Show refreshing message
+            Utils.showToast('Refreshing calendar events...', 'info');
+
+            // Clear existing cache to force fresh fetch
+            this.dataManager.clearEventsCache();
+
+            // Reload events from Google Calendar
+            console.log('🔄 Refreshing calendar events...');
+            await this.loadCalendarEvents();
+
+            // Update all views
+            await this.renderCurrentView();
+            this.renderer.updateWorkloadIndicator(this.state);
+
+            // Update refresh button timestamp
+            this.updateRefreshButtonState();
+
+            Utils.showToast(`✅ Refreshed ${this.state.events.length} events`, 'success');
+            console.log(`✅ Calendar refresh successful (${this.state.events.length} events)`);
+
+        } catch (error) {
+            console.error('Calendar refresh error:', error);
+            Utils.showToast('Failed to refresh calendar: ' + (error.message || 'Unknown error'), 'error');
+        }
+    }
+
+    /**
+     * Handle logout from Google Calendar
+     */
+    async handleLogout() {
+        if (!this.state.isAuthenticated) {
+            alert('You are not currently connected to Google Calendar.');
+            return;
+        }
+
+        const confirmed = confirm(
+            'Are you sure you want to logout from Google Calendar?\n\n' +
+            'This will:\n' +
+            '• Disconnect your Google account\n' +
+            '• Revoke access tokens\n' +
+            '• Switch back to mock data\n\n' +
+            'Your locally stored calendar events will be preserved unless you clear them separately.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            // Sign out from Google Calendar API
+            if (this.calendarApi) {
+                this.calendarApi.signOut();
+            }
+
+            // Clear authentication state
+            this.state.isAuthenticated = false;
+            this.state.useMockData = true;
+            this.state.availableCalendars = [];
+
+            // Save settings
+            this.dataManager.saveData(this.state);
+
+            // Update button state
+            this.updateConnectButtonState();
+
+            // Reinitialize mock data
+            this.initMockData();
+
+            // Re-render views
+            await this.renderCurrentView();
+            this.renderer.updateWorkloadIndicator(this.state);
+
+            // Update calendar selection in settings if viewing settings
+            if (this.state.currentView === 'settings') {
+                this.renderer.renderCalendarSelection(this.state);
+            }
+
+            alert('✅ Successfully logged out from Google Calendar.\n\nYou are now using mock data.');
+            console.log('✅ Logged out from Google Calendar');
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('Error logging out: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Load calendar events from Google Calendar API
+     */
+    async loadCalendarEvents() {
+        if (!this.calendarApi) {
+            console.error('❌ Calendar API not initialized');
+            throw new Error('Calendar API not initialized');
+        }
+
+        if (!this.state.isAuthenticated) {
+            console.error('❌ User not authenticated');
+            throw new Error('User not authenticated');
+        }
+
+        try {
+            // Fetch events from all selected calendars
+            const allEvents = await this.calendarApi.loadEventsFromCalendars(this.state.selectedCalendars);
+
+            // Update state with fetched events
+            this.state.events = allEvents;
+
+            // Mark work events with metadata
+            this.eventProcessor.markWorkEvents(this.state.events);
+
+            // Cache the events
+            this.dataManager.saveEventsCache(this.state.events, this.state.selectedCalendars);
+
+            return this.state.events;
+
+        } catch (error) {
+            console.error('❌ Error loading calendar events:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update the connect button state based on authentication status
+     */
+    updateConnectButtonState() {
+        const btn = document.getElementById('connect-calendar-btn');
+        const refreshBtn = document.getElementById('refresh-calendar-btn');
+        if (!btn) return;
+
+        if (this.state.isAuthenticated) {
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Connected
+            `;
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-primary');
+
+            // Show refresh button
+            if (refreshBtn) {
+                refreshBtn.style.display = 'block';
+                this.updateRefreshButtonState();
+            }
+        } else {
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Connect Calendar
+            `;
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-success');
+
+            // Hide refresh button
+            if (refreshBtn) {
+                refreshBtn.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Update refresh button text based on cache status
+     */
+    updateRefreshButtonState() {
+        const refreshBtnText = document.getElementById('refresh-btn-text');
+        if (!refreshBtnText) return;
+
+        const cache = this.dataManager.loadEventsCache();
+        if (cache && cache.timestamp) {
+            const minutesAgo = Math.round((new Date() - cache.timestamp) / 1000 / 60);
+            if (minutesAgo < 1) {
+                refreshBtnText.textContent = 'Refresh Events (just now)';
+            } else if (minutesAgo === 1) {
+                refreshBtnText.textContent = 'Refresh Events (1 min ago)';
+            } else if (minutesAgo < 60) {
+                refreshBtnText.textContent = `Refresh Events (${minutesAgo} mins ago)`;
+            } else {
+                const hoursAgo = Math.floor(minutesAgo / 60);
+                refreshBtnText.textContent = `Refresh Events (${hoursAgo}h ago)`;
+            }
+        } else {
+            refreshBtnText.textContent = 'Refresh Events';
+        }
     }
 }

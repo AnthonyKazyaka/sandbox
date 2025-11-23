@@ -478,6 +478,61 @@ class CalendarAPI {
     isAuthenticated() {
         return this.accessToken !== null && gapi.client.getToken() !== null;
     }
+
+    /**
+     * Get events from a calendar within a date range
+     * @param {string} calendarId - Calendar ID
+     * @param {string} calendarName - Calendar name for labeling
+     * @returns {Array} Events array
+     */
+    async getEvents(calendarId = 'primary', calendarName = null) {
+        // Fetch events for next 90 days
+        const timeMin = new Date();
+        timeMin.setDate(timeMin.getDate() - 7); // Include past week
+        
+        const timeMax = new Date();
+        timeMax.setDate(timeMax.getDate() + 90); // Next 90 days
+        
+        return this.fetchEvents(calendarId, timeMin, timeMax, calendarName);
+    }
+
+    /**
+     * Load events from multiple selected calendars
+     * @param {Array} selectedCalendarIds - Array of calendar IDs to fetch from
+     * @returns {Array} Combined events from all calendars
+     */
+    async loadEventsFromCalendars(selectedCalendarIds = ['primary']) {
+        try {
+            console.log('📡 Fetching events from selected calendars...');
+            const allEvents = [];
+
+            // Get calendar list to map IDs to names
+            const calendars = await this.listCalendars();
+            const calendarMap = new Map(calendars.map(cal => [cal.id, cal.name]));
+
+            // Fetch events from each selected calendar
+            for (const calendarId of selectedCalendarIds) {
+                const calendarName = calendarMap.get(calendarId) || calendarId;
+                console.log(`   Fetching from: ${calendarName}`);
+
+                try {
+                    const events = await this.getEvents(calendarId, calendarName);
+                    allEvents.push(...events);
+                    console.log(`   ✅ Loaded ${events.length} events from ${calendarName}`);
+                } catch (error) {
+                    console.error(`   ❌ Error loading events from ${calendarName}:`, error);
+                    // Continue with other calendars even if one fails
+                }
+            }
+
+            console.log(`✅ Successfully loaded ${allEvents.length} total events`);
+            return allEvents;
+
+        } catch (error) {
+            console.error('❌ Error loading calendar events:', error);
+            throw error;
+        }
+    }
 }
 
 // Make available globally

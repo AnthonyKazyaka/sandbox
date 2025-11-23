@@ -241,4 +241,81 @@ class EventProcessor {
                 type: this.detectEventType(event.title)
             }));
     }
+
+    /**
+     * Extract duration from event title (for timed visits)
+     * @param {string} title - Event title/summary
+     * @returns {number|null} Duration in minutes, or null if not found
+     */
+    extractDurationFromTitle(title) {
+        if (!title || typeof title !== 'string') return null;
+
+        const match = this.workEventPatterns.minutesSuffix.exec(title.trim());
+        if (match && match[1]) {
+            return parseInt(match[1], 10);
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract sequence marker from event title
+     * @param {string} title - Event title/summary
+     * @returns {string|null} Sequence marker: 'Start', '1st', '2nd', '3rd', 'Last', or null
+     */
+    extractSequenceMarker(title) {
+        if (!title || typeof title !== 'string') return null;
+
+        // Check minutes suffix pattern
+        let match = this.workEventPatterns.minutesSuffix.exec(title.trim());
+        if (match && match[2]) {
+            return match[2];
+        }
+
+        // Check house sit pattern
+        match = this.workEventPatterns.houseSitSuffix.exec(title.trim());
+        if (match && match[2]) {
+            return match[2];
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect service type from event title
+     * @param {string} title - Event title
+     * @returns {string} Service type
+     */
+    detectServiceType(title) {
+        if (!title) return 'other';
+        
+        const titleLower = title.toLowerCase();
+        
+        if (this.workEventPatterns.meetAndGreet.test(title)) return 'meet-greet';
+        if (titleLower.includes('overnight') || titleLower.includes('housesit') || /\bhs\b/i.test(title)) return 'overnight';
+        if (titleLower.includes('walk')) return 'walk';
+        if (/\b(15|20|30|45|60)\b/i.test(title)) return 'dropin';
+        
+        return 'other';
+    }
+
+    /**
+     * Mark events with work event flags and metadata
+     * @param {Array} events - Array of events to mark
+     * @returns {Array} Events with work metadata added
+     */
+    markWorkEvents(events) {
+        if (!Array.isArray(events)) return [];
+
+        events.forEach(event => {
+            event.isWorkEvent = this.isWorkEvent(event.title);
+            if (event.isWorkEvent) {
+                event.serviceType = this.detectServiceType(event.title);
+                event.extractedDuration = this.extractDurationFromTitle(event.title);
+                event.sequenceMarker = this.extractSequenceMarker(event.title);
+            }
+        });
+
+        return events;
+    }
 }

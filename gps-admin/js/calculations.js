@@ -222,4 +222,60 @@ class WorkloadCalculator {
             trend
         };
     }
+
+    /**
+     * Calculate comparison metrics between current and previous period
+     * @param {Array} currentEvents - Events in current period
+     * @param {Array} previousEvents - Events in previous period
+     * @param {number} currentDays - Number of days in current period
+     * @param {number} previousDays - Number of days in previous period
+     * @returns {Object} Comparison metrics
+     */
+    calculatePeriodComparison(currentEvents, previousEvents, currentDays, previousDays) {
+        // Total appointments
+        const currentAppointments = currentEvents.length;
+        const previousAppointments = previousEvents.length;
+        const appointmentsDiff = currentAppointments - previousAppointments;
+        const appointmentsPercent = previousAppointments > 0
+            ? (appointmentsDiff / previousAppointments * 100)
+            : 0;
+
+        // Total hours
+        const currentMinutes = currentEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60)), 0);
+        const previousMinutes = previousEvents.reduce((sum, e) => sum + ((e.end - e.start) / (1000 * 60)), 0);
+        const currentHours = currentMinutes / 60;
+        const previousHours = previousMinutes / 60;
+        const hoursDiff = currentHours - previousHours;
+        const hoursPercent = previousHours > 0 ? (hoursDiff / previousHours * 100) : 0;
+
+        // Average daily
+        const currentAvgDaily = currentHours / currentDays;
+        const previousAvgDaily = previousHours / previousDays;
+        const avgDailyDiff = currentAvgDaily - previousAvgDaily;
+        const avgDailyPercent = previousAvgDaily > 0 ? (avgDailyDiff / previousAvgDaily * 100) : 0;
+
+        return {
+            appointments: {
+                current: currentAppointments,
+                previous: previousAppointments,
+                diff: appointmentsDiff,
+                percent: appointmentsPercent,
+                trend: appointmentsDiff > 0 ? 'positive' : appointmentsDiff < 0 ? 'negative' : 'neutral'
+            },
+            hours: {
+                current: currentHours,
+                previous: previousHours,
+                diff: hoursDiff,
+                percent: hoursPercent,
+                trend: hoursDiff > 1 ? 'positive' : hoursDiff < -1 ? 'negative' : 'neutral'
+            },
+            avgDaily: {
+                current: currentAvgDaily,
+                previous: previousAvgDaily,
+                diff: avgDailyDiff,
+                percent: avgDailyPercent,
+                trend: avgDailyDiff > 0.5 ? 'positive' : avgDailyDiff < -0.5 ? 'negative' : 'neutral'
+            }
+        };
+    }
 }

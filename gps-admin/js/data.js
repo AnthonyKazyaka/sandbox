@@ -160,4 +160,149 @@ class DataManager {
     sortEventsByTime(events) {
         return [...events].sort((a, b) => a.start - b.start);
     }
+
+    /**
+     * Save events cache to localStorage
+     * @param {Array} events - Events to cache
+     * @param {Array} selectedCalendars - Selected calendar IDs
+     * @returns {boolean} Success status
+     */
+    saveEventsCache(events, selectedCalendars) {
+        try {
+            const cacheData = {
+                events: events,
+                timestamp: new Date().toISOString(),
+                selectedCalendars: selectedCalendars
+            };
+            localStorage.setItem('gps-admin-events-cache', JSON.stringify(cacheData));
+            console.log(`💾 Cached ${events.length} events`);
+            return true;
+        } catch (error) {
+            console.error('Error saving events cache:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Load events cache from localStorage
+     * @returns {Object|null} Cache data or null if not available
+     */
+    loadEventsCache() {
+        try {
+            const cached = localStorage.getItem('gps-admin-events-cache');
+            if (!cached) return null;
+
+            const cacheData = JSON.parse(cached);
+            return {
+                events: cacheData.events || [],
+                timestamp: new Date(cacheData.timestamp),
+                selectedCalendars: cacheData.selectedCalendars || []
+            };
+        } catch (error) {
+            console.error('Error loading events cache:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Check if events cache is valid (not stale)
+     * @param {Array} currentSelectedCalendars - Current calendar selection
+     * @param {number} expiryMinutes - Cache expiry in minutes
+     * @returns {boolean} True if cache is fresh, false if stale or missing
+     */
+    isCacheValid(currentSelectedCalendars, expiryMinutes = 15) {
+        const cache = this.loadEventsCache();
+        if (!cache || !cache.timestamp) {
+            return false;
+        }
+
+        const now = new Date();
+        const cacheAge = (now - cache.timestamp) / 1000 / 60; // Minutes
+
+        // Check if calendars have changed
+        const calendarsChanged = JSON.stringify(cache.selectedCalendars) !==
+                                JSON.stringify(currentSelectedCalendars);
+
+        if (calendarsChanged) {
+            console.log('📅 Calendar selection changed, cache invalidated');
+            return false;
+        }
+
+        const isValid = cacheAge < expiryMinutes;
+        if (!isValid) {
+            console.log(`⏰ Cache is stale (${Math.round(cacheAge)} minutes old, max ${expiryMinutes})`);
+        }
+
+        return isValid;
+    }
+
+    /**
+     * Clear events cache
+     */
+    clearEventsCache() {
+        localStorage.removeItem('gps-admin-events-cache');
+        console.log('🗑️ Events cache cleared');
+    }
+
+    /**
+     * Get ignored events from localStorage
+     * @returns {Array} Array of ignored event IDs
+     */
+    getIgnoredEvents() {
+        const ignored = localStorage.getItem('gps-admin-ignored-events');
+        return ignored ? JSON.parse(ignored) : [];
+    }
+
+    /**
+     * Save ignored events to localStorage
+     * @param {Array} ignoredEventIds - Array of event IDs to ignore
+     */
+    saveIgnoredEvents(ignoredEventIds) {
+        localStorage.setItem('gps-admin-ignored-events', JSON.stringify(ignoredEventIds));
+    }
+
+    /**
+     * Check if event should be ignored based on patterns
+     * @param {Object} event - Event to check
+     * @param {Array} ignoredPatterns - Array of patterns to match against
+     * @returns {boolean} True if event should be ignored
+     */
+    isEventIgnoredByPattern(event, ignoredPatterns = []) {
+        if (!ignoredPatterns || ignoredPatterns.length === 0) {
+            return false;
+        }
+
+        const titleLower = (event.title || '').toLowerCase();
+        return ignoredPatterns.some(pattern => {
+            const patternLower = pattern.toLowerCase();
+            return titleLower.includes(patternLower);
+        });
+    }
+
+    /**
+     * Toggle event ignored status
+     * @param {Array} events - All events
+     * @param {string} eventId - Event ID to toggle
+     * @returns {Object} Updated event
+     */
+    toggleEventIgnored(events, eventId) {
+        const ignoredEvents = this.getIgnoredEvents();
+        const index = ignoredEvents.indexOf(eventId);
+
+        if (index > -1) {
+            ignoredEvents.splice(index, 1);
+        } else {
+            ignoredEvents.push(eventId);
+        }
+
+        this.saveIgnoredEvents(ignoredEvents);
+
+        // Update the event in the array
+        const event = events.find(e => e.id === eventId);
+        if (event) {
+            event.ignored = index === -1; // New state is opposite of what it was
+        }
+
+        return event;
+    }
 }

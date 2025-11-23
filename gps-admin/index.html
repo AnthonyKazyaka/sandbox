@@ -261,20 +261,28 @@
                     </div>
                 </div>
 
-                <!-- Calendar Controls -->
-                <div class="calendar-controls">
-                    <button id="calendar-prev" class="btn btn-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                    </button>
-                    <h3 id="calendar-title" class="calendar-title">January 2025</h3>
-                    <button id="calendar-next" class="btn btn-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
-                    <button id="calendar-today" class="btn">Today</button>
+                <!-- Calendar Sticky Header (Controls + Weekdays) -->
+                <div class="calendar-sticky-header">
+                    <!-- Calendar Controls -->
+                    <div class="calendar-controls">
+                        <button id="calendar-prev" class="btn btn-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <h3 id="calendar-title" class="calendar-title">January 2025</h3>
+                        <button id="calendar-next" class="btn btn-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                        <button id="calendar-today" class="btn">Today</button>
+                    </div>
+                    
+                    <!-- Calendar Weekdays Header -->
+                    <div id="calendar-weekdays" class="calendar-weekdays">
+                        <!-- Weekday headers will be rendered here by JavaScript -->
+                    </div>
                 </div>
 
                 <!-- Calendar Grid -->

@@ -91,10 +91,14 @@ class Utils {
      * @returns {string} Formatted time string
      */
     static formatTime(date) {
-        return date.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
+        const parsedDate = date instanceof Date ? date : new Date(date);
+        if (Number.isNaN(parsedDate)) {
+            return '';
+        }
+        return parsedDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
     }
 

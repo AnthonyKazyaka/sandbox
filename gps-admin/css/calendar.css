@@ -1,15 +1,36 @@
 /* Calendar Styles */
 
+:root {
+    /* Sticky header positioning */
+    --calendar-sticky-top: 0;
+}
+
+/* Unified Sticky Header Container */
+.calendar-sticky-header {
+    position: sticky;
+    top: var(--calendar-sticky-top);
+    z-index: 40;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-md);
+    margin-top: calc(-1 * var(--spacing-xl));
+    padding: 0 var(--spacing-xl);
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
 .calendar-controls {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--spacing-lg);
-    margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-lg) 0;
     background: white;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Removed sticky positioning - now handled by parent */
 }
 
 .calendar-title {
@@ -22,13 +43,13 @@
 
 /* Calendar Container */
 .calendar-container {
-    background: white;
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-xl);
-    box-shadow: var(--shadow-sm);
+    /* Remove background - part of unified calendar display */
+    padding: 0;
     width: 100%;
     max-width: 100%;
     overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
 }
 
 /* Month View */
@@ -37,13 +58,25 @@
     gap: var(--spacing-sm);
     width: 100%;
     max-width: 100%;
+    overflow: hidden;
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
 }
 
 .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    background: white;
+    padding: var(--spacing-md) 0 var(--spacing-sm) 0;
+    border-top: 1px solid var(--gray-200);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Removed sticky positioning - now handled by parent container */
 }
 
 .calendar-weekday {
@@ -60,6 +93,8 @@
     grid-template-columns: repeat(7, 1fr);
     gap: var(--spacing-sm);
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .calendar-day {
@@ -76,8 +111,10 @@
     flex-direction: column;
     gap: 2px;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .calendar-day:hover {
@@ -738,7 +775,26 @@
 
 /* Responsive Calendar */
 @media (max-width: 768px) {
-    .calendar-container {
+    :root {
+        --calendar-sticky-top: 0;
+    }
+
+    .calendar-sticky-header {
+        margin-bottom: var(--spacing-sm);
+        margin-top: calc(-1 * var(--spacing-md));
+        padding: 0 var(--spacing-md);
+    }
+
+    .calendar-controls {
+        padding: var(--spacing-md) 0;
+        gap: var(--spacing-md);
+    }
+
+    .calendar-weekdays {
+        padding: var(--spacing-sm) 0;
+    }
+
+    .calendar-month {
         padding: var(--spacing-md);
     }
 

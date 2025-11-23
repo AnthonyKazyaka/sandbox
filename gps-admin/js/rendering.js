@@ -1209,17 +1209,17 @@ class RenderEngine {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        // Render weekday headers into dedicated container
+        const weekdaysContainer = document.getElementById('calendar-weekdays');
+        if (weekdaysContainer) {
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            weekdaysContainer.innerHTML = dayNames.map(day => 
+                `<div class="calendar-weekday">${day}</div>`
+            ).join('');
+        }
+
+        // Build calendar days grid (without weekdays)
         let html = '<div class="calendar-month">';
-
-        // Weekday headers
-        html += '<div class="calendar-weekdays">';
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        dayNames.forEach(day => {
-            html += `<div class="calendar-weekday">${day}</div>`;
-        });
-        html += '</div>';
-
-        // Days grid
         html += '<div class="calendar-days">';
 
         const currentDate = new Date(startDate);

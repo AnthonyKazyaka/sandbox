@@ -56,6 +56,9 @@ class GPSAdminApp {
 
         // Resolve 'primary' in selectedCalendars to the actual ID
         this.resolvePrimaryCalendarSelection();
+
+        // Attempt automatic authentication if token exists
+        this.attemptAutoAuthentication();
     }
 
     /**
@@ -491,6 +494,106 @@ class GPSAdminApp {
     }
 
     /**
+     * Attempt automatic authentication if valid token exists
+     */
+    async attemptAutoAuthentication() {
+        try {
+            // Get Client ID from state or config
+            const clientId = this.state.settings?.api?.calendarClientId || 
+                           window.GPSConfig?.calendar?.clientId;
+
+            // Skip if no client ID configured
+            if (!clientId || clientId === 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com') {
+                console.log('⏭️ Skipping auto-authentication: Client ID not configured');
+                return;
+            }
+
+            // Initialize Calendar API if needed
+            if (!this.calendarApi || !this.calendarApi.gapiInited) {
+                console.log('📦 Initializing Calendar API for auto-authentication...');
+                this.calendarApi = new CalendarAPI(clientId);
+                await this.calendarApi.init();
+            }
+
+            // Check if we have a saved token
+            if (!this.calendarApi.accessToken) {
+                console.log('⏭️ No saved token found, skipping auto-authentication');
+                return;
+            }
+
+            console.log('🔄 Attempting automatic authentication with saved token...');
+
+            // Try to authenticate silently with saved token
+            await this.calendarApi.authenticate();
+
+            // If we get here, authentication succeeded
+            this.state.isAuthenticated = true;
+            this.state.useMockData = false;
+
+            // Get available calendars
+            console.log('📅 Fetching calendar list...');
+            const calendars = await this.calendarApi.listCalendars();
+            this.state.availableCalendars = calendars;
+
+            // Initialize selectedCalendars if not already set
+            if (!this.state.selectedCalendars || this.state.selectedCalendars.length === 0) {
+                this.state.selectedCalendars = ['primary'];
+            }
+
+            // Resolve 'primary' to actual ID
+            this.resolvePrimaryCalendarSelection();
+
+            // Save authentication state
+            this.dataManager.saveData(this.getPersistentState());
+
+            // Try to load from cache first for instant rendering
+            const cache = this.dataManager.loadEventsCache();
+            const cacheValid = this.dataManager.isCacheValid(this.state.selectedCalendars, 15);
+            
+            if (cacheValid && cache && cache.events.length > 0) {
+                console.log('⚡ Loading from cache for instant display...');
+                this.state.events = cache.events;
+                this.eventProcessor.markWorkEvents(this.state.events);
+                
+                // Update UI with cached data immediately
+                this.updateConnectButtonState();
+                await this.renderCurrentView();
+                this.renderer.updateWorkloadIndicator(this.state);
+                
+                console.log('✅ Auto-authentication successful (using cached data)');
+                Utils.showToast('✅ Connected using cached data', 'success');
+                
+                // Fetch fresh data in background
+                console.log('🔄 Fetching fresh events in background...');
+                this.loadCalendarEvents()
+                    .then(async () => {
+                        console.log('✅ Background refresh complete');
+                        await this.renderCurrentView();
+                        this.renderer.updateWorkloadIndicator(this.state);
+                    })
+                    .catch(err => console.warn('Background refresh failed:', err));
+            } else {
+                // No valid cache, fetch fresh data
+                console.log('📡 Loading calendar events...');
+                await this.loadCalendarEvents();
+
+                // Update UI
+                this.updateConnectButtonState();
+                await this.renderCurrentView();
+                this.renderer.updateWorkloadIndicator(this.state);
+
+                console.log('✅ Auto-authentication successful');
+                Utils.showToast('✅ Automatically connected to Google Calendar', 'success');
+            }
+
+        } catch (error) {
+            console.log('⏭️ Auto-authentication failed (will require manual login):', error.message);
+            // Silently fail - user will need to click Connect manually
+            // Don't show error toast as this is automatic/background
+        }
+    }
+
+    /**
      * Handle calendar connection - initiate OAuth flow
      */
     async handleCalendarConnect() {
@@ -604,12 +707,9 @@ class GPSAdminApp {
             // Show refreshing message
             Utils.showToast('Refreshing calendar events...', 'info');
 
-            // Clear existing cache to force fresh fetch
-            this.dataManager.clearEventsCache();
-
-            // Reload events from Google Calendar
+            // Reload events from Google Calendar (force refresh to bypass cache)
             console.log('🔄 Refreshing calendar events...');
-            await this.loadCalendarEvents();
+            await this.loadCalendarEvents(true);
 
             // Update all views
             await this.renderCurrentView();
@@ -687,7 +787,7 @@ class GPSAdminApp {
     /**
      * Load calendar events from Google Calendar API
      */
-    async loadCalendarEvents() {
+    async loadCalendarEvents(forceRefresh = false) {
         if (!this.calendarApi) {
             console.error('❌ Calendar API not initialized');
             throw new Error('Calendar API not initialized');
@@ -711,7 +811,22 @@ class GPSAdminApp {
             return this.state.events;
         }
 
+        // Check if we can use cached events (unless force refresh)
+        if (!forceRefresh) {
+            const cache = this.dataManager.loadEventsCache();
+            const cacheValid = this.dataManager.isCacheValid(this.state.selectedCalendars, 15);
+            
+            if (cacheValid && cache && cache.events.length > 0) {
+                console.log('⚡ Using cached events (fresh)');
+                this.state.events = cache.events;
+                this.eventProcessor.markWorkEvents(this.state.events);
+                return this.state.events;
+            }
+        }
+
         try {
+            console.log('🔄 Fetching fresh events from Google Calendar...');
+            
             // Fetch events from all selected calendars
             const allEvents = await this.calendarApi.loadEventsFromCalendars(this.state.selectedCalendars);
 

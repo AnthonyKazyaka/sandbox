@@ -175,15 +175,23 @@ class RenderEngine {
             const startTime = event.isAllDay ? 'All Day' : Utils.formatTime(event.start);
             const duration = event.isAllDay ? 'All Day' : `${Math.round((event.end - event.start) / (1000 * 60))} min`;
             const icon = this.eventProcessor.getEventTypeIcon(event.type);
+            const isWorkEvent = event.isWorkEvent || this.eventProcessor.isWorkEvent(event.title);
+            
+            // Work event badge
+            const workBadge = isWorkEvent ? '<span class="work-event-badge">💼 Work</span>' : '';
+            const workClass = isWorkEvent ? 'work-event' : 'personal-event';
 
             html += `
-                <div class="day-details-event ${event.ignored ? 'event-ignored' : ''}">
+                <div class="day-details-event ${event.ignored ? 'event-ignored' : ''} ${workClass}">
                     <div class="day-details-event-time">
                         <div>${icon} ${startTime}</div>
                         <div class="day-details-event-duration">${duration}</div>
                     </div>
                     <div class="day-details-event-info">
-                        <div class="day-details-event-title">${event.title}</div>
+                        <div class="day-details-event-title">
+                            ${event.title}
+                            ${workBadge}
+                        </div>
                         ${event.location ? `<div class="day-details-event-location">📍 ${event.location}</div>` : ''}
                     </div>
                 </div>
@@ -1432,7 +1440,12 @@ class RenderEngine {
         });
         
         html += '</div>';
-        html += `<p class="text-muted" style="margin-top: 12px; font-size: 0.875rem;">Selected: ${state.selectedCalendars.length} calendar(s)</p>`;
+        
+        if (state.selectedCalendars.length === 0) {
+            html += `<p class="text-warning" style="margin-top: 12px; font-size: 0.875rem; color: var(--warning);">⚠️ No calendars selected. Select at least one calendar to sync events.</p>`;
+        } else {
+            html += `<p class="text-muted" style="margin-top: 12px; font-size: 0.875rem;">✓ Selected: ${state.selectedCalendars.length} calendar(s)</p>`;
+        }
         
         container.innerHTML = html;
     }

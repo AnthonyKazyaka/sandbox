@@ -24,6 +24,11 @@ class GPSAdminApp {
             ...savedData
         };
 
+        // Ensure currentDate is always a Date object (in case it was saved as string)
+        if (!(this.state.currentDate instanceof Date)) {
+            this.state.currentDate = this.state.currentDate ? new Date(this.state.currentDate) : new Date();
+        }
+
         // Initialize APIs if available
         const calendarClientId = window.GPSConfig?.calendar?.clientId;
         this.calendarApi = window.CalendarAPI && calendarClientId ? new CalendarAPI(calendarClientId) : null;
@@ -181,6 +186,14 @@ class GPSAdminApp {
             });
         }
 
+        // View in List button (from day details modal)
+        const viewInListBtn = document.getElementById('view-in-list-btn');
+        if (viewInListBtn) {
+            viewInListBtn.addEventListener('click', () => {
+                this.viewDateInList();
+            });
+        }
+
         // Setup calendar controls (only once)
         this.setupCalendarControls();
     }
@@ -251,8 +264,17 @@ class GPSAdminApp {
      * Save settings
      */
     saveSettings() {
-        this.dataManager.saveData(this.state);
+        this.dataManager.saveData(this.getPersistentState());
         Utils.showToast('Settings saved successfully', 'success');
+    }
+
+    /**
+     * Get state that should be persisted (excludes transient UI state)
+     * @returns {Object} State to persist
+     */
+    getPersistentState() {
+        const { currentDate, currentView, calendarView, isManagingTemplates, ...persistentState } = this.state;
+        return persistentState;
     }
 
     /**
@@ -313,6 +335,72 @@ class GPSAdminApp {
      */
     renderSettings() {
         this.renderer.renderSettings(this.state);
+    }
+
+    /**
+     * Show day details modal
+     * @param {Date|string} date - Date to show details for
+     */
+    showDayDetails(date) {
+        // Convert string to Date if needed
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        
+        // Store selected date for later use (e.g., View in List button)
+        this.selectedDate = dateObj;
+        
+        // Delegate to renderer
+        this.renderer.showDayDetails(this.state, dateObj);
+    }
+
+    /**
+     * View selected date in calendar list view
+     */
+    viewDateInList() {
+        if (!this.selectedDate) {
+            console.warn('No date selected');
+            return;
+        }
+
+        console.log('📋 Viewing date in list:', this.selectedDate);
+
+        // Set the current date to the selected date's month
+        this.state.currentDate = new Date(this.selectedDate);
+
+        // Switch to list view
+        this.state.calendarView = 'list';
+
+        // Update view toggle buttons
+        document.querySelectorAll('[data-calendar-view]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.calendarView === 'list');
+        });
+
+        // Switch to calendar view
+        this.switchView('calendar');
+
+        // Close the modal
+        Utils.hideModal('day-details-modal');
+
+        // Small delay to ensure DOM is rendered, then scroll to the date
+        setTimeout(() => {
+            const dateKey = this.selectedDate.toISOString().split('T')[0];
+            const dayElements = document.querySelectorAll('.calendar-list-day');
+
+            console.log('🔍 Looking for date:', dateKey, 'in', dayElements.length, 'day elements');
+
+            dayElements.forEach(dayElement => {
+                const header = dayElement.querySelector('.calendar-list-day-header');
+                if (header && header.textContent.includes(this.selectedDate.getDate())) {
+                    console.log('✅ Found matching day, scrolling...');
+                    dayElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Highlight the day briefly
+                    dayElement.style.transition = 'box-shadow 0.3s ease';
+                    dayElement.style.boxShadow = '0 0 0 3px var(--primary-300)';
+                    setTimeout(() => {
+                        dayElement.style.boxShadow = '';
+                    }, 2000);
+                }
+            });
+        }, 300);
     }
 
     /**
@@ -406,13 +494,16 @@ class GPSAdminApp {
             const calendars = await this.calendarApi.listCalendars();
             this.state.availableCalendars = calendars;
 
-            // Select primary calendar by default if none selected
-            if (!this.state.selectedCalendars || this.state.selectedCalendars.length === 0) {
-                this.state.selectedCalendars = ['primary'];
+            // Initialize selectedCalendars if not already set
+            if (!this.state.selectedCalendars) {
+                this.state.selectedCalendars = [];
             }
+            
+            // If no calendars selected, don't auto-select - let user choose
+            // (This allows users to uncheck "primary" if they want other calendars)
 
             // Save authentication state
-            this.dataManager.saveData(this.state);
+            this.dataManager.saveData(this.getPersistentState());
 
             // Load calendar events
             console.log('📡 Loading calendar events...');
@@ -521,7 +612,7 @@ class GPSAdminApp {
             this.state.availableCalendars = [];
 
             // Save settings
-            this.dataManager.saveData(this.state);
+            this.dataManager.saveData(this.getPersistentState());
 
             // Update button state
             this.updateConnectButtonState();
@@ -555,9 +646,22 @@ class GPSAdminApp {
             throw new Error('Calendar API not initialized');
         }
 
+        // Check if GAPI is fully initialized
+        if (!this.calendarApi.gapiInited || !this.calendarApi.gisInited) {
+            console.error('❌ Google API libraries not fully initialized');
+            throw new Error('Google API libraries not fully initialized. Please reconnect to Google Calendar.');
+        }
+
         if (!this.state.isAuthenticated) {
             console.error('❌ User not authenticated');
             throw new Error('User not authenticated');
+        }
+
+        // Check if any calendars are selected
+        if (!this.state.selectedCalendars || this.state.selectedCalendars.length === 0) {
+            console.warn('⚠️ No calendars selected, clearing events');
+            this.state.events = [];
+            return this.state.events;
         }
 
         try {
@@ -908,7 +1012,7 @@ class GPSAdminApp {
         this.state.events.push(newEvent);
 
         // Save to storage
-        this.dataManager.saveData(this.state);
+        this.dataManager.saveData(this.getPersistentState());
 
         // Close modal
         Utils.hideModal('appointment-modal');
@@ -946,7 +1050,7 @@ class GPSAdminApp {
         }
 
         // Save to storage
-        this.dataManager.saveData(this.state);
+        this.dataManager.saveData(this.getPersistentState());
         
         Utils.showToast('API settings saved successfully', 'success');
         console.log('✅ API settings saved');
@@ -996,7 +1100,7 @@ class GPSAdminApp {
         this.state.settings.thresholds = thresholds;
 
         // Save to storage
-        this.dataManager.saveData(this.state);
+        this.dataManager.saveData(this.getPersistentState());
         
         Utils.showToast('Workload settings saved successfully', 'success');
         console.log('✅ Workload thresholds saved');
@@ -1006,7 +1110,7 @@ class GPSAdminApp {
      * Toggle calendar selection in settings
      * @param {string} calendarId - Calendar ID to toggle
      */
-    toggleCalendarSelection(calendarId) {
+    async toggleCalendarSelection(calendarId) {
         const index = this.state.selectedCalendars.indexOf(calendarId);
         
         if (index > -1) {
@@ -1018,11 +1122,54 @@ class GPSAdminApp {
         }
 
         // Save settings
-        this.dataManager.saveData(this.state);
+        this.dataManager.saveData(this.getPersistentState());
         
         // Re-render calendar selection
         this.renderer.renderCalendarSelection(this.state);
         
         console.log('📅 Calendar selection updated:', this.state.selectedCalendars);
+
+        // Reload events from newly selected calendars
+        if (this.state.isAuthenticated && this.state.selectedCalendars.length > 0) {
+            // Check if API is ready
+            if (!this.calendarApi || !this.calendarApi.gapiInited || !this.calendarApi.gisInited) {
+                Utils.showToast('⚠️ Calendar API not ready. Please reconnect to Google Calendar.', 'warning');
+                return;
+            }
+
+            Utils.showToast('Refreshing events from selected calendars...', 'info');
+            
+            try {
+                // Clear cache to force refresh
+                this.dataManager.clearEventsCache();
+                
+                // Reload events
+                await this.loadCalendarEvents();
+                
+                // Update all views
+                await this.renderCurrentView();
+                this.renderer.updateWorkloadIndicator(this.state);
+                
+                Utils.showToast(`✅ Loaded ${this.state.events.length} events from selected calendars`, 'success');
+            } catch (error) {
+                console.error('Error reloading events:', error);
+                
+                // Provide specific error messages
+                let errorMsg = 'Failed to reload events';
+                if (error.message.includes('not fully initialized')) {
+                    errorMsg = '⚠️ Calendar API not ready. Please use the "Refresh Events" button in the header.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+                
+                Utils.showToast(errorMsg, 'error');
+            }
+        } else if (this.state.selectedCalendars.length === 0) {
+            // Clear events when no calendars selected
+            this.state.events = [];
+            await this.renderCurrentView();
+            this.renderer.updateWorkloadIndicator(this.state);
+            Utils.showToast('No calendars selected - events cleared', 'info');
+        }
     }
 }

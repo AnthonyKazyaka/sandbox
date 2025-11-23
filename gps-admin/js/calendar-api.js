@@ -7,12 +7,74 @@
 class CalendarAPI {
     constructor(clientId) {
         this.clientId = clientId;
-        this.accessToken = null;
         this.tokenClient = null;
         this.gapiInited = false;
         this.gisInited = false;
-        this.version = '2.0';
+        this.version = '2.1';
+        this.tokenStorageKey = 'gpsAdmin_googleToken';
+        
+        // Load saved token from localStorage
+        this.accessToken = this.loadToken();
+        
         console.log(`📦 CalendarAPI v${this.version} constructed`);
+        if (this.accessToken) {
+            console.log('🔑 Found saved access token');
+        }
+    }
+
+    /**
+     * Save access token to localStorage
+     * @param {string} token - Access token
+     * @param {number} expiresIn - Token expiry in seconds (default 3600 = 1 hour)
+     */
+    saveToken(token, expiresIn = 3600) {
+        const tokenData = {
+            token: token,
+            expiresAt: Date.now() + (expiresIn * 1000)
+        };
+        try {
+            localStorage.setItem(this.tokenStorageKey, JSON.stringify(tokenData));
+            console.log('💾 Access token saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save token:', error);
+        }
+    }
+
+    /**
+     * Load access token from localStorage
+     * @returns {string|null} Access token or null if expired/missing
+     */
+    loadToken() {
+        try {
+            const stored = localStorage.getItem(this.tokenStorageKey);
+            if (!stored) return null;
+
+            const tokenData = JSON.parse(stored);
+            
+            // Check if token is expired
+            if (Date.now() > tokenData.expiresAt) {
+                console.log('⚠️ Saved token expired, clearing...');
+                this.clearToken();
+                return null;
+            }
+
+            return tokenData.token;
+        } catch (error) {
+            console.error('Failed to load token:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Clear saved token from localStorage
+     */
+    clearToken() {
+        try {
+            localStorage.removeItem(this.tokenStorageKey);
+            console.log('🗑️ Token cleared from localStorage');
+        } catch (error) {
+            console.error('Failed to clear token:', error);
+        }
     }
 
     /**
@@ -163,13 +225,17 @@ class CalendarAPI {
                     return;
                 }
                 this.accessToken = response.access_token;
+                // Save token with expiry
+                this.saveToken(response.access_token, response.expires_in || 3600);
                 console.log('✅ OAuth authentication successful');
                 resolve(response);
             };
 
-            // Check if we have a valid token
-            if (this.accessToken && gapi.client.getToken()) {
-                console.log('✅ Using existing valid token');
+            // Check if we have a saved token
+            if (this.accessToken) {
+                console.log('🔑 Restoring saved token to GAPI...');
+                gapi.client.setToken({ access_token: this.accessToken });
+                console.log('✅ Using existing saved token');
                 resolve({ access_token: this.accessToken });
             } else {
                 console.log('🔑 Requesting new access token...');
@@ -186,8 +252,10 @@ class CalendarAPI {
         if (token !== null) {
             google.accounts.oauth2.revoke(token.access_token);
             gapi.client.setToken('');
-            this.accessToken = null;
         }
+        this.accessToken = null;
+        this.clearToken();
+        console.log('👋 Signed out and cleared saved token');
     }
 
     /**

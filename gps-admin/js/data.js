@@ -51,7 +51,7 @@ class DataManager {
             events: [],
             templates: [],
             availableCalendars: [],
-            selectedCalendars: ['primary'],
+            selectedCalendars: [], // Empty by default - let user choose which calendars to sync
             ignoredEventPatterns: [],
             settings: {
                 thresholds: {

@@ -1010,6 +1010,35 @@ label {
     color: var(--gray-600);
 }
 
+/* Work Event Styling */
+.day-details-event.work-event {
+    border-left: 4px solid var(--primary-500);
+    background: linear-gradient(to right, var(--primary-50) 0%, white 10%);
+}
+
+.day-details-event.work-event:hover {
+    border-left-color: var(--primary-600);
+    background: linear-gradient(to right, var(--primary-100) 0%, white 10%);
+}
+
+.day-details-event.personal-event {
+    border-left: 4px solid var(--gray-300);
+}
+
+.work-event-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    background: var(--primary-100);
+    color: var(--primary-700);
+    border-radius: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 .calendar-label {
     display: inline-block;
     font-weight: 500;

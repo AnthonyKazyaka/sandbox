@@ -115,6 +115,72 @@ class GPSAdminApp {
             });
         });
 
+        // Template management buttons
+        const manageTemplatesBtn = document.getElementById('manage-templates-btn');
+        if (manageTemplatesBtn) {
+            manageTemplatesBtn.addEventListener('click', () => {
+                this.toggleManageTemplatesMode();
+            });
+        }
+
+        const newTemplateBtn = document.getElementById('new-template-btn');
+        if (newTemplateBtn) {
+            newTemplateBtn.addEventListener('click', () => {
+                this.showTemplateModal();
+            });
+        }
+
+        const saveTemplateBtn = document.getElementById('save-template');
+        if (saveTemplateBtn) {
+            saveTemplateBtn.addEventListener('click', () => {
+                this.saveTemplate();
+            });
+        }
+
+        // Appointment buttons
+        const newAppointmentBtn = document.getElementById('new-appointment-btn');
+        if (newAppointmentBtn) {
+            newAppointmentBtn.addEventListener('click', () => {
+                this.showAppointmentModal();
+            });
+        }
+
+        const addAppointmentBtn = document.getElementById('add-appointment-btn');
+        if (addAppointmentBtn) {
+            addAppointmentBtn.addEventListener('click', () => {
+                this.showAppointmentModal();
+            });
+        }
+
+        const saveAppointmentBtn = document.getElementById('save-appointment');
+        if (saveAppointmentBtn) {
+            saveAppointmentBtn.addEventListener('click', () => {
+                this.saveAppointment();
+            });
+        }
+
+        const appointmentTemplateSelect = document.getElementById('appointment-template');
+        if (appointmentTemplateSelect) {
+            appointmentTemplateSelect.addEventListener('change', (e) => {
+                this.renderer.handleTemplateSelection(e.target.value, this.templatesManager);
+            });
+        }
+
+        // Settings buttons
+        const saveApiSettingsBtn = document.getElementById('save-api-settings');
+        if (saveApiSettingsBtn) {
+            saveApiSettingsBtn.addEventListener('click', () => {
+                this.saveApiSettings();
+            });
+        }
+
+        const saveWorkloadSettingsBtn = document.getElementById('save-workload-settings');
+        if (saveWorkloadSettingsBtn) {
+            saveWorkloadSettingsBtn.addEventListener('click', () => {
+                this.saveWorkloadSettings();
+            });
+        }
+
         // Setup calendar controls (only once)
         this.setupCalendarControls();
     }
@@ -582,5 +648,381 @@ class GPSAdminApp {
         } else {
             refreshBtnText.textContent = 'Refresh Events';
         }
+    }
+
+    /**
+     * Show template modal for creating or editing a template
+     * @param {string|null} templateId - Template ID for editing, null for creating
+     */
+    showTemplateModal(templateId = null) {
+        if (!this.templatesManager) return;
+
+        const modal = document.getElementById('template-modal');
+        const title = document.getElementById('template-modal-title');
+        const form = document.getElementById('template-form');
+
+        // Reset form
+        form.reset();
+
+        if (templateId) {
+            // Edit mode
+            const template = this.templatesManager.getTemplateById(templateId);
+            if (!template) return;
+
+            // Don't allow editing default templates
+            if (template.isDefault) {
+                Utils.showToast('Default templates cannot be edited. Use "Duplicate" to create a customized version.', 'info');
+                return;
+            }
+
+            title.textContent = 'Edit Template';
+            document.getElementById('template-name').value = template.name;
+            document.getElementById('template-icon').value = template.icon;
+            document.getElementById('template-type').value = template.type;
+            document.getElementById('template-hours').value = Math.floor(template.duration / 60);
+            document.getElementById('template-minutes').value = template.duration % 60;
+            document.getElementById('template-include-travel').checked = template.includeTravel;
+
+            // Store template ID for editing
+            modal.dataset.editingId = templateId;
+        } else {
+            // Create mode
+            title.textContent = 'Create Template';
+            document.getElementById('template-hours').value = 0;
+            document.getElementById('template-minutes').value = 30;
+            document.getElementById('template-include-travel').checked = true;
+            delete modal.dataset.editingId;
+        }
+
+        Utils.showModal('template-modal');
+    }
+
+    /**
+     * Save template (create or update)
+     */
+    saveTemplate() {
+        if (!this.templatesManager) return;
+
+        const modal = document.getElementById('template-modal');
+        const editingId = modal.dataset.editingId;
+
+        // Get form values
+        const name = document.getElementById('template-name').value.trim();
+        const icon = document.getElementById('template-icon').value.trim();
+        const type = document.getElementById('template-type').value;
+        const hours = parseInt(document.getElementById('template-hours').value) || 0;
+        const minutes = parseInt(document.getElementById('template-minutes').value) || 0;
+        const includeTravel = document.getElementById('template-include-travel').checked;
+
+        const duration = (hours * 60) + minutes;
+
+        // Validate using TemplatesManager
+        const validation = this.templatesManager.validateTemplate({
+            name,
+            duration,
+            travelBuffer: 0
+        });
+
+        if (!validation.valid) {
+            alert(validation.errors.join('\n'));
+            return;
+        }
+
+        try {
+            if (editingId) {
+                // Update existing template
+                this.templatesManager.updateTemplate(editingId, {
+                    name,
+                    icon: icon || '📋',
+                    type,
+                    duration,
+                    includeTravel
+                });
+                Utils.showToast('Template updated!', 'success');
+            } else {
+                // Create new template
+                this.templatesManager.createTemplate({
+                    name,
+                    icon: icon || '📋',
+                    type,
+                    duration,
+                    includeTravel
+                });
+                Utils.showToast('Template created!', 'success');
+            }
+
+            // Close modal and re-render
+            Utils.hideModal('template-modal');
+            this.renderer.renderTemplates(this.state, this.templatesManager);
+
+        } catch (error) {
+            console.error('Error saving template:', error);
+            Utils.showToast(error.message, 'error');
+        }
+    }
+
+    /**
+     * Delete template
+     * @param {string} templateId - Template ID to delete
+     */
+    deleteTemplate(templateId) {
+        if (!this.templatesManager) return;
+
+        if (!confirm('Are you sure you want to delete this template?')) {
+            return;
+        }
+
+        try {
+            this.templatesManager.deleteTemplate(templateId);
+            this.renderer.renderTemplates(this.state, this.templatesManager);
+            Utils.showToast('Template deleted', 'success');
+        } catch (error) {
+            console.error('Error deleting template:', error);
+            Utils.showToast(error.message, 'error');
+        }
+    }
+
+    /**
+     * Toggle template management mode
+     */
+    toggleManageTemplatesMode() {
+        this.state.isManagingTemplates = !this.state.isManagingTemplates;
+        
+        const btn = document.getElementById('manage-templates-btn');
+        if (btn) {
+            if (this.state.isManagingTemplates) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-danger');
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Done Managing
+                `;
+            } else {
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Manage Templates
+                `;
+            }
+        }
+        
+        // Re-render templates view
+        this.renderer.renderTemplates(this.state, this.templatesManager);
+    }
+
+    /**
+     * Show appointment modal for creating a new appointment
+     * @param {string|null} templateId - Optional template ID to pre-fill form
+     * @param {Date|null} date - Optional date to pre-fill
+     */
+    showAppointmentModal(templateId = null, date = null) {
+        const modal = document.getElementById('appointment-modal');
+
+        // Populate template dropdown
+        this.renderer.populateTemplateDropdown(this.templatesManager);
+
+        // Reset form
+        document.getElementById('appointment-form')?.reset();
+
+        // Set default date and time
+        const defaultDate = date || new Date();
+        const dateInput = document.getElementById('appointment-date');
+        const timeInput = document.getElementById('appointment-time');
+        
+        if (dateInput) dateInput.value = defaultDate.toISOString().split('T')[0];
+        if (timeInput) timeInput.value = '09:00';
+
+        // If template ID provided, select it and auto-fill
+        if (templateId) {
+            const templateSelect = document.getElementById('appointment-template');
+            if (templateSelect) {
+                templateSelect.value = templateId;
+                this.renderer.handleTemplateSelection(templateId, this.templatesManager);
+            }
+        }
+
+        Utils.showModal('appointment-modal');
+    }
+
+    /**
+     * Save appointment from modal form
+     */
+    async saveAppointment() {
+        const form = document.getElementById('appointment-form');
+        if (!form || !form.checkValidity()) {
+            form?.reportValidity();
+            return;
+        }
+
+        // Get form values
+        const title = document.getElementById('appointment-title').value.trim();
+        const dateStr = document.getElementById('appointment-date').value;
+        const timeStr = document.getElementById('appointment-time').value;
+        const duration = parseInt(document.getElementById('appointment-duration').value);
+        const location = document.getElementById('appointment-location').value.trim();
+        const includeTravel = document.getElementById('appointment-travel').checked;
+        const notes = document.getElementById('appointment-notes').value.trim();
+        const templateId = document.getElementById('appointment-template').value;
+
+        if (!title || !dateStr || !timeStr) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Parse date and time
+        const start = new Date(dateStr + ' ' + timeStr);
+        const end = new Date(start);
+        end.setMinutes(end.getMinutes() + duration);
+
+        // Create event object
+        const newEvent = {
+            id: `local_${Date.now()}`,
+            title: title,
+            start: start,
+            end: end,
+            location: location,
+            notes: notes,
+            templateId: templateId || null,
+            includeTravel: includeTravel,
+            isLocal: true, // Mark as locally created (not from Google Calendar)
+            ignored: false
+        };
+
+        // If template was used, get additional info
+        if (templateId && this.templatesManager) {
+            const template = this.templatesManager.getTemplateById(templateId);
+            if (template) {
+                newEvent.type = template.type;
+                newEvent.color = template.color;
+            }
+        }
+
+        // Add to events
+        this.state.events.push(newEvent);
+
+        // Save to storage
+        this.dataManager.saveData(this.state);
+
+        // Close modal
+        Utils.hideModal('appointment-modal');
+
+        // Re-render current view
+        await this.renderCurrentView();
+        this.renderer.updateWorkloadIndicator(this.state);
+
+        Utils.showToast(`✅ Appointment "${title}" created!`, 'success');
+    }
+
+    /**
+     * Save API settings from settings form
+     */
+    saveApiSettings() {
+        const clientIdInput = document.getElementById('calendar-client-id');
+        const mapsApiKeyInput = document.getElementById('maps-api-key');
+        const homeAddressInput = document.getElementById('home-address');
+        const includeTravelCheckbox = document.getElementById('include-travel-time');
+
+        // Update settings in state
+        if (clientIdInput) {
+            this.state.settings.api.calendarClientId = clientIdInput.value.trim();
+        }
+        if (mapsApiKeyInput) {
+            this.state.settings.api.mapsApiKey = mapsApiKeyInput.value.trim();
+        }
+        if (homeAddressInput) {
+            this.state.settings.homeAddress = homeAddressInput.value.trim();
+            // Update calculator with new home address
+            this.calculator.setHomeAddress(this.state.settings.homeAddress);
+        }
+        if (includeTravelCheckbox) {
+            this.state.settings.includeTravelTime = includeTravelCheckbox.checked;
+        }
+
+        // Save to storage
+        this.dataManager.saveData(this.state);
+        
+        Utils.showToast('API settings saved successfully', 'success');
+        console.log('✅ API settings saved');
+    }
+
+    /**
+     * Save workload threshold settings from settings form
+     */
+    saveWorkloadSettings() {
+        // Get all threshold inputs
+        const thresholds = {
+            daily: {
+                comfortable: parseFloat(document.getElementById('threshold-daily-comfortable')?.value) || 6,
+                busy: parseFloat(document.getElementById('threshold-daily-busy')?.value) || 8,
+                high: parseFloat(document.getElementById('threshold-daily-overload')?.value) || 10,
+                burnout: parseFloat(document.getElementById('threshold-daily-burnout')?.value) || 12
+            },
+            weekly: {
+                comfortable: parseFloat(document.getElementById('threshold-weekly-comfortable')?.value) || 30,
+                busy: parseFloat(document.getElementById('threshold-weekly-busy')?.value) || 40,
+                high: parseFloat(document.getElementById('threshold-weekly-overload')?.value) || 50,
+                burnout: parseFloat(document.getElementById('threshold-weekly-burnout')?.value) || 60
+            },
+            monthly: {
+                comfortable: parseFloat(document.getElementById('threshold-monthly-comfortable')?.value) || 120,
+                busy: parseFloat(document.getElementById('threshold-monthly-busy')?.value) || 160,
+                high: parseFloat(document.getElementById('threshold-monthly-overload')?.value) || 200,
+                burnout: parseFloat(document.getElementById('threshold-monthly-burnout')?.value) || 240
+            }
+        };
+
+        // Validate that thresholds are in ascending order
+        const validateThresholds = (category) => {
+            const t = thresholds[category];
+            if (t.comfortable >= t.busy || t.busy >= t.high || t.high >= t.burnout) {
+                return false;
+            }
+            return true;
+        };
+
+        if (!validateThresholds('daily') || !validateThresholds('weekly') || !validateThresholds('monthly')) {
+            alert('⚠️ Thresholds must be in ascending order:\nComfortable < Busy < Overload < Burnout');
+            return;
+        }
+
+        // Update settings in state
+        this.state.settings.thresholds = thresholds;
+
+        // Save to storage
+        this.dataManager.saveData(this.state);
+        
+        Utils.showToast('Workload settings saved successfully', 'success');
+        console.log('✅ Workload thresholds saved');
+    }
+
+    /**
+     * Toggle calendar selection in settings
+     * @param {string} calendarId - Calendar ID to toggle
+     */
+    toggleCalendarSelection(calendarId) {
+        const index = this.state.selectedCalendars.indexOf(calendarId);
+        
+        if (index > -1) {
+            // Remove from selection
+            this.state.selectedCalendars.splice(index, 1);
+        } else {
+            // Add to selection
+            this.state.selectedCalendars.push(calendarId);
+        }
+
+        // Save settings
+        this.dataManager.saveData(this.state);
+        
+        // Re-render calendar selection
+        this.renderer.renderCalendarSelection(this.state);
+        
+        console.log('📅 Calendar selection updated:', this.state.selectedCalendars);
     }
 }

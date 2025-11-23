@@ -158,18 +158,22 @@ class RenderEngine {
         
         let housesitLabel = '';
         if (hasActiveHousesit) {
-            housesitLabel = ' • <span style="color: #8B5CF6; font-weight: 600;">+ housesit</span>';
+            housesitLabel = '<span class="day-details-housesit active"><span class="housesit-icon-inline">🏠</span>+ housesit</span>';
         } else if (hasHousesitEnding) {
-            housesitLabel = ' • <span style="color: #A78BFA; font-weight: 600;">housesit ends</span>';
+            housesitLabel = '<span class="day-details-housesit ending"><span class="housesit-icon-inline">🏠</span>housesit ends</span>';
         }
 
         subtitleElement.innerHTML = `
-            <span>${workEventCount} appointment${workEventCount !== 1 ? 's' : ''}</span> •
-            <span>${workHours} work</span> •
-            <span>${travelHours} travel</span> •
-            <span>${totalHours} total</span>
-            ${housesitLabel} •
-            <span class="workload-badge ${metrics.level}">${metrics.label}</span>
+            <div class="day-details-stats">
+                <span class="day-details-stat">📅 ${workEventCount} appointment${workEventCount !== 1 ? 's' : ''}</span>
+                <span class="day-details-stat">⏱️ ${workHours} work</span>
+                <span class="day-details-stat">🚗 ${travelHours} travel</span>
+                <span class="day-details-stat total">📊 ${totalHours} total</span>
+            </div>
+            <div class="day-details-badges">
+                ${housesitLabel ? housesitLabel : ''}
+                <span class="workload-badge ${metrics.level}">${metrics.label}</span>
+            </div>
         `;
 
         this.renderDayDetailsEvents(sortedEvents, dateKey);

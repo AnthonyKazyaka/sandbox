@@ -891,8 +891,9 @@ label {
     padding: var(--spacing-xl);
     border-top: 1px solid var(--gray-200);
     display: flex;
-    gap: var(--spacing-md);
-    justify-content: flex-end;
+    gap: var(--spacing-lg);
+    justify-content: space-between;
+    align-items: center;
 }
 
 /* Day Details Modal */
@@ -903,7 +904,62 @@ label {
 .day-details-subtitle {
     font-size: 0.875rem;
     color: var(--gray-600);
-    margin-top: 4px;
+    margin-top: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.day-details-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md) var(--spacing-lg);
+    align-items: center;
+}
+
+.day-details-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.day-details-stat.total {
+    color: var(--primary-700);
+    font-weight: 600;
+}
+
+.day-details-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.day-details-housesit {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 4px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.day-details-housesit.active {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+}
+
+.day-details-housesit.ending {
+    background: rgba(167, 139, 250, 0.1);
+    color: #A78BFA;
+}
+
+.housesit-icon-inline {
+    font-size: 0.9rem;
 }
 
 .day-details-summary {

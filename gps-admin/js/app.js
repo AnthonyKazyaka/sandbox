@@ -774,7 +774,7 @@ class GPSAdminApp {
         });
 
         // Modal close handlers
-        document.querySelectorAll('.modal-close').forEach(btn => {
+        document.querySelectorAll('.modal-close, .js-modal-close').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
                 modal?.classList.remove('active');

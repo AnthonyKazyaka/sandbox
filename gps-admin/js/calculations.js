@@ -75,7 +75,12 @@ class WorkloadCalculator {
                     workMinutes += duration;
                     workEventCount++;
                 } else {
-                    housesits.push(event);
+                    // Mark if this is the end date of the housesit
+                    const isEndDate = this.eventProcessor.isOvernightEndDate(event, targetDate);
+                    housesits.push({
+                        ...event,
+                        isEndDate: isEndDate
+                    });
                 }
             }
         });

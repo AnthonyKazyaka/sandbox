@@ -120,6 +120,25 @@ class RenderEngine {
 
         const dayEvents = this.eventProcessor.getEventsForDate(state.events, dateKey);
         const sortedEvents = dayEvents.sort((a, b) => a.start - b.start);
+        
+        const metrics = this.calculator.calculateWorkloadMetrics(sortedEvents, dateKey, { includeTravel: true });
+        
+        // Count only work events (excluding ending housesits)
+        const workEvents = sortedEvents.filter(event => {
+            const isWork = event.isWorkEvent || this.eventProcessor.isWorkEvent(event);
+            if (!isWork) return false;
+            
+            // Exclude overnight events that are ending
+            if (this.eventProcessor.isOvernightEvent(event)) {
+                return !this.eventProcessor.isOvernightEndDate(event, dateKey);
+            }
+            return true;
+        });
+        const workEventCount = workEvents.length;
+        
+        // Check housesit status
+        const hasHousesitEnding = metrics.housesits.some(h => h.isEndDate);
+        const hasActiveHousesit = metrics.housesits.some(h => !h.isEndDate);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -132,31 +151,37 @@ class RenderEngine {
         if (isToday) {
             titleElement.textContent += ' (Today)';
         }
-
-        const metrics = this.calculator.calculateWorkloadMetrics(sortedEvents, dateKey, { includeTravel: true });
         
         const workHours = Utils.formatHours(metrics.workHours);
         const travelHours = Utils.formatHours(metrics.travelHours);
         const totalHours = Utils.formatHours(metrics.totalHours);
+        
+        let housesitLabel = '';
+        if (hasActiveHousesit) {
+            housesitLabel = ' • <span style="color: #8B5CF6; font-weight: 600;">+ housesit</span>';
+        } else if (hasHousesitEnding) {
+            housesitLabel = ' • <span style="color: #A78BFA; font-weight: 600;">housesit ends</span>';
+        }
 
         subtitleElement.innerHTML = `
-            <span>${sortedEvents.length} appointment${sortedEvents.length !== 1 ? 's' : ''}</span> •
+            <span>${workEventCount} appointment${workEventCount !== 1 ? 's' : ''}</span> •
             <span>${workHours} work</span> •
             <span>${travelHours} travel</span> •
             <span>${totalHours} total</span>
-            ${metrics.housesits.length > 0 ? ' • <span style="color: #8B5CF6; font-weight: 600;">+ housesit</span>' : ''} •
+            ${housesitLabel} •
             <span class="workload-badge ${metrics.level}">${metrics.label}</span>
         `;
 
-        this.renderDayDetailsEvents(sortedEvents);
+        this.renderDayDetailsEvents(sortedEvents, dateKey);
         Utils.showModal('day-details-modal');
     }
 
     /**
      * Render events in day details modal
      * @param {Array} events - Events to render
+     * @param {Date} targetDate - The date being displayed
      */
-    renderDayDetailsEvents(events) {
+    renderDayDetailsEvents(events, targetDate) {
         const container = document.getElementById('day-details-content');
 
         if (events.length === 0) {
@@ -177,8 +202,18 @@ class RenderEngine {
             const icon = this.eventProcessor.getEventTypeIcon(event.type);
             const isWorkEvent = event.isWorkEvent || this.eventProcessor.isWorkEvent(event.title);
             
-            // Work event badge
-            const workBadge = isWorkEvent ? '<span class="work-event-badge">💼 Work</span>' : '';
+            // Check if this is an overnight event ending on this day
+            const isOvernightEnding = this.eventProcessor.isOvernightEndDate(event, targetDate);
+            
+            // Work event badge with housesit ending indicator
+            let workBadge = '';
+            if (isWorkEvent) {
+                if (isOvernightEnding) {
+                    workBadge = '<span class="work-event-badge" style="background-color: #A78BFA;">🏠 Housesit Ends</span>';
+                } else {
+                    workBadge = '<span class="work-event-badge">💼 Work</span>';
+                }
+            }
             const workClass = isWorkEvent ? 'work-event' : 'personal-event';
 
             html += `
@@ -491,16 +526,24 @@ class RenderEngine {
             const level = metrics.level;
             const housesits = metrics.housesits;
             const isToday = date.toDateString() === today.toDateString();
+            
+            // Check if any housesits are ending on this day
+            const hasHousesitEnding = housesits.some(h => h.isEndDate);
+            const hasActiveHousesit = housesits.some(h => !h.isEndDate);
 
             // Calculate workload bar percentage (max 12 hours = 100%)
             const maxHours = 12;
             const barPercentage = Math.min((hours / maxHours) * 100, 100);
 
-            html += '<div class="week-day' + (isToday ? ' today' : '') + (housesits.length > 0 ? ' has-housesit' : '') + '" onclick="window.gpsApp.showDayDetails(\'' + date.toISOString() + '\')">';
+            html += '<div class="week-day' + (isToday ? ' today' : '') + (hasActiveHousesit ? ' has-housesit' : '') + (hasHousesitEnding ? ' has-housesit-ending' : '') + '" onclick="window.gpsApp.showDayDetails(\'' + date.toISOString() + '\')">';
             
             // Housesit indicator bar at top
-            if (housesits.length > 0) {
+            if (hasActiveHousesit) {
                 html += '  <div class="week-day-housesit-indicator" title="House sit scheduled">';
+                html += '    <span class="housesit-icon">🏠</span>';
+                html += '  </div>';
+            } else if (hasHousesitEnding) {
+                html += '  <div class="week-day-housesit-indicator housesit-ending" title="House sit ends">';
                 html += '    <span class="housesit-icon">🏠</span>';
                 html += '  </div>';
             }
@@ -513,8 +556,10 @@ class RenderEngine {
             }
 
             html += '  <div class="week-day-hours">' + Utils.formatHours(hours);
-            if (housesits.length > 0) {
+            if (hasActiveHousesit) {
                 html += ' <span class="housesit-label">+ housesit</span>';
+            } else if (hasHousesitEnding) {
+                html += ' <span class="housesit-label housesit-ending">ends</span>';
             }
             html += '</div>';
             html += '  <div class="week-day-level ' + level + '">' + this.calculator.getWorkloadLabel(level) + '</div>';
@@ -1179,15 +1224,33 @@ class RenderEngine {
             dateKey.setHours(0, 0, 0, 0);
 
             const dayEvents = this.eventProcessor.getEventsForDate(state.events, dateKey);
+            
             const metrics = this.calculator.calculateWorkloadMetrics(dayEvents, dateKey, { 
                 includeTravel: state.settings.includeTravelTime 
             });
+            
+            // Count only work events for display (excluding ending housesits)
+            const workEvents = dayEvents.filter(event => {
+                const isWork = event.isWorkEvent || this.eventProcessor.isWorkEvent(event);
+                if (!isWork) return false;
+                
+                // Exclude overnight events that are ending
+                if (this.eventProcessor.isOvernightEvent(event)) {
+                    return !this.eventProcessor.isOvernightEndDate(event, dateKey);
+                }
+                return true;
+            });
+            const workEventCount = workEvents.length;
 
             const hours = Utils.formatHours(metrics.totalHours);
             const workHours = Utils.formatHours(metrics.workHours);
             const travelHours = Utils.formatHours(metrics.travelHours);
             const workloadLevel = metrics.level;
             const housesits = metrics.housesits;
+            
+            // Check if any housesits are ending on this day
+            const hasHousesitEnding = housesits.some(h => h.isEndDate);
+            const hasActiveHousesit = housesits.some(h => !h.isEndDate);
 
             const isToday = dateKey.getTime() === today.getTime();
             const isOtherMonth = currentDate.getMonth() !== month;
@@ -1195,16 +1258,18 @@ class RenderEngine {
             let classes = 'calendar-day';
             if (isToday) classes += ' today';
             if (isOtherMonth) classes += ' other-month';
-            if (!isOtherMonth && dayEvents.length > 0) classes += ` ${workloadLevel}`;
-            if (housesits.length > 0) classes += ' has-housesit';
+            if (workEventCount > 0) classes += ` ${workloadLevel}`;
+            if (hasActiveHousesit) classes += ' has-housesit';
+            if (hasHousesitEnding) classes += ' has-housesit-ending';
 
             html += `
                 <div class="${classes}" data-date="${dateKey.toISOString()}">
-                    ${housesits.length > 0 ? '<div class="calendar-day-housesit-bar" title="House sit scheduled"></div>' : ''}
+                    ${hasActiveHousesit ? '<div class="calendar-day-housesit-bar" title="House sit scheduled"></div>' : ''}
+                    ${hasHousesitEnding ? '<div class="calendar-day-housesit-bar housesit-ending" title="House sit ends"></div>' : ''}
                     <div class="calendar-day-number">${currentDate.getDate()}</div>
-                    ${dayEvents.length > 0 ? `
-                        <div class="calendar-day-events">${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''}</div>
-                        <div class="calendar-day-hours">${workHours} work${metrics.travelMinutes > 0 ? ` + ${travelHours} travel` : ''}${housesits.length > 0 ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}</div>
+                    ${workEventCount > 0 ? `
+                        <div class="calendar-day-events">${workEventCount} appt${workEventCount !== 1 ? 's' : ''}</div>
+                        <div class="calendar-day-hours">${workHours} work${metrics.travelMinutes > 0 ? ` + ${travelHours} travel` : ''}${hasActiveHousesit ? ' <span style="color: #8B5CF6; font-size: 0.65rem; font-weight: 600;">+ housesit</span>' : ''}${hasHousesitEnding && !hasActiveHousesit ? ' <span style="color: #A78BFA; font-size: 0.65rem; font-weight: 600;">housesit ends</span>' : ''}</div>
                         <div class="calendar-day-total" style="font-weight: 600; color: var(--primary-700);">${hours} total</div>
                     ` : ''}
                 </div>
@@ -1411,6 +1476,8 @@ class RenderEngine {
         }
 
         console.log(`📋 Rendering calendar selection (authenticated: ${state.isAuthenticated})`);
+        console.log('   Available calendars:', state.availableCalendars.length);
+        console.log('   Selected calendars:', state.selectedCalendars);
 
         if (!state.isAuthenticated || state.availableCalendars.length === 0) {
             container.innerHTML = '<p class="text-muted">Connect your Google Calendar to select calendars</p>';

@@ -97,6 +97,11 @@
 }
 
 /* Workload Levels */
+.calendar-day.light {
+    border-color: var(--workload-light);
+    background: linear-gradient(135deg, white 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
 .calendar-day.comfortable {
     border-color: var(--workload-comfortable);
     background: linear-gradient(135deg, white 0%, rgba(16, 185, 129, 0.1) 100%);
@@ -140,6 +145,10 @@
     margin-top: 2px;
 }
 
+.calendar-day.light .calendar-day-hours {
+    color: var(--workload-light);
+}
+
 .calendar-day.comfortable .calendar-day-hours {
     color: var(--workload-comfortable);
 }
@@ -168,7 +177,14 @@
     z-index: 1;
 }
 
-.calendar-day.has-housesit {
+.calendar-day-housesit-bar.housesit-ending {
+    right: 50%;
+    background: linear-gradient(90deg, #8B5CF6 0%, #A78BFA 100%);
+    border-radius: var(--radius-md) 0 0 0;
+}
+
+.calendar-day.has-housesit,
+.calendar-day.has-housesit-ending {
     padding-top: 6px;
 }
 

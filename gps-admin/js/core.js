@@ -53,6 +53,9 @@ class GPSAdminApp {
         const app = document.getElementById('app');
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (app) app.style.display = 'grid';
+
+        // Resolve 'primary' in selectedCalendars to the actual ID
+        this.resolvePrimaryCalendarSelection();
     }
 
     /**
@@ -191,6 +194,15 @@ class GPSAdminApp {
         if (viewInListBtn) {
             viewInListBtn.addEventListener('click', () => {
                 this.viewDateInList();
+            });
+        }
+
+        // Clear calendar data button
+        const clearDataBtn = document.getElementById('clear-calendar-data-btn');
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', () => {
+                console.log('🗑️ Clear calendar data button clicked');
+                this.handleClearCalendarData();
             });
         }
 
@@ -493,14 +505,23 @@ class GPSAdminApp {
             console.log('📅 Fetching calendar list...');
             const calendars = await this.calendarApi.listCalendars();
             this.state.availableCalendars = calendars;
+            
+            console.log('📋 Available calendars:', calendars.map(c => ({ id: c.id, name: c.name, primary: c.primary })));
 
             // Initialize selectedCalendars if not already set
             if (!this.state.selectedCalendars) {
                 this.state.selectedCalendars = [];
             }
             
-            // If no calendars selected, don't auto-select - let user choose
-            // (This allows users to uncheck "primary" if they want other calendars)
+            console.log('✅ Currently selected calendars:', this.state.selectedCalendars);
+            
+            // Select primary calendar by default if none selected
+            if (this.state.selectedCalendars.length === 0) {
+                this.state.selectedCalendars = ['primary'];
+            }
+
+            // Resolve 'primary' to actual ID
+            this.resolvePrimaryCalendarSelection();
 
             // Save authentication state
             this.dataManager.saveData(this.getPersistentState());
@@ -1170,6 +1191,71 @@ class GPSAdminApp {
             await this.renderCurrentView();
             this.renderer.updateWorkloadIndicator(this.state);
             Utils.showToast('No calendars selected - events cleared', 'info');
+        }
+    }
+
+    /**
+     * Handle clearing calendar data
+     */
+    async handleClearCalendarData() {
+        const confirmed = confirm(
+            'Are you sure you want to clear all calendar data?\n\n' +
+            'This will:\n' +
+            '• Clear all locally stored events\n' +
+            '• Clear calendar selections\n' +
+            '• Reset to mock data\n\n' +
+            'This action cannot be undone.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            // Clear events
+            this.state.events = [];
+
+            // Clear calendar selections
+            this.state.selectedCalendars = ['primary'];
+            
+            // Resolve 'primary' to actual ID if available
+            this.resolvePrimaryCalendarSelection();
+
+            // Reinitialize mock data
+            this.initMockData();
+
+            // Save settings
+            this.dataManager.saveData(this.getPersistentState());
+
+            // Re-render views
+            await this.renderCurrentView();
+            this.renderer.updateWorkloadIndicator(this.state);
+
+            // Update calendar selection in settings
+            if (this.state.currentView === 'settings') {
+                this.renderer.renderCalendarSelection(this.state);
+            }
+
+            alert('✅ Calendar data has been cleared.\n\nYou are now using mock data.');
+            console.log('✅ Cleared calendar data');
+        } catch (error) {
+            console.error('Clear data error:', error);
+            alert('Error clearing data: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Resolve 'primary' in selectedCalendars to the actual ID
+     */
+    resolvePrimaryCalendarSelection() {
+        if (!this.state.availableCalendars || this.state.availableCalendars.length === 0) return;
+
+        const primaryCal = this.state.availableCalendars.find(c => c.primary);
+        if (!primaryCal) return;
+
+        const index = this.state.selectedCalendars.indexOf('primary');
+        if (index > -1) {
+            console.log(`🔄 Resolving 'primary' calendar selection to ${primaryCal.id}`);
+            this.state.selectedCalendars[index] = primaryCal.id;
+            this.dataManager.saveData(this.getPersistentState());
         }
     }
 }

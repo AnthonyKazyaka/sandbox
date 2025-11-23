@@ -42,6 +42,7 @@
     --info-700: #1D4ED8;
 
     /* Workload Colors */
+    --workload-light: #3B82F6; /* Blue for light workload */
     --workload-comfortable: #10B981;
     --workload-busy: #F59E0B;
     --workload-high: #F97316;
@@ -495,6 +496,7 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+.week-day.light { border-color: var(--workload-light); background: rgba(59, 130, 246, 0.05); }
 .week-day.comfortable { border-color: var(--workload-comfortable); background: rgba(16, 185, 129, 0.05); }
 .week-day.busy { border-color: var(--workload-busy); background: rgba(245, 158, 11, 0.05); }
 .week-day.high { border-color: var(--workload-high); background: rgba(249, 115, 22, 0.05); }
@@ -1699,6 +1701,11 @@ label {
     z-index: 2;
 }
 
+.week-day-housesit-indicator.housesit-ending {
+    right: 50%;
+    border-radius: var(--radius-sm) 0 0 0;
+}
+
 .housesit-icon {
     position: absolute;
     top: -2px;
@@ -1709,7 +1716,8 @@ label {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.week-day.has-housesit {
+.week-day.has-housesit,
+.week-day.has-housesit-ending {
     padding-top: 8px;
 }
 
@@ -1719,6 +1727,10 @@ label {
     font-weight: 600;
     display: block;
     margin-top: 2px;
+}
+
+.housesit-label.housesit-ending {
+    color: #A78BFA;
 }
 
 /* Count-up Animation */

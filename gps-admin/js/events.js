@@ -202,6 +202,29 @@ class EventProcessor {
     }
 
     /**
+     * Check if the target date is the end date of an overnight event
+     * @param {Object} event - Event object
+     * @param {Date} targetDate - The date to check
+     * @returns {boolean} True if this is the end date of the overnight event
+     */
+    isOvernightEndDate(event, targetDate) {
+        if (!this.isOvernightEvent(event)) return false;
+        
+        const targetDayStart = new Date(targetDate);
+        targetDayStart.setHours(0, 0, 0, 0);
+        
+        const eventStartDay = new Date(event.start);
+        eventStartDay.setHours(0, 0, 0, 0);
+        
+        const eventEndDay = new Date(event.end);
+        eventEndDay.setHours(0, 0, 0, 0);
+        
+        // It's the end date if the target matches the event end day and is different from start day
+        return targetDayStart.getTime() === eventEndDay.getTime() && 
+               eventStartDay.getTime() !== eventEndDay.getTime();
+    }
+
+    /**
      * Calculate event duration for a specific day
      * @param {Object} event - Event object
      * @param {Date} targetDate - Target date

@@ -554,12 +554,18 @@ class CalendarAPI {
      * @returns {Array} Events array
      */
     async getEvents(calendarId = 'primary', calendarName = null) {
-        // Fetch events for next 90 days
+        // Fetch events for a wider range to support calendar navigation
+        // Previous: -7 days to +90 days
+        // New: -6 months to +12 months
         const timeMin = new Date();
-        timeMin.setDate(timeMin.getDate() - 7); // Include past week
+        timeMin.setMonth(timeMin.getMonth() - 6);
+        timeMin.setDate(1); // Start of month
+        timeMin.setHours(0, 0, 0, 0);
         
         const timeMax = new Date();
-        timeMax.setDate(timeMax.getDate() + 90); // Next 90 days
+        timeMax.setMonth(timeMax.getMonth() + 12);
+        timeMax.setDate(0); // End of month
+        timeMax.setHours(23, 59, 59, 999);
         
         return this.fetchEvents(calendarId, timeMin, timeMax, calendarName);
     }

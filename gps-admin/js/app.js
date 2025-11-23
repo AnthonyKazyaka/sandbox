@@ -74,6 +74,9 @@ class GPSAdminApp {
 
         this.initMockData();
         this.loadSettings();
+        
+        // Resolve 'primary' calendar selection to actual ID if available
+        this.resolvePrimaryCalendarSelection();
     }
 
     // Event processing methods delegated to EventProcessor
@@ -930,6 +933,23 @@ class GPSAdminApp {
 
 
     /**
+     * Resolve 'primary' in selectedCalendars to the actual ID
+     */
+    resolvePrimaryCalendarSelection() {
+        if (!this.state.availableCalendars || this.state.availableCalendars.length === 0) return;
+
+        const primaryCal = this.state.availableCalendars.find(c => c.primary);
+        if (!primaryCal) return;
+
+        const index = this.state.selectedCalendars.indexOf('primary');
+        if (index > -1) {
+            console.log(`🔄 Resolving 'primary' calendar selection to ${primaryCal.id}`);
+            this.state.selectedCalendars[index] = primaryCal.id;
+            this.saveSettings();
+        }
+    }
+
+    /**
      * Toggle calendar selection
      */
     toggleCalendarSelection(calendarId) {
@@ -1411,6 +1431,9 @@ class GPSAdminApp {
                 this.state.selectedCalendars = ['primary'];
             }
 
+            // Resolve 'primary' to actual ID
+            this.resolvePrimaryCalendarSelection();
+
             // Save authentication state and settings
             this.saveSettings();
 
@@ -1516,6 +1539,9 @@ class GPSAdminApp {
 
             // Clear calendar selections
             this.state.selectedCalendars = ['primary'];
+            
+            // Resolve 'primary' to actual ID if available
+            this.resolvePrimaryCalendarSelection();
 
             // Reinitialize mock data
             this.initMockData();

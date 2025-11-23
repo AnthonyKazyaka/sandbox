@@ -70,12 +70,38 @@ class GPSAdminApp {
             });
         });
 
-        // Menu toggle
+        // Menu toggle (mobile)
         const menuToggle = document.getElementById('menu-toggle');
         const sidebar = document.querySelector('.sidebar');
         if (menuToggle && sidebar) {
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
+            });
+        }
+
+        // Sidebar collapse toggle (desktop)
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        const appContainer = document.querySelector('.app-container');
+        if (collapseToggle && sidebar && appContainer) {
+            // Load saved collapse state
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                appContainer.classList.add('sidebar-collapsed');
+                collapseToggle.setAttribute('title', 'Expand sidebar');
+            }
+
+            collapseToggle.addEventListener('click', () => {
+                const willBeCollapsed = !sidebar.classList.contains('collapsed');
+                
+                sidebar.classList.toggle('collapsed');
+                appContainer.classList.toggle('sidebar-collapsed');
+                
+                // Update button title
+                collapseToggle.setAttribute('title', willBeCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+                
+                // Save state to localStorage
+                localStorage.setItem('sidebarCollapsed', willBeCollapsed);
             });
         }
 
@@ -720,7 +746,7 @@ class GPSAdminApp {
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
-                Connected
+                <span class="btn-text">Connected</span>
             `;
             btn.classList.add('btn-success');
             btn.classList.remove('btn-primary');
@@ -738,7 +764,7 @@ class GPSAdminApp {
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                Connect Calendar
+                <span class="btn-text">Connect Calendar</span>
             `;
             btn.classList.add('btn-primary');
             btn.classList.remove('btn-success');

@@ -152,6 +152,18 @@ class EventListExporter {
 
         let output = '';
 
+        // Add summary header
+        const totalEvents = workEvents.length;
+        const firstEventDate = this.formatDate(new Date(workEvents[0].start));
+        const lastEventDate = this.formatDate(new Date(workEvents[workEvents.length - 1].start));
+
+        if (groupByDate) {
+            output += `Work Events Summary\n`;
+            output += `${firstEventDate} - ${lastEventDate}\n`;
+            output += `Total: ${totalEvents} event${totalEvents !== 1 ? 's' : ''}\n`;
+            output += `${'='.repeat(50)}\n\n`;
+        }
+
         if (groupByDate) {
             // Group events by date
             const eventsByDate = new Map();
@@ -168,7 +180,9 @@ class EventListExporter {
 
             // Generate grouped output
             for (const [date, dateEvents] of eventsByDate) {
-                output += `${date}\n`;
+                const eventCount = dateEvents.length;
+                const countLabel = eventCount === 1 ? '1 event' : `${eventCount} events`;
+                output += `${date} (${countLabel})\n`;
 
                 dateEvents.forEach(event => {
                     const client = this.extractClientName(event.title);

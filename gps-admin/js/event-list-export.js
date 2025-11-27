@@ -167,7 +167,7 @@ class EventListExporter {
             startDate = null,
             endDate = null,
             includeTime = false,
-            groupByDate = true,
+            groupBy = 'client', // 'client' or 'date'
             sortOrder = 'asc' // 'asc' or 'desc'
         } = options;
 
@@ -204,18 +204,80 @@ class EventListExporter {
 
         let output = '';
 
-        if (groupByDate) {
+        // Filter out overnight events not on their start date
+        const filteredEvents = [];
+        workEvents.forEach(event => {
+            const eventDate = new Date(event.start);
+            if (this.shouldIncludeEventOnDate(event, eventDate)) {
+                filteredEvents.push(event);
+            }
+        });
+
+        if (filteredEvents.length === 0) {
+            return 'No work events found in the selected date range.';
+        }
+
+        // Add summary header
+        const firstEventDate = this.formatDate(new Date(filteredEvents[0].start));
+        const lastEventDate = this.formatDate(new Date(filteredEvents[filteredEvents.length - 1].start));
+
+        output += `Work Events Summary\n`;
+        output += `${firstEventDate} - ${lastEventDate}\n`;
+        output += `Total: ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}\n`;
+        output += `${'='.repeat(50)}\n\n`;
+
+        if (groupBy === 'client') {
+            // Group by client, then by service type
+            const clientGroups = new Map();
+
+            filteredEvents.forEach(event => {
+                const client = this.extractClientName(event.title);
+                const serviceType = this.formatServiceType(event);
+
+                if (!clientGroups.has(client)) {
+                    clientGroups.set(client, new Map());
+                }
+
+                const serviceGroups = clientGroups.get(client);
+                if (!serviceGroups.has(serviceType)) {
+                    serviceGroups.set(serviceType, []);
+                }
+
+                serviceGroups.get(serviceType).push(event);
+            });
+
+            // Sort clients alphabetically
+            const sortedClients = Array.from(clientGroups.keys()).sort();
+
+            // Generate output grouped by client and service
+            sortedClients.forEach(client => {
+                const serviceGroups = clientGroups.get(client);
+                const totalClientEvents = Array.from(serviceGroups.values()).reduce((sum, events) => sum + events.length, 0);
+
+                output += `${client} (${totalClientEvents} visit${totalClientEvents !== 1 ? 's' : ''})\n`;
+
+                serviceGroups.forEach((events, serviceType) => {
+                    output += `  ${serviceType}:\n`;
+
+                    events.forEach(event => {
+                        const eventDate = new Date(event.start);
+                        const date = this.formatDate(eventDate);
+                        const time = includeTime ? ` @ ${this.formatTime(eventDate)}` : '';
+
+                        output += `    • ${date}${time}\n`;
+                    });
+                });
+
+                output += '\n';
+            });
+
+        } else if (groupBy === 'date') {
             // Group events by date
             const eventsByDate = new Map();
 
-            workEvents.forEach(event => {
+            filteredEvents.forEach(event => {
                 const eventDate = new Date(event.start);
                 const dateKey = this.formatDate(eventDate);
-
-                // Only include overnight events on their start date
-                if (!this.shouldIncludeEventOnDate(event, eventDate)) {
-                    return;
-                }
 
                 if (!eventsByDate.has(dateKey)) {
                     eventsByDate.set(dateKey, []);
@@ -224,18 +286,7 @@ class EventListExporter {
                 eventsByDate.get(dateKey).push(event);
             });
 
-            // Calculate actual total after filtering overnight events
-            const actualTotal = Array.from(eventsByDate.values()).reduce((sum, events) => sum + events.length, 0);
-            const firstEventDate = eventsByDate.size > 0 ? Array.from(eventsByDate.keys())[0] : '';
-            const lastEventDate = eventsByDate.size > 0 ? Array.from(eventsByDate.keys())[eventsByDate.size - 1] : '';
-
-            // Add summary header
-            output += `Work Events Summary\n`;
-            output += `${firstEventDate} - ${lastEventDate}\n`;
-            output += `Total: ${actualTotal} event${actualTotal !== 1 ? 's' : ''}\n`;
-            output += `${'='.repeat(50)}\n\n`;
-
-            // Generate grouped output
+            // Generate grouped output by date
             for (const [date, dateEvents] of eventsByDate) {
                 const eventCount = dateEvents.length;
                 const countLabel = eventCount === 1 ? '1 event' : `${eventCount} events`;
@@ -253,14 +304,8 @@ class EventListExporter {
             }
         } else {
             // Simple list without grouping
-            workEvents.forEach(event => {
+            filteredEvents.forEach(event => {
                 const eventDate = new Date(event.start);
-
-                // Only include overnight events on their start date
-                if (!this.shouldIncludeEventOnDate(event, eventDate)) {
-                    return;
-                }
-
                 const date = this.formatDate(eventDate);
                 const client = this.extractClientName(event.title);
                 const serviceType = this.formatServiceType(event);

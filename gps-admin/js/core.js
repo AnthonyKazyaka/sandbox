@@ -1478,7 +1478,7 @@ class GPSAdminApp {
             const startDateInput = document.getElementById('export-start-date').value;
             const endDateInput = document.getElementById('export-end-date').value;
             const includeTime = document.getElementById('export-include-time').checked;
-            const groupByDate = document.getElementById('export-group-by-date').checked;
+            const groupBy = document.getElementById('export-group-by').value;
             const format = document.getElementById('export-format').value;
 
             // Parse dates
@@ -1497,7 +1497,7 @@ class GPSAdminApp {
                     startDate,
                     endDate,
                     includeTime,
-                    groupByDate
+                    groupBy
                 });
             }
 

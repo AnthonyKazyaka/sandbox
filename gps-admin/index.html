@@ -811,15 +811,20 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="export-group-by">Group By</label>
+                        <select id="export-group-by" class="select">
+                            <option value="client">Client → Service → Dates</option>
+                            <option value="date">Date → Clients</option>
+                            <option value="none">No Grouping (Simple List)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label>Format Options</label>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="export-include-time" checked>
                                 <span>Include appointment times</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="export-group-by-date" checked>
-                                <span>Group by date</span>
                             </label>
                         </div>
                     </div>

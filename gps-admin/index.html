@@ -427,7 +427,14 @@
                         <div class="form-group">
                             <label for="calendar-client-id">Google Calendar OAuth Client ID</label>
                             <input type="text" id="calendar-client-id" class="input" placeholder="Your OAuth Client ID">
-                            <small class="form-help">See <a href="docs/API_SETUP.md" target="_blank">API Setup Guide</a></small>
+                            <small class="form-help" id="client-id-help">
+                                <span id="client-id-auto-configured" style="display: none; color: #10b981;">
+                                    ✓ Auto-configured from deployment
+                                </span>
+                                <span id="client-id-manual-setup" style="display: none;">
+                                    See <a href="docs/API_SETUP.md" target="_blank">API Setup Guide</a>
+                                </span>
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="maps-api-key">Google Maps API Key</label>

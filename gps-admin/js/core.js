@@ -533,8 +533,9 @@ class GPSAdminApp {
     async attemptAutoAuthentication() {
         try {
             // Get Client ID from state or config
-            const clientId = this.state.settings?.api?.calendarClientId || 
-                           window.GPSConfig?.calendar?.clientId;
+            // Use saved setting if it's not empty, otherwise fall back to injected config
+            const savedClientId = this.state.settings?.api?.calendarClientId?.trim();
+            const clientId = savedClientId || window.GPSConfig?.calendar?.clientId;
 
             // Skip if no client ID configured
             if (!clientId || clientId === 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com') {

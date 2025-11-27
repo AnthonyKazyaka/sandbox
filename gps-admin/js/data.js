@@ -75,8 +75,9 @@ class DataManager {
                     }
                 },
                 api: {
-                    calendarClientId: '',
-                    mapsApiKey: ''
+                    // Use injected config from deployment as default
+                    calendarClientId: window.GPSConfig?.calendar?.clientId || '',
+                    mapsApiKey: window.GPSConfig?.maps?.apiKey || ''
                 },
                 homeAddress: '',
                 includeTravelTime: true,

@@ -1413,8 +1413,27 @@ class RenderEngine {
         const homeAddressInput = document.getElementById('home-address');
         const includeTravelCheckbox = document.getElementById('include-travel-time');
 
-        if (clientIdInput) clientIdInput.value = state.settings.api.calendarClientId || '';
-        if (mapsApiKeyInput) mapsApiKeyInput.value = state.settings.api.mapsApiKey || '';
+        // Show injected config values as fallback when saved settings are empty
+        const injectedClientId = window.GPSConfig?.calendar?.clientId;
+        if (clientIdInput) {
+            clientIdInput.value = state.settings.api.calendarClientId ||
+                                 injectedClientId || '';
+
+            // Show appropriate help text
+            const autoConfiguredMsg = document.getElementById('client-id-auto-configured');
+            const manualSetupMsg = document.getElementById('client-id-manual-setup');
+            if (injectedClientId && injectedClientId !== 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com') {
+                if (autoConfiguredMsg) autoConfiguredMsg.style.display = 'inline';
+                if (manualSetupMsg) manualSetupMsg.style.display = 'none';
+            } else {
+                if (autoConfiguredMsg) autoConfiguredMsg.style.display = 'none';
+                if (manualSetupMsg) manualSetupMsg.style.display = 'inline';
+            }
+        }
+        if (mapsApiKeyInput) {
+            mapsApiKeyInput.value = state.settings.api.mapsApiKey ||
+                                   window.GPSConfig?.maps?.apiKey || '';
+        }
         if (homeAddressInput) homeAddressInput.value = state.settings.homeAddress || '';
         if (includeTravelCheckbox) includeTravelCheckbox.checked = state.settings.includeTravelTime !== false;
 

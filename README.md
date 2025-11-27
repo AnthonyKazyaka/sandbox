@@ -37,3 +37,21 @@ A beautiful, customizable, and secure family task management app with analytics,
 
 **Location:** `/to-do-tracker/`
 [Live version](https://anthonykazyaka.github.io/sandbox/to-do-tracker)
+
+### GPS Admin - Genie's Pet Sitting Administration
+A smart scheduling and workload management system for pet sitting businesses. Integrates with Google Calendar to provide workload analytics, event categorization, and professional reporting.
+
+**Features:**
+
+- Google Calendar integration with OAuth 2.0
+- Work event detection and categorization (drop-ins, overnights, meet & greets)
+- Automated event list export (text and CSV formats)
+- Overnight stay tracking with multi-night calculation
+- Flexible grouping options (by client, date, or service type)
+- Intelligent personal event filtering
+- GitHub Actions deployment with secure credential injection
+
+**Location:** `/gps-admin/`
+[Live version](https://anthonykazyaka.github.io/sandbox/gps-admin)
+
+**Setup:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for Google Calendar API configuration

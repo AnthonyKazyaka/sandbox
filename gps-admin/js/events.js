@@ -17,7 +17,7 @@ class EventProcessor {
         this.personalEventPatterns = {
             offDay: /^\s*✨\s*off\s*✨|^\s*off\s*[-–]/i,
             personalKeywords: /\b(lunch|appointment with|therapy|birthday|anniversary|shower)\b/i,
-            medicalPersonal: /\b(doctor|dentist|massage|nails|haircut|tattoo|yoga)\b/i,
+            medicalPersonal: /\b(doctor|dentist|massage|nails|haircut|tattoo|yoga|acupuncture)\b/i,
             household: /\b(house clean|kroger|grocery)\b/i,
             socialBusiness: /\b(momentum|meeting with|webinar)\b/i
         };

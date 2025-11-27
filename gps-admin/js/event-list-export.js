@@ -9,6 +9,56 @@ class EventListExporter {
     }
 
     /**
+     * Calculate number of nights for an overnight event
+     * @param {Object} event - Event object
+     * @returns {number} Number of nights
+     */
+    calculateOvernightNights(event) {
+        if (!this.eventProcessor.isOvernightEvent(event)) {
+            return 0;
+        }
+
+        const start = new Date(event.start);
+        const end = new Date(event.end);
+
+        // Set to midnight for accurate day counting
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+        // Calculate difference in days
+        const diffTime = endDay - startDay;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return Math.max(1, diffDays); // At least 1 night
+    }
+
+    /**
+     * Check if we should include this event in the export
+     * For overnight events, only include on the start date
+     * @param {Object} event - Event object
+     * @param {Date} checkDate - Date to check against (optional)
+     * @returns {boolean} True if should include
+     */
+    shouldIncludeEventOnDate(event, checkDate = null) {
+        // If not an overnight event, always include
+        if (!this.eventProcessor.isOvernightEvent(event)) {
+            return true;
+        }
+
+        // If no specific date to check, include it (will be filtered by date range later)
+        if (!checkDate) {
+            return true;
+        }
+
+        // For overnight events, only include if this is the start date
+        const eventStart = new Date(event.start);
+        const eventStartDay = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+        const checkDay = new Date(checkDate.getFullYear(), checkDate.getMonth(), checkDate.getDate());
+
+        return eventStartDay.getTime() === checkDay.getTime();
+    }
+
+    /**
      * Format service type from event title for display
      * @param {Object} event - Event object
      * @returns {string} Formatted service type
@@ -19,7 +69,9 @@ class EventListExporter {
 
         // Check for overnight/housesit
         if (this.eventProcessor.isOvernightEvent(event)) {
-            return 'Overnight/Housesit';
+            const nights = this.calculateOvernightNights(event);
+            const nightLabel = nights === 1 ? '1 night' : `${nights} nights`;
+            return `Overnight (${nightLabel})`;
         }
 
         // Check for nail trim
@@ -169,7 +221,13 @@ class EventListExporter {
             const eventsByDate = new Map();
 
             workEvents.forEach(event => {
-                const dateKey = this.formatDate(new Date(event.start));
+                const eventDate = new Date(event.start);
+                const dateKey = this.formatDate(eventDate);
+
+                // Only include overnight events on their start date
+                if (!this.shouldIncludeEventOnDate(event, eventDate)) {
+                    return;
+                }
 
                 if (!eventsByDate.has(dateKey)) {
                     eventsByDate.set(dateKey, []);
@@ -197,10 +255,17 @@ class EventListExporter {
         } else {
             // Simple list without grouping
             workEvents.forEach(event => {
-                const date = this.formatDate(new Date(event.start));
+                const eventDate = new Date(event.start);
+
+                // Only include overnight events on their start date
+                if (!this.shouldIncludeEventOnDate(event, eventDate)) {
+                    return;
+                }
+
+                const date = this.formatDate(eventDate);
                 const client = this.extractClientName(event.title);
                 const serviceType = this.formatServiceType(event);
-                const time = includeTime ? ` @ ${this.formatTime(new Date(event.start))}` : '';
+                const time = includeTime ? ` @ ${this.formatTime(eventDate)}` : '';
 
                 output += `${date} | ${client} | ${serviceType}${time}\n`;
             });
@@ -248,8 +313,15 @@ class EventListExporter {
 
         // CSV rows
         workEvents.forEach(event => {
-            const date = this.formatDate(new Date(event.start));
-            const time = this.formatTime(new Date(event.start));
+            const eventDate = new Date(event.start);
+
+            // Only include overnight events on their start date
+            if (!this.shouldIncludeEventOnDate(event, eventDate)) {
+                return;
+            }
+
+            const date = this.formatDate(eventDate);
+            const time = this.formatTime(eventDate);
             const client = this.escapeCSV(this.extractClientName(event.title));
             const serviceType = this.escapeCSV(this.formatServiceType(event));
 

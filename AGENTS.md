@@ -123,18 +123,33 @@ class FamilyTracker {
     --text: #f1f5f9;
 }
 
-/* Mobile-first responsive design */
+/* Mobile-first responsive design with container constraints */
 .container {
     width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
+    max-width: 100%; /* CRITICAL: Prevent horizontal overflow */
+    box-sizing: border-box; /* Include padding in width */
+    padding: var(--spacing-xl); /* 32px on desktop */
+    overflow: hidden; /* Clip overflow content */
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
     .container {
-        padding: 2rem;
+        padding: var(--spacing-md); /* 16px on mobile - REQUIRED */
     }
+}
+
+/* Grid/Flex children must allow shrinking */
+.grid-item,
+.flex-item {
+    min-width: 0; /* Override default min-width: auto */
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Root elements prevent horizontal scroll */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 ```
 
@@ -203,8 +218,35 @@ class FamilyTracker {
 
 ## 🧪 Testing & Quality Assurance
 
+### Critical Layout Testing (5 Required Viewports)
+**Test EVERY CSS/layout change at these sizes:**
+- [ ] 1920x1080 (Desktop)
+- [ ] 1024x768 (Tablet landscape)
+- [ ] 768x768 (Tablet portrait)
+- [ ] 375x667 (Mobile - iPhone SE)
+- [ ] 320x568 (Small mobile)
+
+**Quick Overflow Check:**
+```javascript
+// Run in browser console after each viewport resize
+console.log('Horizontal overflow:', document.body.scrollWidth > document.body.clientWidth);
+
+// Find ALL overflowing elements
+Array.from(document.querySelectorAll('*'))
+    .filter(el => el.scrollWidth > window.innerWidth)
+    .forEach(el => console.log(el.tagName, el.className, el.scrollWidth));
+```
+
 ### Testing Checklist Template
 ```markdown
+#### Layout Testing (PRIORITY - Test First)
+- [ ] No horizontal scrollbar at all 5 viewports
+- [ ] Vertical scrolling works properly
+- [ ] Sidebar displays at 260px width (desktop)
+- [ ] Calendar fits within viewport (all sizes)
+- [ ] Mobile padding reduced to 16px
+- [ ] No content extends beyond viewport edges
+
 #### Functional Testing
 - [ ] All CRUD operations work correctly
 - [ ] Data persists across browser sessions
@@ -224,6 +266,7 @@ class FamilyTracker {
 - [ ] Smooth 60fps animations
 - [ ] Memory usage stays reasonable
 - [ ] Large datasets handled efficiently
+- [ ] No layout shifts (CLS = 0)
 
 #### Cross-Browser Testing
 - [ ] Chrome/Edge (primary target)
@@ -251,6 +294,37 @@ console.log('Theme State:', {
     theme: document.documentElement.getAttribute('data-theme'),
     scheme: document.documentElement.getAttribute('data-scheme')
 });
+
+// Debug layout and overflow issues
+function debugLayout() {
+    const body = document.body;
+    const app = document.querySelector('.app-container');
+    
+    return {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        bodySize: { scroll: body.scrollWidth, client: body.clientWidth },
+        hasOverflow: body.scrollWidth > body.clientWidth,
+        appDisplay: app ? window.getComputedStyle(app).display : 'N/A',
+        canScrollH: window.scrollX !== (window.scrollTo(100, 0), window.scrollX, window.scrollTo(0, 0))
+    };
+}
+console.table(debugLayout());
+
+// Find specific overflowing element
+function findOverflowCause() {
+    return Array.from(document.querySelectorAll('*'))
+        .filter(el => el.scrollWidth > window.innerWidth)
+        .map(el => ({
+            tag: el.tagName,
+            id: el.id,
+            classes: el.className,
+            scrollW: el.scrollWidth,
+            clientW: el.clientWidth,
+            diff: el.scrollWidth - el.clientWidth
+        }))
+        .sort((a, b) => b.diff - a.diff);
+}
+console.table(findOverflowCause());
 ```
 
 ## 🔄 File Synchronization Protocol
@@ -366,6 +440,23 @@ class StateManager {
 - **Mobile-first**: Responsive design starting from mobile screens
 - **Accessibility**: WCAG AA compliance with keyboard navigation
 
+### gps-admin Development
+- **Architecture**: Multi-view application with Calendar API integration
+- **Styling**: CSS Grid layout with responsive breakpoints at 768px
+- **Key Views**: Dashboard, Calendar (Month/Week/Day/List), Templates, Analytics, Settings
+- **Critical Layout Fix**: JavaScript must set `display: 'grid'` not `display: 'block'` to enable CSS Grid
+
+**Common Layout Issues & Solutions:**
+```javascript
+// Issue: Sidebar displaying horizontally instead of vertical 260px
+// Cause: JavaScript setting display:block overrides CSS display:grid
+// Fix: In core.js, ensure: app.style.display = 'grid';
+
+// Issue: Calendar overflow on mobile
+// Cause: Missing width constraints + excessive padding
+// Fix: Add width: 100%, max-width: 100%, reduce mobile padding to 16px
+```
+
 ## 🚀 Quick Reference Commands
 
 ### Development Server Setup
@@ -434,14 +525,76 @@ localStorage.setItem('familyTrackerData', JSON.stringify(testData));
 
 ---
 
+## 📚 Critical Lessons Learned
+
+### Layout & Overflow Issues (Nov 2025 - gps-admin)
+**Problem**: Sidebar displayed full width horizontally, calendar overflowed viewport on mobile
+
+**Root Causes Identified:**
+1. **JavaScript Override**: `app.style.display = 'block'` overrode CSS `display: grid`
+2. **Missing Width Constraints**: Containers lacked `width: 100%; max-width: 100%`
+3. **Excessive Mobile Padding**: 32px padding caused overflow at 375px viewport
+4. **Grid Children Not Shrinking**: Missing `min-width: 0` on flex/grid items
+
+**Solutions Applied:**
+```javascript
+// core.js - CRITICAL FIX
+app.style.display = 'grid'; // NOT 'block'!
+```
+
+```css
+/* styles.css & calendar.css - Container Constraints Pattern */
+.container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* or overflow-x: hidden */
+}
+
+/* Mobile responsive padding - REQUIRED */
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md); /* 16px, NOT 32px */
+    }
+}
+
+/* Grid/flex children - Allow shrinking */
+.grid-item {
+    min-width: 0; /* Critical for grid to work */
+    overflow: hidden;
+}
+
+/* Root overflow prevention */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+```
+
+**Prevention Checklist:**
+- [ ] Test layout at 5 viewports: 1920x1080, 1024x768, 768x768, 375x667, 320x568
+- [ ] Check `document.body.scrollWidth > document.body.clientWidth` in console
+- [ ] Verify JavaScript doesn't override critical CSS (display, width, etc.)
+- [ ] Ensure mobile padding ≤ 16px for 375px viewport
+- [ ] Add `min-width: 0` to all grid/flex children
+- [ ] Use `box-sizing: border-box` on all containers with padding
+
+**Reference Documentation:**
+- `gps-admin/CSS_BEST_PRACTICES.md` - Comprehensive CSS patterns and guidelines
+- `gps-admin/TESTING_GUIDE.md` - Manual and automated testing procedures
+- `gps-admin/PLAYWRIGHTER_LOG.md` - Session logs and evidence files
+
+---
+
 ## 📝 Maintenance Log
 
-**Last Updated**: June 7, 2025  
-**Version**: 1.2.0  
+**Last Updated**: November 22, 2025  
+**Version**: 1.3.0  
 **Sync Status**: ✅ Synchronized with copilot-instructions.md and CLAUDE.md  
 **Next Review**: Weekly during active development
 
 ### Change History
+- **November 22, 2025**: Added gps-admin layout lessons, enhanced CSS architecture patterns, integrated overflow debugging strategies, added 5-viewport testing requirements
 - **June 7, 2025**: Added Quick Reference section, performance guidelines, enhanced universal standards, integrated Phase 2 development context
 - **Pending**: Weekly updates based on development progress
 

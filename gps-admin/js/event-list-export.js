@@ -33,13 +33,32 @@ class EventListExporter {
     }
 
     /**
+     * Check if event is an "end overnight/HS/housesit" marker
+     * @param {Object} event - Event object
+     * @returns {boolean} True if this is an end marker
+     */
+    isEndOvernightMarker(event) {
+        const title = event.title || '';
+        const titleLower = title.toLowerCase();
+
+        // Check for "end overnight", "end HS", "end housesit" patterns
+        return /\b(end\s*(overnight|hs|housesit))\b/i.test(titleLower);
+    }
+
+    /**
      * Check if we should include this event in the export
      * For overnight events, only include on the start date
+     * Exclude "end overnight/HS/housesit" markers entirely
      * @param {Object} event - Event object
      * @param {Date} checkDate - Date to check against (optional)
      * @returns {boolean} True if should include
      */
     shouldIncludeEventOnDate(event, checkDate = null) {
+        // Exclude "end overnight/HS/housesit" markers
+        if (this.isEndOvernightMarker(event)) {
+            return false;
+        }
+
         // If not an overnight event, always include
         if (!this.eventProcessor.isOvernightEvent(event)) {
             return true;

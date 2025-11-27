@@ -10,6 +10,7 @@ class GPSAdminApp {
         this.eventProcessor = new EventProcessor();
         this.calculator = new WorkloadCalculator(this.eventProcessor);
         this.renderer = new RenderEngine(this.calculator, this.eventProcessor);
+        this.eventListExporter = window.EventListExporter ? new EventListExporter(this.eventProcessor) : null;
 
         // Load data
         const savedData = this.dataManager.loadData();
@@ -232,6 +233,39 @@ class GPSAdminApp {
             clearDataBtn.addEventListener('click', () => {
                 console.log('🗑️ Clear calendar data button clicked');
                 this.handleClearCalendarData();
+            });
+        }
+
+        // Export event list button
+        const exportEventListBtn = document.getElementById('export-event-list-btn');
+        if (exportEventListBtn) {
+            exportEventListBtn.addEventListener('click', () => {
+                console.log('📤 Export event list button clicked');
+                this.showExportEventListModal();
+            });
+        }
+
+        // Export preview button
+        const exportGeneratePreviewBtn = document.getElementById('export-generate-preview');
+        if (exportGeneratePreviewBtn) {
+            exportGeneratePreviewBtn.addEventListener('click', () => {
+                this.generateExportPreview();
+            });
+        }
+
+        // Export copy to clipboard button
+        const exportCopyBtn = document.getElementById('export-copy-to-clipboard');
+        if (exportCopyBtn) {
+            exportCopyBtn.addEventListener('click', async () => {
+                await this.copyExportToClipboard();
+            });
+        }
+
+        // Export download file button
+        const exportDownloadBtn = document.getElementById('export-download-file');
+        if (exportDownloadBtn) {
+            exportDownloadBtn.addEventListener('click', () => {
+                this.downloadExportFile();
             });
         }
 
@@ -1397,6 +1431,164 @@ class GPSAdminApp {
             console.log(`🔄 Resolving 'primary' calendar selection to ${primaryCal.id}`);
             this.state.selectedCalendars[index] = primaryCal.id;
             this.dataManager.saveData(this.getPersistentState());
+        }
+    }
+
+    /**
+     * Show export event list modal
+     */
+    showExportEventListModal() {
+        if (!this.eventListExporter) {
+            alert('Event list exporter is not available.');
+            return;
+        }
+
+        // Set default date range to current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Format dates for input fields (YYYY-MM-DD)
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        document.getElementById('export-start-date').value = formatDate(startOfMonth);
+        document.getElementById('export-end-date').value = formatDate(endOfMonth);
+
+        // Reset preview section
+        document.getElementById('export-preview-section').style.display = 'none';
+        document.getElementById('export-copy-to-clipboard').style.display = 'none';
+        document.getElementById('export-download-file').style.display = 'none';
+
+        Utils.showModal('export-event-list-modal');
+    }
+
+    /**
+     * Generate export preview
+     */
+    generateExportPreview() {
+        if (!this.eventListExporter) return;
+
+        try {
+            // Get form values
+            const startDateInput = document.getElementById('export-start-date').value;
+            const endDateInput = document.getElementById('export-end-date').value;
+            const includeTime = document.getElementById('export-include-time').checked;
+            const groupByDate = document.getElementById('export-group-by-date').checked;
+            const format = document.getElementById('export-format').value;
+
+            // Parse dates
+            const startDate = startDateInput ? new Date(startDateInput + 'T00:00:00') : null;
+            const endDate = endDateInput ? new Date(endDateInput + 'T23:59:59') : null;
+
+            // Generate preview based on format
+            let preview;
+            if (format === 'csv') {
+                preview = this.eventListExporter.generateCSV(this.state.events, {
+                    startDate,
+                    endDate
+                });
+            } else {
+                preview = this.eventListExporter.generateTextList(this.state.events, {
+                    startDate,
+                    endDate,
+                    includeTime,
+                    groupByDate
+                });
+            }
+
+            // Count work events
+            const workEvents = this.state.events.filter(event => {
+                if (!this.eventProcessor.isWorkEvent(event)) return false;
+
+                const eventDate = new Date(event.start);
+                if (startDate && eventDate < startDate) return false;
+                if (endDate && eventDate > endDate) return false;
+
+                return true;
+            });
+
+            // Display preview
+            document.getElementById('export-preview').textContent = preview;
+            document.getElementById('export-event-count').textContent = `${workEvents.length} event${workEvents.length !== 1 ? 's' : ''}`;
+            document.getElementById('export-preview-section').style.display = 'block';
+            document.getElementById('export-copy-to-clipboard').style.display = 'inline-flex';
+            document.getElementById('export-download-file').style.display = 'inline-flex';
+
+            // Store preview for later use
+            this.exportPreview = preview;
+            this.exportFormat = format;
+
+        } catch (error) {
+            console.error('Error generating export preview:', error);
+            alert('Error generating preview: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Copy export to clipboard
+     */
+    async copyExportToClipboard() {
+        if (!this.eventListExporter || !this.exportPreview) return;
+
+        try {
+            const success = await this.eventListExporter.copyToClipboard(this.exportPreview);
+
+            if (success) {
+                // Visual feedback
+                const btn = document.getElementById('export-copy-to-clipboard');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                alert('Failed to copy to clipboard. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            alert('Error copying to clipboard: ' + (error.message || 'Unknown error'));
+        }
+    }
+
+    /**
+     * Download export file
+     */
+    downloadExportFile() {
+        if (!this.eventListExporter || !this.exportPreview) return;
+
+        try {
+            // Generate filename
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const extension = this.exportFormat === 'csv' ? 'csv' : 'txt';
+            const mimeType = this.exportFormat === 'csv' ? 'text/csv' : 'text/plain';
+            const filename = `work-events-${dateStr}.${extension}`;
+
+            // Download file
+            this.eventListExporter.downloadAsFile(this.exportPreview, filename, mimeType);
+
+            // Visual feedback
+            const btn = document.getElementById('export-download-file');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Downloaded!';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Error downloading file: ' + (error.message || 'Unknown error'));
         }
     }
 }

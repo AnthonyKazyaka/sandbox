@@ -17,7 +17,7 @@ class MockDataGenerator {
         events.push(
             {
                 id: '1',
-                title: 'Bella - Morning Drop-in',
+                title: 'Bella 30',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 30),
@@ -27,7 +27,7 @@ class MockDataGenerator {
             },
             {
                 id: '2',
-                title: 'Max & Cooper - Dog Walk',
+                title: 'Max & Cooper 60',
                 type: 'walk',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 30),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 30),
@@ -37,7 +37,7 @@ class MockDataGenerator {
             },
             {
                 id: '3',
-                title: 'Luna - Midday Drop-in',
+                title: 'Luna 45',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 45),
@@ -47,7 +47,7 @@ class MockDataGenerator {
             },
             {
                 id: '4',
-                title: 'Milo - Evening Drop-in',
+                title: 'Milo 30',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 17, 30),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0),
@@ -61,7 +61,7 @@ class MockDataGenerator {
         events.push(
             {
                 id: '5',
-                title: 'Charlie - Meet & Greet',
+                title: 'Charlie M&G',
                 type: 'meet-greet',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 15, 0),
@@ -71,7 +71,7 @@ class MockDataGenerator {
             },
             {
                 id: '6',
-                title: 'Daisy - Evening Drop-in',
+                title: 'Daisy 30',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 18, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 18, 30),
@@ -85,7 +85,7 @@ class MockDataGenerator {
         events.push(
             {
                 id: '7',
-                title: 'Rocky & Bella - Overnight',
+                title: 'Rocky & Bella Overnight',
                 type: 'overnight',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 18, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 10, 0),
@@ -95,13 +95,23 @@ class MockDataGenerator {
             },
             {
                 id: '8',
-                title: 'Luna - Morning Drop-in',
+                title: 'Luna 30',
                 type: 'dropin',
                 start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 9, 0),
                 end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 9, 30),
                 location: '789 Maple Drive',
                 client: 'Davis Family',
                 notes: 'Medication'
+            },
+            {
+                id: '8a',
+                title: 'Buddy Nail Trim',
+                type: 'other',
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 11, 0),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 11, 15),
+                location: '999 Cherry Street',
+                client: 'Anderson Family',
+                notes: 'Nail trim only'
             }
         );
 

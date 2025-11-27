@@ -251,6 +251,14 @@
                             <button class="btn btn-sm" data-calendar-view="month">Month</button>
                             <button class="btn btn-sm" data-calendar-view="list">List</button>
                         </div>
+                        <button id="export-event-list-btn" class="btn btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export List
+                        </button>
                         <button id="new-appointment-btn" class="btn btn-primary">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -419,7 +427,14 @@
                         <div class="form-group">
                             <label for="calendar-client-id">Google Calendar OAuth Client ID</label>
                             <input type="text" id="calendar-client-id" class="input" placeholder="Your OAuth Client ID">
-                            <small class="form-help">See <a href="docs/API_SETUP.md" target="_blank">API Setup Guide</a></small>
+                            <small class="form-help" id="client-id-help">
+                                <span id="client-id-auto-configured" style="display: none; color: #10b981;">
+                                    ✓ Auto-configured from deployment
+                                </span>
+                                <span id="client-id-manual-setup" style="display: none;">
+                                    See <a href="docs/API_SETUP.md" target="_blank">API Setup Guide</a>
+                                </span>
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="maps-api-key">Google Maps API Key</label>
@@ -773,6 +788,96 @@
         </div>
     </div>
 
+    <!-- Export Event List Modal -->
+    <div id="export-event-list-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Work Events List</h3>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted" style="margin-bottom: var(--spacing-lg);">
+                    Generate a formatted text list of your work calendar events showing date, client/pet name, and service type.
+                </p>
+
+                <form id="export-event-list-form">
+                    <div class="form-group">
+                        <label>Date Range</label>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="export-start-date" style="font-size: 0.875rem; font-weight: normal;">Start Date</label>
+                                <input type="date" id="export-start-date" class="input">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="export-end-date" style="font-size: 0.875rem; font-weight: normal;">End Date</label>
+                                <input type="date" id="export-end-date" class="input">
+                            </div>
+                        </div>
+                        <small class="form-help">Leave blank to export all work events</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="export-group-by">Group By</label>
+                        <select id="export-group-by" class="select">
+                            <option value="client">Client → Service → Dates</option>
+                            <option value="date">Date → Clients</option>
+                            <option value="none">No Grouping (Simple List)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Format Options</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="export-include-time" checked>
+                                <span>Include appointment times</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="export-format">Export Format</label>
+                        <select id="export-format" class="select">
+                            <option value="text">Text List</option>
+                            <option value="csv">CSV (Spreadsheet)</option>
+                        </select>
+                    </div>
+                </form>
+
+                <!-- Preview Section -->
+                <div id="export-preview-section" style="margin-top: var(--spacing-lg); display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                        <label style="font-weight: 600; color: var(--gray-700);">Preview:</label>
+                        <span id="export-event-count" class="badge" style="background: var(--primary-500); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;"></span>
+                    </div>
+                    <div id="export-preview" style="background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--spacing-md); max-height: 300px; overflow-y: auto; font-family: 'Monaco', 'Courier New', monospace; font-size: 0.875rem; white-space: pre-wrap; line-height: 1.6;">
+                        <!-- Preview will be generated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary js-modal-close">Cancel</button>
+                <button id="export-generate-preview" class="btn btn-secondary">Generate Preview</button>
+                <button id="export-copy-to-clipboard" class="btn btn-primary" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy to Clipboard
+                </button>
+                <button id="export-download-file" class="btn btn-primary" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download File
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Configuration (load first) -->
     <!-- Try to load local config, fall back to example if not found -->
     <script src="config.local.js" onerror="this.onerror=null; this.src='config.example.js';"></script>
@@ -790,6 +895,7 @@
     <script src="js/maps-api.js?v=2.8"></script>
     <script src="js/workload-analyzer.js?v=2.8"></script>
     <script src="js/templates.js?v=2.8"></script>
+    <script src="js/event-list-export.js?v=1.0"></script>
 
     <!-- Initialize App -->
     <script>

@@ -9,14 +9,15 @@ class EventProcessor {
         this.workEventPatterns = {
             meetAndGreet: /\b(MG|M&G|Meet\s*&\s*Greet)\b/i,
             minutesSuffix: /\b(15|20|30|45|60)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i,
-            houseSitSuffix: /\b(HS|Housesit)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i
+            houseSitSuffix: /\b(HS|Housesit)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i,
+            nailTrim: /\b(nail\s*trim)\b/i
         };
 
         // Personal event patterns (for exclusion)
         this.personalEventPatterns = {
             offDay: /^\s*✨\s*off\s*✨|^\s*off\s*[-–]/i,
             personalKeywords: /\b(lunch|appointment with|therapy|birthday|anniversary|shower)\b/i,
-            medicalPersonal: /\b(doctor|dentist|massage|nails|haircut|tattoo|yoga)\b/i,
+            medicalPersonal: /\b(doctor|dentist|massage|nails|haircut|tattoo|yoga|acupuncture)\b/i,
             household: /\b(house clean|kroger|grocery)\b/i,
             socialBusiness: /\b(momentum|meeting with|webinar)\b/i
         };
@@ -81,6 +82,10 @@ class EventProcessor {
         }
 
         if (this.workEventPatterns.houseSitSuffix.test(cleanedTitle)) {
+            return true;
+        }
+
+        if (this.workEventPatterns.nailTrim.test(cleanedTitle)) {
             return true;
         }
 

@@ -10,7 +10,7 @@ class EventProcessor {
             meetAndGreet: /\b(MG|M&G|Meet\s*&\s*Greet)\b/i,
             minutesSuffix: /\b(15|20|30|45|60)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i,
             houseSitSuffix: /\b(HS|Housesit)\b(?:\s*[-–]?\s*(Start|1st|2nd|3rd|Last))?$/i,
-            nailTrim: /\b(nail\s*trim|nails?)\b/i
+            nailTrim: /\b(nail\s*trim)\b/i
         };
 
         // Personal event patterns (for exclusion)

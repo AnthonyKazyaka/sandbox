@@ -75,7 +75,7 @@ class EventListExporter {
         }
 
         // Check for nail trim
-        if (titleLower.includes('nail trim') || titleLower.includes('nails')) {
+        if (titleLower.includes('nail trim')) {
             return 'Nail Trim';
         }
 
@@ -204,18 +204,6 @@ class EventListExporter {
 
         let output = '';
 
-        // Add summary header
-        const totalEvents = workEvents.length;
-        const firstEventDate = this.formatDate(new Date(workEvents[0].start));
-        const lastEventDate = this.formatDate(new Date(workEvents[workEvents.length - 1].start));
-
-        if (groupByDate) {
-            output += `Work Events Summary\n`;
-            output += `${firstEventDate} - ${lastEventDate}\n`;
-            output += `Total: ${totalEvents} event${totalEvents !== 1 ? 's' : ''}\n`;
-            output += `${'='.repeat(50)}\n\n`;
-        }
-
         if (groupByDate) {
             // Group events by date
             const eventsByDate = new Map();
@@ -235,6 +223,17 @@ class EventListExporter {
 
                 eventsByDate.get(dateKey).push(event);
             });
+
+            // Calculate actual total after filtering overnight events
+            const actualTotal = Array.from(eventsByDate.values()).reduce((sum, events) => sum + events.length, 0);
+            const firstEventDate = eventsByDate.size > 0 ? Array.from(eventsByDate.keys())[0] : '';
+            const lastEventDate = eventsByDate.size > 0 ? Array.from(eventsByDate.keys())[eventsByDate.size - 1] : '';
+
+            // Add summary header
+            output += `Work Events Summary\n`;
+            output += `${firstEventDate} - ${lastEventDate}\n`;
+            output += `Total: ${actualTotal} event${actualTotal !== 1 ? 's' : ''}\n`;
+            output += `${'='.repeat(50)}\n\n`;
 
             // Generate grouped output
             for (const [date, dateEvents] of eventsByDate) {

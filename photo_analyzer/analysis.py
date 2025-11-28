@@ -10,6 +10,7 @@ This module provides functions for analyzing images including:
 
 import cv2
 import numpy as np
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 import logging
@@ -40,7 +41,7 @@ def get_haar_cascade_path(cascade_name: str) -> str:
     Returns:
         Full path to the cascade file.
     """
-    return str(cv2.data.haarcascades + cascade_name)
+    return os.path.join(cv2.data.haarcascades, cascade_name)
 
 
 # Load Haar cascades

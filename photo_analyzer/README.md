@@ -19,12 +19,27 @@ A Python CLI tool for bulk photo analysis with SQLite caching. Analyzes images f
 
 ## Installation
 
-```bash
-# Install dependencies
-pip install opencv-python
+### 1. Set up a virtual environment (recommended)
 
-# Optional: Install tqdm for progress bars
-pip install tqdm
+```bash
+# Create a virtual environment
+python -m venv .venv
+
+# Activate the virtual environment
+# On Linux/Mac:
+source .venv/bin/activate
+# On Windows:
+# .venv\Scripts\activate
+```
+
+### 2. Install dependencies
+
+```bash
+# Install all dependencies from requirements.txt
+pip install -r requirements.txt
+
+# Or install manually:
+pip install opencv-python tqdm
 ```
 
 ## Usage

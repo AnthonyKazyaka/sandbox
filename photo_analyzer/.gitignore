@@ -8,8 +8,14 @@ __pycache__/
 *.sqlite
 *.sqlite3
 
-# Output files
-*.json
+# Virtual environment
+.venv/
+venv/
+
+# Test data and output
+test_photos/
+test_summary.json
+test_results.json
 
 # IDE
 .vscode/

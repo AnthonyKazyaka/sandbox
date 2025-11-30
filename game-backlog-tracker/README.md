@@ -2,6 +2,8 @@
 
 A modern, intelligent web application for managing and prioritizing your video game backlog, with AI assistant integration via Model Context Protocol (MCP).
 
+🌐 **[Live Demo](https://anthonykazyaka.github.io/sandbox/game-backlog-tracker)** | 📖 **[Documentation](docs/)** | 🤖 **[MCP Server](mcp-server/)**
+
 ---
 
 ## ⚡ Quick Setup
@@ -302,5 +304,5 @@ MIT License - Free to use and modify
 **Last Updated**: November 30, 2025  
 **Status**: Production Ready ✅
 
-**Author**: [Your Name]  
-**Repository**: [GitHub Link]
+**Live Demo**: [https://anthonykazyaka.github.io/sandbox/game-backlog-tracker](https://anthonykazyaka.github.io/sandbox/game-backlog-tracker)  
+**Repository**: [https://github.com/AnthonyKazyaka/sandbox/tree/main/game-backlog-tracker](https://github.com/AnthonyKazyaka/sandbox/tree/main/game-backlog-tracker)

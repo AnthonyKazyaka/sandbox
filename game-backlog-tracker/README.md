@@ -10,7 +10,7 @@ This application helps gamers organize their growing collection of unplayed game
 
 ### Game Management
 - **Add Games**: Manually add games with details (title, platform, genre, release date, estimated playtime)
-- **Import from APIs**: Integration with IGDB/Steam APIs for automatic game data
+- **Import from APIs**: Integration with RAWG API for automatic game data (cover art, playtime, Metacritic scores)
 - **Custom Tags**: Organize games with custom tags and categories
 - **Game Status**: Track progress (Backlog, Playing, Completed, Abandoned, Wishlist)
 
@@ -44,6 +44,7 @@ This application helps gamers organize their growing collection of unplayed game
 - **Storage**: localStorage with JSON export/import
 - **Design**: Responsive, mobile-first approach
 - **PWA**: Offline-capable Progressive Web App
+- **APIs**: RAWG API for game data enrichment
 
 ## 📱 User Interface
 
@@ -71,15 +72,62 @@ This application helps gamers organize their growing collection of unplayed game
 
 ## 🚀 Getting Started
 
-Open `index.html` in a modern web browser. No build process or dependencies required!
+### Setup
 
-For development:
-```bash
-# Start a local server
-python -m http.server 8000
-# or
-npx serve .
-```
+1. **Clone the repository** (or download the files)
+
+2. **Configure API keys**:
+   ```bash
+   # Copy the example config file
+   cp js/config.example.js js/config.js
+   ```
+
+## 🎯 API Integration
+
+### RAWG API
+This app uses the [RAWG Video Games Database API](https://rawg.io/apidocs) to:
+- Search for games by title
+- Auto-populate game details (genre, platforms, release date)
+- Fetch cover art and screenshots
+- Get playtime estimates
+- Include Metacritic scores
+
+**Free Tier**: 20,000 requests per month
+
+**Data Caching**: API responses are cached locally for 7 days to minimize requests and work offline.
+
+## 🔧 Configuration
+
+Edit `js/config.js` to customize:
+- API keys
+- Cache duration (default: 7 days)
+- Request rate limits
+- Timeout settings
+
+## 📝 Future Enhancements
+
+- Cloud sync (Firebase/Supabase integration)
+- Social features (share lists, compare backlogs)
+- Gaming sessions timer and tracker
+- Achievement/trophy tracking
+- Integration with gaming platforms (Steam, PlayStation, Xbox)
+- AI-powered recommendations
+- Budget tracker for game purchases
+- Sale alerts integration (Steam, Epic, etc.)
+   # Node.js
+   npx serve .
+   
+   # PHP
+   php -S localhost:8000
+   ```
+
+5. **Open in browser**: Navigate to `http://localhost:8000`
+
+### Important: API Key Security
+
+⚠️ **Never commit `js/config.js` to git!**
+
+The `.gitignore` file is configured to exclude `js/config.js` from version control. This keeps your API keys private. Always use `js/config.example.js` as a template for sharing.
 
 ## 📝 Future Enhancements
 

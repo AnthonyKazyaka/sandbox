@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage, prioritize, and track your video game backlog">
+    <meta name="theme-color" content="#1a1a2e">
+    
+    <title>Game Backlog Tracker</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Preconnect to RAWG API -->
+    <link rel="preconnect" href="https://api.rawg.io">
+</head>
+<body>
+    <div id="app" class="app">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">🎮 Backlog</h1>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span class="hamburger"></span>
+                </button>
+            </div>
+            
+            <div class="nav-section">
+                <ul class="nav-list">
+                    <li>
+                        <button class="nav-item active" data-view="backlog">
+                            <span class="nav-icon">📚</span>
+                            <span class="nav-text">Backlog</span>
+                            <span class="nav-count" id="backlog-count">0</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-item" data-view="playing">
+                            <span class="nav-icon">🎮</span>
+                            <span class="nav-text">Playing</span>
+                            <span class="nav-count" id="playing-count">0</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-item" data-view="priority">
+                            <span class="nav-icon">⭐</span>
+                            <span class="nav-text">Play Next</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-item" data-view="completed">
+                            <span class="nav-icon">✅</span>
+                            <span class="nav-text">Completed</span>
+                            <span class="nav-count" id="completed-count">0</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-item" data-view="wishlist">
+                            <span class="nav-icon">💫</span>
+                            <span class="nav-text">Wishlist</span>
+                            <span class="nav-count" id="wishlist-count">0</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="nav-section">
+                <h3 class="nav-section-title">Insights</h3>
+                <ul class="nav-list">
+                    <li>
+                        <button class="nav-item" data-view="stats">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Statistics</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="nav-section nav-footer">
+                <ul class="nav-list">
+                    <li>
+                        <button class="nav-item" data-view="settings">
+                            <span class="nav-icon">⚙️</span>
+                            <span class="nav-text">Settings</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                        <span class="hamburger"></span>
+                    </button>
+                    <h2 class="view-title" id="view-title">Backlog</h2>
+                </div>
+                <div class="header-actions">
+                    <div class="search-wrapper">
+                        <input type="search" class="search-input" id="search-input" placeholder="Search games...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <button class="btn btn-primary" id="add-game-btn">
+                        <span class="btn-icon">+</span>
+                        <span class="btn-text">Add Game</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- View Container -->
+            <div class="view-container" id="view-container">
+                <!-- Backlog View -->
+                <section class="view active" id="view-backlog">
+                    <div class="view-controls">
+                        <div class="filter-group">
+                            <select class="filter-select" id="filter-platform">
+                                <option value="">All Platforms</option>
+                            </select>
+                            <select class="filter-select" id="filter-genre">
+                                <option value="">All Genres</option>
+                            </select>
+                        </div>
+                        <div class="sort-group">
+                            <select class="filter-select" id="sort-by">
+                                <option value="createdAt">Date Added</option>
+                                <option value="title">Title</option>
+                                <option value="interestLevel">Interest</option>
+                                <option value="estimatedHours">Length</option>
+                                <option value="metacriticScore">Metacritic</option>
+                            </select>
+                            <button class="sort-order-btn" id="sort-order" title="Toggle sort order">
+                                <span class="sort-icon">↓</span>
+                            </button>
+                        </div>
+                        <div class="view-mode-group">
+                            <button class="view-mode-btn active" data-mode="grid" title="Grid view">⊞</button>
+                            <button class="view-mode-btn" data-mode="list" title="List view">☰</button>
+                        </div>
+                    </div>
+                    <div class="games-grid" id="games-grid">
+                        <!-- Games will be rendered here -->
+                    </div>
+                    <div class="empty-state" id="empty-backlog" style="display: none;">
+                        <div class="empty-icon">📚</div>
+                        <h3>Your backlog is empty</h3>
+                        <p>Add some games to get started tracking your collection!</p>
+                        <button class="btn btn-primary" id="empty-add-btn">Add Your First Game</button>
+                    </div>
+                </section>
+
+                <!-- Playing View -->
+                <section class="view" id="view-playing">
+                    <div class="games-grid" id="playing-grid">
+                        <!-- Currently playing games -->
+                    </div>
+                    <div class="empty-state" id="empty-playing" style="display: none;">
+                        <div class="empty-icon">🎮</div>
+                        <h3>Not playing anything</h3>
+                        <p>Start a game from your backlog to track your progress!</p>
+                    </div>
+                </section>
+
+                <!-- Priority View -->
+                <section class="view" id="view-priority">
+                    <div class="priority-header">
+                        <p class="priority-description">Games ranked by our smart algorithm based on your interests, game length, and variety.</p>
+                        <div class="time-filter">
+                            <label>Available time:</label>
+                            <select id="time-available">
+                                <option value="">Any</option>
+                                <option value="2">~2 hours</option>
+                                <option value="5">~5 hours</option>
+                                <option value="10">~10 hours</option>
+                                <option value="20">~20 hours</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="priority-list" id="priority-list">
+                        <!-- Priority-sorted games -->
+                    </div>
+                </section>
+
+                <!-- Completed View -->
+                <section class="view" id="view-completed">
+                    <div class="games-grid" id="completed-grid">
+                        <!-- Completed games -->
+                    </div>
+                    <div class="empty-state" id="empty-completed" style="display: none;">
+                        <div class="empty-icon">✅</div>
+                        <h3>No completed games yet</h3>
+                        <p>Finish some games to see them here!</p>
+                    </div>
+                </section>
+
+                <!-- Wishlist View -->
+                <section class="view" id="view-wishlist">
+                    <div class="games-grid" id="wishlist-grid">
+                        <!-- Wishlist games -->
+                    </div>
+                    <div class="empty-state" id="empty-wishlist" style="display: none;">
+                        <div class="empty-icon">💫</div>
+                        <h3>Wishlist is empty</h3>
+                        <p>Add games you're interested in buying!</p>
+                    </div>
+                </section>
+
+                <!-- Statistics View -->
+                <section class="view" id="view-stats">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">Total Games</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-backlog">0</div>
+                            <div class="stat-label">In Backlog</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-completed">0</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-completion-rate">0%</div>
+                            <div class="stat-label">Completion Rate</div>
+                        </div>
+                        <div class="stat-card wide">
+                            <div class="stat-value" id="stat-hours">0h</div>
+                            <div class="stat-label">Est. Playtime Remaining</div>
+                        </div>
+                        <div class="stat-card wide">
+                            <div class="stat-value" id="stat-metacritic">-</div>
+                            <div class="stat-label">Avg. Metacritic</div>
+                        </div>
+                    </div>
+                    
+                    <div class="charts-section">
+                        <div class="chart-card">
+                            <h3>Games by Platform</h3>
+                            <div class="chart-bars" id="platform-chart"></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Games by Genre</h3>
+                            <div class="chart-bars" id="genre-chart"></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Games by Status</h3>
+                            <div class="chart-bars" id="status-chart"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Settings View -->
+                <section class="view" id="view-settings">
+                    <div class="settings-section">
+                        <h3>Appearance</h3>
+                        <div class="setting-row">
+                            <label>Theme</label>
+                            <select id="setting-theme">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>Priority Weights</h3>
+                        <p class="setting-description">Adjust how games are prioritized in the "Play Next" view.</p>
+                        <div class="setting-row">
+                            <label>Interest Level</label>
+                            <input type="range" id="weight-interest" min="0" max="50" value="30">
+                            <span class="weight-value">30</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Backlog Age</label>
+                            <input type="range" id="weight-age" min="0" max="50" value="20">
+                            <span class="weight-value">20</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Game Length</label>
+                            <input type="range" id="weight-length" min="0" max="50" value="15">
+                            <span class="weight-value">15</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Genre Diversity</label>
+                            <input type="range" id="weight-diversity" min="0" max="50" value="10">
+                            <span class="weight-value">10</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Metacritic Score</label>
+                            <input type="range" id="weight-metacritic" min="0" max="50" value="5">
+                            <span class="weight-value">5</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>Data Management</h3>
+                        <div class="setting-row buttons">
+                            <button class="btn btn-secondary" id="export-data">📤 Export Data</button>
+                            <button class="btn btn-secondary" id="import-data">📥 Import Data</button>
+                            <input type="file" id="import-file" accept=".json" style="display: none;">
+                        </div>
+                        <div class="setting-row buttons">
+                            <button class="btn btn-danger" id="clear-cache">🗑️ Clear Cache</button>
+                            <button class="btn btn-danger" id="reset-data">⚠️ Reset All Data</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>Storage Info</h3>
+                        <div class="storage-info" id="storage-info">
+                            <p>Size: <span id="storage-size">-</span></p>
+                            <p>Games: <span id="storage-games">-</span></p>
+                            <p>Cache entries: <span id="cache-entries">-</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>About</h3>
+                        <p class="about-text">
+                            Game Backlog Tracker v1.0.0<br>
+                            <small>Data powered by <a href="https://rawg.io" target="_blank">RAWG</a></small>
+                        </p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Game Modal -->
+    <div class="modal" id="game-modal">
+        <div class="modal-overlay" id="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Game</h3>
+                <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- RAWG Search -->
+                <div class="form-section" id="rawg-search-section">
+                    <label class="form-label">Search RAWG Database</label>
+                    <div class="search-row">
+                        <input type="text" class="form-input" id="rawg-search" placeholder="Search for a game...">
+                        <button class="btn btn-secondary" id="rawg-search-btn">Search</button>
+                    </div>
+                    <div class="search-results" id="rawg-results"></div>
+                </div>
+                
+                <div class="form-divider">
+                    <span>or enter manually</span>
+                </div>
+                
+                <form id="game-form">
+                    <input type="hidden" id="game-id">
+                    <input type="hidden" id="game-rawg-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="game-title">Title *</label>
+                            <input type="text" class="form-input" id="game-title" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row two-col">
+                        <div class="form-group">
+                            <label class="form-label" for="game-platform">Platform</label>
+                            <select class="form-input" id="game-platform">
+                                <option value="PC">PC</option>
+                                <option value="PlayStation 5">PlayStation 5</option>
+                                <option value="PlayStation 4">PlayStation 4</option>
+                                <option value="Xbox Series X|S">Xbox Series X|S</option>
+                                <option value="Xbox One">Xbox One</option>
+                                <option value="Nintendo Switch">Nintendo Switch</option>
+                                <option value="Mobile">Mobile</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="game-status">Status</label>
+                            <select class="form-input" id="game-status">
+                                <option value="backlog">Backlog</option>
+                                <option value="playing">Playing</option>
+                                <option value="completed">Completed</option>
+                                <option value="wishlist">Wishlist</option>
+                                <option value="abandoned">Abandoned</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row two-col">
+                        <div class="form-group">
+                            <label class="form-label" for="game-hours">Est. Hours</label>
+                            <input type="number" class="form-input" id="game-hours" min="0" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="game-year">Release Year</label>
+                            <input type="number" class="form-input" id="game-year" min="1970" max="2030">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Interest Level</label>
+                            <div class="star-rating" id="interest-rating">
+                                <button type="button" class="star" data-value="1">★</button>
+                                <button type="button" class="star" data-value="2">★</button>
+                                <button type="button" class="star active" data-value="3">★</button>
+                                <button type="button" class="star" data-value="4">★</button>
+                                <button type="button" class="star" data-value="5">★</button>
+                            </div>
+                            <input type="hidden" id="game-interest" value="3">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="game-genres">Genres (comma separated)</label>
+                            <input type="text" class="form-input" id="game-genres" placeholder="Action, Adventure, RPG">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="game-notes">Notes</label>
+                            <textarea class="form-input" id="game-notes" rows="3" placeholder="Any additional notes..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row game-preview" id="game-preview" style="display: none;">
+                        <img id="preview-image" src="" alt="Game cover">
+                        <div class="preview-info">
+                            <span class="preview-metacritic" id="preview-metacritic"></span>
+                            <span class="preview-source">via RAWG</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="modal-save">Save Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Detail Modal -->
+    <div class="modal" id="detail-modal">
+        <div class="modal-overlay" id="detail-overlay"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="detail-title">Game Details</h3>
+                <button class="modal-close" id="detail-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-layout">
+                    <div class="detail-cover">
+                        <img id="detail-image" src="" alt="Game cover">
+                    </div>
+                    <div class="detail-info">
+                        <div class="detail-meta">
+                            <span class="detail-platform" id="detail-platform"></span>
+                            <span class="detail-year" id="detail-year"></span>
+                            <span class="detail-hours" id="detail-hours"></span>
+                        </div>
+                        <div class="detail-status">
+                            <label>Status:</label>
+                            <select id="detail-status-select">
+                                <option value="backlog">Backlog</option>
+                                <option value="playing">Playing</option>
+                                <option value="completed">Completed</option>
+                                <option value="wishlist">Wishlist</option>
+                                <option value="abandoned">Abandoned</option>
+                            </select>
+                        </div>
+                        <div class="detail-scores">
+                            <div class="score-item">
+                                <label>Your Rating:</label>
+                                <div class="star-rating detail-rating" id="detail-user-rating"></div>
+                            </div>
+                            <div class="score-item">
+                                <label>Metacritic:</label>
+                                <span class="metacritic-badge" id="detail-metacritic">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-genres" id="detail-genres"></div>
+                        <div class="detail-description" id="detail-description"></div>
+                        <div class="detail-notes">
+                            <label>Your Notes:</label>
+                            <textarea id="detail-notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="detail-delete">Delete</button>
+                <button class="btn btn-secondary" id="detail-edit">Edit</button>
+                <button class="btn btn-primary" id="detail-save">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="web/app.js"></script>
+</body>
+</html>

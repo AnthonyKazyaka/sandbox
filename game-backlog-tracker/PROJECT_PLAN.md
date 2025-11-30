@@ -40,7 +40,7 @@ Modern gamers face an overwhelming problem:
 - [ ] Add games manually (title, platform, status)
 - [ ] Display games in a simple list view
 - [ ] Basic filtering by status (Backlog, Playing, Completed)
-- [ ] localStorage persistence
+- [ ] localStorage persistence (at first)
 - [ ] Responsive mobile layout
 
 **Success Criteria**:
@@ -193,10 +193,11 @@ priority_score =
 **Goal**: Extended capabilities for power users
 
 **Features**:
-- [ ] API integration (IGDB or similar):
-  - Auto-populate game data
-  - Fetch cover art
-  - Import Steam library
+- [ ] API integration:
+  - **IGDB/RAWG API**: Auto-populate game data, fetch cover art
+  - **HowLongToBeat**: Accurate playtime estimates (Main Story, Main+Extras, Completionist)
+  - **Metacritic/OpenCritic**: Critical scores and user ratings
+  - **Steam API**: Import Steam library
 - [ ] Batch operations (multi-select and update)
 - [ ] Custom views/filters (save searches)
 - [ ] Gaming calendar (plan what to play when)
@@ -206,6 +207,7 @@ priority_score =
 **Success Criteria**:
 - Enhanced functionality without complexity
 - Optional features don't clutter core UX
+- Graceful fallbacks when APIs unavailable
 
 **Estimated Time**: 5-7 days
 
@@ -355,12 +357,17 @@ After MVP:
 2. **API rate limits**: If integrating external services
 3. **Image storage**: Base64 can bloat storage
 4. **Cross-device sync**: Not possible without backend
+5. **CORS restrictions**: Many gaming APIs don't support browser requests
+6. **Web scraping ethics**: HowLongToBeat has no official API
 
 ### Mitigation Strategies
 - Implement data cleanup/archiving for old entries
-- Cache API responses aggressively
+- Cache API responses aggressively (localStorage for fetched data)
 - Use thumbnails, external image hosting
 - Export/import as workaround for sync
+- Consider serverless proxy (Cloudflare Workers/Netlify Functions) for API calls
+- Use community-maintained APIs/wrappers (howlongtobeat npm package)
+- Implement manual data entry fallback for all external sources
 
 ---
 

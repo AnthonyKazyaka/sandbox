@@ -55,3 +55,22 @@ A smart scheduling and workload management system for pet sitting businesses. In
 [Live version](https://anthonykazyaka.github.io/sandbox/gps-admin)
 
 **Setup:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for Google Calendar API configuration
+
+### Game Backlog Tracker
+A modern, intelligent web application for managing and prioritizing your video game backlog, with AI assistant integration via Model Context Protocol (MCP).
+
+**Features:**
+
+- Smart prioritization algorithm ranks games based on interest, length, and backlog age
+- RAWG API integration for automatic game data, cover art, and Metacritic scores
+- Status tracking: Backlog, Currently Playing, Completed, Wishlist
+- Statistics dashboard with platform and genre visualizations
+- Dark/light themes with responsive design
+- Local-first data storage with import/export
+- MCP server for AI assistant integration (Claude Desktop, VS Code)
+- 9 AI tools for natural language game management
+
+**Location:** `/game-backlog-tracker/`
+[Live version](https://anthonykazyaka.github.io/sandbox/game-backlog-tracker)
+
+**Note:** RAWG API key required - get one free at [rawg.io/apidocs](https://rawg.io/apidocs)

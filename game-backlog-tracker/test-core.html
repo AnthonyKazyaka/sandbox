@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Library Test - Game Backlog Tracker</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        h1 { color: #00d4ff; }
+        h2 { color: #ff6b6b; margin-top: 30px; }
+        .test-section {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success { background: #1b4332; border-left: 4px solid #2ecc71; }
+        .error { background: #4a1a1a; border-left: 4px solid #e74c3c; }
+        .info { background: #1a3a4a; border-left: 4px solid #3498db; }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+        button:hover { background: #00a8cc; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button.danger { background: #e74c3c; color: white; }
+        button.secondary { background: #6c757d; color: white; }
+        pre {
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        code { color: #00ff88; }
+        input, select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #0f0f23;
+            color: #eee;
+            margin: 5px;
+            font-size: 14px;
+        }
+        input { width: 300px; }
+        #output {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .game-card {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: flex;
+            gap: 15px;
+        }
+        .game-card img {
+            width: 120px;
+            height: 68px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .game-info { flex: 1; }
+        .game-title { font-weight: bold; color: #00d4ff; }
+        .game-meta { font-size: 12px; color: #888; margin-top: 5px; }
+        .priority-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Game Backlog Tracker - Core Library Test</h1>
+    <p>This page tests all core functionality. Open the browser console for detailed logs.</p>
+
+    <div class="test-section">
+        <h2>🔌 Module Loading</h2>
+        <div id="module-status"></div>
+        <button onclick="testModuleLoading()">Test Module Loading</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 RAWG API Test</h2>
+        <input type="text" id="search-query" placeholder="Search for a game..." value="The Legend of Zelda">
+        <button onclick="testRawgSearch()">Search RAWG</button>
+        <button onclick="testRawgDetails()">Get First Result Details</button>
+        <div id="rawg-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💾 Storage Test</h2>
+        <button onclick="testStorageInit()">Initialize Storage</button>
+        <button onclick="testStorageInfo()">Get Storage Info</button>
+        <button onclick="testExport()">Export Data</button>
+        <button onclick="testReset()" class="danger">Reset All Data</button>
+        <div id="storage-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Game CRUD Test</h2>
+        <input type="text" id="game-title" placeholder="Game title" value="Hades">
+        <select id="game-status">
+            <option value="backlog">Backlog</option>
+            <option value="playing">Playing</option>
+            <option value="completed">Completed</option>
+            <option value="wishlist">Wishlist</option>
+        </select>
+        <button onclick="testAddGameManual()">Add Manual</button>
+        <button onclick="testAddGameFromRawg()">Add from RAWG</button>
+        <button onclick="testListGames()">List All Games</button>
+        <div id="crud-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Priority System Test</h2>
+        <button onclick="testPriorityList()">Get Priority List</button>
+        <button onclick="testQuickWins()">Get Quick Wins</button>
+        <button onclick="testByMood()">Get by Mood (Relaxing)</button>
+        <button onclick="testTimeRecommendations()">2-Hour Session Picks</button>
+        <div id="priority-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Statistics Test</h2>
+        <button onclick="testStats()">Get Statistics</button>
+        <div id="stats-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Console Output</h2>
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        // Make functions available globally
+        let rawgApi, storage, dataManager, priorityCalculator, GAME_STATUS;
+        let lastSearchResults = [];
+
+        // Custom console logger
+        const output = document.getElementById('output');
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = typeof message === 'object' 
+                ? `<pre><code>${JSON.stringify(message, null, 2)}</code></pre>`
+                : message;
+            output.insertBefore(div, output.firstChild);
+            console.log(message);
+        }
+
+        // Load modules
+        async function loadModules() {
+            try {
+                const core = await import('./core/index.js');
+                rawgApi = core.rawgApi;
+                storage = core.storage;
+                dataManager = core.dataManager;
+                priorityCalculator = core.priorityCalculator;
+                GAME_STATUS = core.GAME_STATUS;
+                
+                log('✅ All modules loaded successfully!', 'success');
+                document.getElementById('module-status').innerHTML = 
+                    '<div class="test-result success">Modules loaded! Core library ready.</div>';
+                
+                // Initialize
+                dataManager.initialize();
+                log('✅ Data manager initialized', 'success');
+                
+                return true;
+            } catch (error) {
+                log(`❌ Module loading failed: ${error.message}`, 'error');
+                document.getElementById('module-status').innerHTML = 
+                    `<div class="test-result error">Failed to load modules: ${error.message}</div>`;
+                return false;
+            }
+        }
+
+        // Test functions
+        window.testModuleLoading = async function() {
+            await loadModules();
+        };
+
+        window.testRawgSearch = async function() {
+            const query = document.getElementById('search-query').value;
+            log(`Searching RAWG for: "${query}"...`);
+            
+            try {
+                const results = await rawgApi.searchGames(query, { pageSize: 5 });
+                lastSearchResults = results.results;
+                
+                let html = `<p>Found ${results.count} games (showing ${results.results.length})</p>`;
+                
+                for (const game of results.results) {
+                    html += `
+                        <div class="game-card">
+                            ${game.coverImage ? `<img src="${game.coverImage}" alt="${game.title}">` : ''}
+                            <div class="game-info">
+                                <div class="game-title">${game.title}</div>
+                                <div class="game-meta">
+                                    ${game.releaseYear || 'Unknown'} • 
+                                    ${game.platforms?.slice(0, 3).join(', ') || 'Unknown platforms'} •
+                                    ${game.estimatedHours ? `~${game.estimatedHours}h` : 'Unknown length'}
+                                </div>
+                                <div class="game-meta">
+                                    Metacritic: ${game.metacriticScore || 'N/A'} •
+                                    Genres: ${game.genres?.slice(0, 3).join(', ') || 'Unknown'}
+                                </div>
+                                <div class="game-meta">RAWG ID: ${game.rawgId}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('rawg-results').innerHTML = html;
+                log(`✅ RAWG search complete (${results.fromCache ? 'from cache' : 'fresh data'})`, 'success');
+            } catch (error) {
+                log(`❌ RAWG search failed: ${error.message}`, 'error');
+            }
+        };
+
+        window.testRawgDetails = async function() {
+            if (lastSearchResults.length === 0) {
+                log('⚠️ No search results. Run a search first.', 'info');
+                return;
+            }
+            
+            const gameId = lastSearchResults[0].rawgId;
+            log(`Getting details for game ID: ${gameId}...`);
+            
+            try {
+                const details = await rawgApi.getGameById(gameId);
+                log('Game Details:', 'info');
+                log(details);
+                log(`✅ Details retrieved (${details.fromCache ? 'from cache' : 'fresh data'})`, 'success');
+            } catch (error) {
+                log(`❌ Failed to get details: ${error.message}`, 'error');
+            }
+        };
+
+        window.testStorageInit = function() {
+            try {
+                const data = storage.initialize();
+                log('Storage initialized:', 'success');
+                log(data);
+            } catch (error) {
+                log(`❌ Storage init failed: ${error.message}`, 'error');
+            }
+        };
+
+        window.testStorageInfo = function() {
+            try {
+                const info = storage.getStorageInfo();
+                document.getElementById('storage-results').innerHTML = `
+                    <div class="test-result info">
+                        <strong>Storage Usage:</strong><br>
+                        Size: ${info.sizeMB} MB / ${info.estimatedLimitMB} MB (${info.usedPercent}%)<br>
+                        Games: ${info.gamesCount}
+                    </div>
+                `;
+                log('Storage info:', 'info');
+                log(info);
+            } catch (error) {
+                log(`❌ Failed to get storage info: ${error.message}`, 'error');
+            }
+        };
+
+        window.testExport = function() {
+            try {
+                const data = storage.exportData();
+                log('Exported data (truncated):', 'success');
+                log(JSON.parse(data));
+            } catch (error) {
+                log(`❌ Export failed: ${error.message}`, 'error');
+            }
+        };
+
+        window.testReset = function() {
+            if (confirm('Are you sure you want to reset all data?')) {
+                try {
+                    storage.reset();
+                    log('✅ All data reset!', 'success');
+                } catch (error) {
+                    log(`❌ Reset failed: ${error.message}`, 'error');
+                }
+            }
+        };
+
+        window.testAddGameManual = async function() {
+            const title = document.getElementById('game-title').value;
+            const status = document.getElementById('game-status').value;
+            
+            try {
+                const game = await dataManager.createGame({
+                    title,
+                    status,
+                    platform: 'PC',
+                    interestLevel: 4,
+                    estimatedHours: 20
+                }, true); // Enrich from API
+                
+                log(`✅ Added game: ${game.title}`, 'success');
+                log(game);
+            } catch (error) {
+                log(`❌ Failed to add game: ${error.message}`, 'error');
+            }
+        };
+
+        window.testAddGameFromRawg = async function() {
+            if (lastSearchResults.length === 0) {
+                log('⚠️ No search results. Run a search first.', 'info');
+                return;
+            }
+            
+            const rawgId = lastSearchResults[0].rawgId;
+            const status = document.getElementById('game-status').value;
+            
+            try {
+                const game = await dataManager.createGameFromRawg(rawgId, {
+                    status,
+                    interestLevel: 5
+                });
+                
+                log(`✅ Added game from RAWG: ${game.title}`, 'success');
+                log(game);
+            } catch (error) {
+                log(`❌ Failed to add game: ${error.message}`, 'error');
+            }
+        };
+
+        window.testListGames = function() {
+            try {
+                const games = dataManager.getAllGames();
+                
+                let html = `<p><strong>Total Games: ${games.length}</strong></p>`;
+                
+                for (const game of games) {
+                    html += `
+                        <div class="game-card">
+                            ${game.coverImage ? `<img src="${game.coverImage}" alt="${game.title}">` : '<div style="width:120px;height:68px;background:#333;border-radius:4px"></div>'}
+                            <div class="game-info">
+                                <div class="game-title">${game.title}</div>
+                                <div class="game-meta">
+                                    Status: <strong>${game.status}</strong> •
+                                    Platform: ${game.platform} •
+                                    Interest: ${'★'.repeat(game.interestLevel)}${'☆'.repeat(5 - game.interestLevel)}
+                                </div>
+                                <div class="game-meta">
+                                    ${game.estimatedHours ? `~${game.estimatedHours}h` : 'Unknown length'} •
+                                    Metacritic: ${game.metacriticScore || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('crud-results').innerHTML = html;
+                log(`Listed ${games.length} games`, 'success');
+            } catch (error) {
+                log(`❌ Failed to list games: ${error.message}`, 'error');
+            }
+        };
+
+        window.testPriorityList = function() {
+            try {
+                const games = dataManager.getAllGames();
+                const prioritized = priorityCalculator.getPrioritizedList(games, { limit: 10 });
+                
+                let html = `<p><strong>Top ${prioritized.length} Priority Games:</strong></p>`;
+                
+                for (const item of prioritized) {
+                    const explanation = priorityCalculator.explainScore(item.game, item.priority);
+                    html += `
+                        <div class="game-card">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    <span class="priority-badge">${item.priority.total}</span>
+                                    ${item.game.title}
+                                </div>
+                                <div class="game-meta">${explanation.details.join(' • ')}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('priority-results').innerHTML = html || '<p>No games to prioritize.</p>';
+                log(`Generated priority list with ${prioritized.length} games`, 'success');
+            } catch (error) {
+                log(`❌ Failed to generate priority list: ${error.message}`, 'error');
+            }
+        };
+
+        window.testQuickWins = function() {
+            try {
+                const games = dataManager.getAllGames();
+                const quickWins = priorityCalculator.getQuickWins(games, 15, 5);
+                
+                let html = `<p><strong>Quick Wins (≤15 hours):</strong></p>`;
+                
+                for (const item of quickWins) {
+                    html += `
+                        <div class="game-card">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    <span class="priority-badge">${item.priority.total}</span>
+                                    ${item.game.title}
+                                </div>
+                                <div class="game-meta">~${item.game.estimatedHours || '?'}h</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('priority-results').innerHTML = html || '<p>No quick wins found.</p>';
+            } catch (error) {
+                log(`❌ Failed to get quick wins: ${error.message}`, 'error');
+            }
+        };
+
+        window.testByMood = function() {
+            try {
+                const games = dataManager.getAllGames();
+                const recommendations = priorityCalculator.getByMood(games, 'relaxing');
+                
+                let html = `<p><strong>Relaxing Games:</strong></p>`;
+                
+                for (const item of recommendations) {
+                    html += `
+                        <div class="game-card">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    <span class="priority-badge">${item.priority.total}</span>
+                                    ${item.game.title}
+                                </div>
+                                <div class="game-meta">Genres: ${item.game.genres?.join(', ') || 'Unknown'}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('priority-results').innerHTML = html || '<p>No relaxing games found.</p>';
+            } catch (error) {
+                log(`❌ Failed to get mood recommendations: ${error.message}`, 'error');
+            }
+        };
+
+        window.testTimeRecommendations = function() {
+            try {
+                const games = dataManager.getAllGames();
+                const recommendations = priorityCalculator.getRecommendationsByTime(games, 2, 5);
+                
+                let html = `<p><strong>For a 2-Hour Session:</strong></p>`;
+                
+                for (const item of recommendations) {
+                    html += `
+                        <div class="game-card">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    <span class="priority-badge">${item.priority.total}</span>
+                                    ${item.game.title}
+                                </div>
+                                <div class="game-meta">~${item.game.estimatedHours || '?'}h total</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('priority-results').innerHTML = html || '<p>No recommendations found.</p>';
+            } catch (error) {
+                log(`❌ Failed to get time recommendations: ${error.message}`, 'error');
+            }
+        };
+
+        window.testStats = function() {
+            try {
+                const stats = dataManager.getStats();
+                
+                document.getElementById('stats-results').innerHTML = `
+                    <div class="test-result info">
+                        <strong>📊 Backlog Statistics</strong><br><br>
+                        <strong>Games by Status:</strong><br>
+                        • Backlog: ${stats.byStatus.backlog || 0}<br>
+                        • Playing: ${stats.byStatus.playing || 0}<br>
+                        • Completed: ${stats.byStatus.completed || 0}<br>
+                        • Abandoned: ${stats.byStatus.abandoned || 0}<br>
+                        • Wishlist: ${stats.byStatus.wishlist || 0}<br><br>
+                        <strong>Time:</strong><br>
+                        • Estimated Total: ${stats.totalEstimatedHours}h<br>
+                        • Actual Played: ${stats.totalActualHours}h<br><br>
+                        <strong>Quality:</strong><br>
+                        • Completion Rate: ${stats.completionRate}%<br>
+                        • Avg User Rating: ${stats.averageRating}/5<br>
+                        • Avg Metacritic: ${stats.averageMetacritic}/100
+                    </div>
+                `;
+                
+                log('Statistics:', 'success');
+                log(stats);
+            } catch (error) {
+                log(`❌ Failed to get stats: ${error.message}`, 'error');
+            }
+        };
+
+        // Auto-load modules on page load
+        loadModules();
+    </script>
+</body>
+</html>

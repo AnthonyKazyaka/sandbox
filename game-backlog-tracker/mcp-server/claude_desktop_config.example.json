@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "game-backlog": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/game-backlog-tracker/mcp-server/index.js"
+      ],
+      "env": {}
+    }
+  }
+}

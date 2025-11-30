@@ -1,0 +1,24 @@
+# API keys and sensitive configuration
+js/config.js
+
+# Node modules (if you add any build tools later)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build output (future use)
+dist/
+build/
+
+# Environment variables
+.env
+.env.local

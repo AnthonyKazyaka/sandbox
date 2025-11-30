@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Labeler - Manual Classification</title>
+    <meta name="description" content="Manually label photos to create training data">
+    <link rel="stylesheet" href="labeler.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>🏷️ Photo Labeler</h1>
+            <p class="subtitle">Manually classify photos to improve detection accuracy</p>
+        </header>
+
+        <!-- Setup Section -->
+        <section class="setup-section" id="setupSection">
+            <div class="setup-card">
+                <h2>Setup Photo Directory</h2>
+                <p>Load photos from a directory for manual labeling</p>
+                
+                <div class="input-group">
+                    <label for="directoryInput">Select Photo Directory:</label>
+                    <input type="file" id="directoryInput" webkitdirectory directory multiple class="file-input">
+                    <label for="directoryInput" class="upload-button">
+                        📁 Choose Directory
+                    </label>
+                </div>
+
+                <div class="setup-hint">
+                    Or load existing labels to continue where you left off:
+                </div>
+
+                <div class="input-group">
+                    <label for="labelsInput">Load Existing Labels (optional):</label>
+                    <input type="file" id="labelsInput" accept=".json" class="file-input">
+                    <label for="labelsInput" class="upload-button secondary">
+                        📄 Load Labels JSON
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Labeling Interface (hidden until directory loaded) -->
+        <main class="labeling-content" id="labelingContent" style="display: none;">
+            <!-- Progress Bar -->
+            <section class="progress-section">
+                <div class="progress-info">
+                    <span class="progress-text">Progress: <span id="currentIndex">0</span> / <span id="totalPhotos">0</span></span>
+                    <span class="progress-percent"><span id="progressPercent">0</span>%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </section>
+
+            <!-- Photo Display -->
+            <section class="photo-section">
+                <div class="photo-container">
+                    <img id="currentPhoto" src="" alt="Current photo" class="photo-display">
+                    <div class="photo-info">
+                        <div class="photo-filename" id="photoFilename">photo.jpg</div>
+                        <div class="photo-dimensions" id="photoDimensions">0 × 0</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Labeling Controls -->
+            <section class="controls-section">
+                <div class="controls-grid">
+                    <!-- Detection Labels -->
+                    <div class="control-group">
+                        <h3>🔍 Detection</h3>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hasPerson" class="checkbox">
+                                <span class="checkbox-text">Has Person(s)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hasDog" class="checkbox">
+                                <span class="checkbox-text">Has Dog(s)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hasCat" class="checkbox">
+                                <span class="checkbox-text">Has Cat(s)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hasOtherPet" class="checkbox">
+                                <span class="checkbox-text">Has Other Pet(s)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Quality Labels -->
+                    <div class="control-group">
+                        <h3>📸 Quality</h3>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="blur" value="sharp" class="radio">
+                                <span class="radio-text">Sharp</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="blur" value="soft" class="radio">
+                                <span class="radio-text">Soft</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="blur" value="blurry" class="radio">
+                                <span class="radio-text">Blurry</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Composition Labels -->
+                    <div class="control-group">
+                        <h3>🎯 Composition</h3>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="centering" value="well_centered" class="radio">
+                                <span class="radio-text">Well Centered</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="centering" value="somewhat_centered" class="radio">
+                                <span class="radio-text">Somewhat Centered</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="centering" value="off_center" class="radio">
+                                <span class="radio-text">Off Center</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="control-group full-width">
+                        <h3>📝 Notes (optional)</h3>
+                        <textarea id="notes" class="notes-input" placeholder="Add any additional notes about this photo..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation -->
+            <section class="navigation-section">
+                <div class="nav-buttons">
+                    <button id="prevButton" class="btn btn-secondary" disabled>
+                        ← Previous
+                    </button>
+                    <button id="skipButton" class="btn btn-secondary">
+                        Skip
+                    </button>
+                    <button id="nextButton" class="btn btn-primary">
+                        Save & Next →
+                    </button>
+                </div>
+                <div class="nav-actions">
+                    <button id="saveLabels" class="btn btn-success">
+                        💾 Save All Labels
+                    </button>
+                    <button id="exportLabels" class="btn btn-info">
+                        📤 Export Labels JSON
+                    </button>
+                </div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-value" id="labeledCount">0</div>
+                    <div class="stat-label">Labeled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="unlabeledCount">0</div>
+                    <div class="stat-label">Remaining</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="personLabelCount">0</div>
+                    <div class="stat-label">People</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="dogLabelCount">0</div>
+                    <div class="stat-label">Dogs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="catLabelCount">0</div>
+                    <div class="stat-label">Cats</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast" style="display: none;">
+            <span class="toast-text" id="toastText"></span>
+        </div>
+
+        <!-- Error Display -->
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <span class="error-icon">⚠️</span>
+            <span class="error-text" id="errorText"></span>
+            <button class="error-close" id="errorClose">&times;</button>
+        </div>
+    </div>
+
+    <script src="labeler.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+
+# Virtual environment
+.venv/
+venv/
+
+# Test data and output
+test_photos/
+test_summary.json
+test_results.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

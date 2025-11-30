@@ -1,150 +1,306 @@
 # Game Backlog Tracker
 
-A comprehensive web-based tool to help manage, prioritize, and track your video game backlog.
+A modern, intelligent web application for managing and prioritizing your video game backlog, with AI assistant integration via Model Context Protocol (MCP).
 
-## 🎮 Overview
+---
 
-This application helps gamers organize their growing collection of unplayed games, prioritize what to play next, and gain insights into their gaming habits and preferences.
+## ⚡ Quick Setup
 
-## ✨ Core Features
+**VS Code + GitHub Copilot:**
+```bash
+cd game-backlog-tracker
+cd mcp-server && npm install && cd ..
+cp .vscode/settings.json.example .vscode/settings.json
+code .  # Reload VS Code, then chat: @workspace show my backlog
+```
 
-### Game Management
-- **Add Games**: Manually add games with details (title, platform, genre, release date, estimated playtime)
-- **Import from APIs**: Integration with RAWG API for automatic game data (cover art, playtime, Metacritic scores)
-- **Custom Tags**: Organize games with custom tags and categories
-- **Game Status**: Track progress (Backlog, Playing, Completed, Abandoned, Wishlist)
+📘 **[Complete VS Code Setup Guide →](.vscode/VSCODE_SETUP.md)** | 📖 **[Claude Desktop Setup →](mcp-server/SETUP.md)**
 
-### Prioritization System
-- **Smart Scoring**: Algorithm considering multiple factors:
-  - Personal interest level (1-5 stars)
-  - Game length (short games ranked higher for quick wins)
-  - Release date (older games get priority)
-  - Platform availability
-  - Genre balance (suggests variety)
-  - Critical reception (optional metacritic integration)
-- **Manual Override**: Drag-and-drop reordering
-- **Play Queue**: Create a curated "up next" list
+---
 
-### Analytics & Insights
-- **Backlog Statistics**:
-  - Total games by status
-  - Estimated total playtime
-  - Completion rate
-  - Platform distribution
-  - Genre breakdown
-- **Trends Over Time**:
-  - Games added vs completed
-  - Average completion time
-  - Most played genres/platforms
-- **Recommendations**: Suggest what to play based on mood/available time
+## 🎮 Project Status
+
+**All Phases Complete!** ✅
+
+- ✅ **Phase A: Core Library** - Data management, RAWG API integration, priority algorithm
+- ✅ **Phase C: Web Application** - Full-featured PWA with dark/light themes
+- ✅ **Phase B: MCP Server** - AI assistant integration for Claude Desktop
+
+## ✨ Features
+
+### 🌐 Web Application
+
+- **Smart Prioritization** - AI-powered algorithm ranks games based on interest, length, and backlog age
+- **RAWG Integration** - Automatic game data, cover art, and Metacritic scores
+- **Status Tracking** - Manage Backlog, Currently Playing, Completed, Wishlist
+- **Statistics Dashboard** - Visualize your collection by platform, genre, completion rate
+- **Dark/Light Themes** - Beautiful responsive design for desktop and mobile
+- **Local-First** - All data stored locally with import/export support
+
+### 🤖 MCP Server (AI Integration)
+
+Talk to your backlog using Claude Desktop or other MCP-compatible AI assistants:
+
+```
+"What should I play next?"
+"Add Hollow Knight to my backlog"
+"Show me games under 10 hours"
+"Mark Celeste as completed with 5 stars"
+"What's my completion rate?"
+```
+
+**9 AI Tools Available:**
+- `list_games` - Browse your collection with filters
+- `add_game` - Add games manually or from RAWG
+- `update_game` - Change status, rating, notes
+- `delete_game` - Remove games
+- `start_playing` - Move to "Currently Playing"
+- `complete_game` - Mark as completed with rating
+- `get_priority_list` - Get smart recommendations
+- `get_statistics` - View collection stats
+- `search_games` - Find games by title/notes
+
+## 🚀 Quick Start
+
+### Web Application
+
+1. **Get a RAWG API key** (free at https://rawg.io/apidocs)
+
+2. **Configure the app:**
+   ```bash
+   cd game-backlog-tracker
+   cp js/config.example.js js/config.js
+   # Edit config.js and add your API key
+   ```
+
+3. **Start a local server:**
+   ```bash
+   python -m http.server 8080
+   # or
+   npx serve .
+   ```
+
+4. **Open in browser:** http://localhost:8080
+
+### MCP Server (Optional - for AI assistants)
+
+#### 🎯 Quick Setup for VS Code + GitHub Copilot
+
+```bash
+# One-line setup
+cd mcp-server && npm install && cd .. && cp .vscode/settings.json.example .vscode/settings.json
+```
+
+Then reload VS Code and start chatting: `@workspace show my backlog`
+
+📘 **[Complete VS Code Setup Guide →](.vscode/VSCODE_SETUP.md)**
+
+#### 🤖 Claude Desktop Setup
+
+1. **Install dependencies:**
+   ```bash
+   cd mcp-server
+   npm install
+   ```
+
+2. **Configure Claude Desktop:**
+   
+   Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+   ```json
+   {
+     "mcpServers": {
+       "game-backlog": {
+         "command": "node",
+         "args": ["/absolute/path/to/game-backlog-tracker/mcp-server/index.js"]
+       }
+     }
+   }
+   ```
+
+3. **Restart Claude Desktop** and start managing your backlog with AI!
+
+📖 **Detailed setup:** See [mcp-server/SETUP.md](mcp-server/SETUP.md)
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Vanilla HTML/CSS/JavaScript (no framework dependencies)
-- **Storage**: localStorage with JSON export/import
-- **Design**: Responsive, mobile-first approach
-- **PWA**: Offline-capable Progressive Web App
-- **APIs**: RAWG API for game data enrichment
+### Web Application
+- **Frontend**: Vanilla JavaScript (ES6+ modules), HTML5, CSS3
+- **API**: RAWG Video Games Database API  
+- **Storage**: localStorage with JSON import/export
+- **Architecture**: Class-based modules, reactive UI patterns
+- **No framework dependencies** - Pure vanilla JS
 
-## 📱 User Interface
+### MCP Server
+- **Runtime**: Node.js 18+
+- **Protocol**: Model Context Protocol (MCP) via stdio
+- **Storage**: JSON file (`~/.game-backlog-tracker.json`)
+- **SDK**: `@modelcontextprotocol/sdk`
 
-### Views
-1. **Backlog View**: Grid/list of unplayed games with filters
-2. **Priority Queue**: Smart-sorted list of what to play next
-3. **Currently Playing**: Active games with progress tracking
-4. **Completed**: Archive of finished games with ratings/notes
-5. **Analytics Dashboard**: Visual statistics and trends
-6. **Game Details**: Deep dive into individual game info
+### Core Library (Shared)
+- **Modules**: Data management, RAWG API wrapper, priority calculator
+- **Features**: Rate limiting (1 req/sec), caching (7 days), error handling
 
-### Design Principles
-- Clean, gaming-inspired aesthetic
-- Fast, responsive interactions
-- Keyboard shortcuts for power users
-- Dark/light theme support
-- Accessible and inclusive design
+## 📁 Project Structure
 
-## 🎯 Project Goals
+```
+game-backlog-tracker/
+├── index.html                 # Main application
+├── css/
+│   └── styles.css            # Dark/light theme styles
+├── web/
+│   └── app.js                # Web app logic (~1000 lines)
+├── core/                     # Core library (shared)
+│   ├── data-manager.js       # CRUD operations
+│   ├── storage.js            # localStorage persistence
+│   ├── rawg-api.js           # API integration + caching
+│   ├── priority.js           # Priority algorithm
+│   └── index.js              # Module exports
+├── mcp-server/               # MCP server
+│   ├── index.js              # Server implementation
+│   ├── test.js               # Integration tests
+│   ├── package.json          # Dependencies
+│   ├── README.md             # Server docs
+│   └── SETUP.md              # Configuration guide
+├── js/
+│   ├── config.js             # API key (gitignored)
+│   └── config.example.js     # Template
+└── docs/
+    ├── PROJECT_ROADMAP.md    # Development plan
+    └── API_INTEGRATION.md    # RAWG research
+```
 
-1. **Practical Utility**: Solve a real problem for gamers with large backlogs
-2. **Learning Opportunity**: Explore vanilla JS patterns, data visualization, and PWA features
-3. **Portfolio Piece**: Demonstrate full-stack thinking and UX design
-4. **Extensibility**: Architecture that allows future enhancements (social features, achievements, etc.)
+## 🎯 Development Phases
 
-## 🚀 Getting Started
+All phases complete! See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) for details.
 
-### Setup
+### ✅ Phase A: Core Library
+- Full CRUD operations for game management
+- RAWG API integration with caching & rate limiting
+- Priority algorithm with configurable weights
+- localStorage with import/export
 
-1. **Clone the repository** (or download the files)
+### ✅ Phase C: Web Application
+- Responsive PWA with dark/light themes
+- Game cards with cover images & metadata
+- Status tracking (Backlog → Playing → Completed)
+- Smart filtering, sorting, search
+- Statistics dashboard with charts
+- Settings panel with priority weights
 
-2. **Configure API keys**:
-   ```bash
-   # Copy the example config file
-   cp js/config.example.js js/config.js
-   ```
+### ✅ Phase B: MCP Server
+- 9 AI-accessible tools
+- 4 resource endpoints
+- Claude Desktop integration
+- Comprehensive tests
+- Full documentation
 
-## 🎯 API Integration
+## 🧪 Testing
 
-### RAWG API
-This app uses the [RAWG Video Games Database API](https://rawg.io/apidocs) to:
-- Search for games by title
-- Auto-populate game details (genre, platforms, release date)
-- Fetch cover art and screenshots
-- Get playtime estimates
-- Include Metacritic scores
+### Web Application
+```bash
+# Start server
+python -m http.server 8080
 
-**Free Tier**: 20,000 requests per month
+# Test in browser
+open http://localhost:8080
+```
 
-**Data Caching**: API responses are cached locally for 7 days to minimize requests and work offline.
+### MCP Server
+```bash
+cd mcp-server
 
-## 🔧 Configuration
+# Run integration tests
+node test.js
 
-Edit `js/config.js` to customize:
-- API keys
-- Cache duration (default: 7 days)
-- Request rate limits
-- Timeout settings
+# Expected output: "🎉 All tests passed!"
+```
 
-## 📝 Future Enhancements
+### Core Library
+```bash
+# Open test page
+open test-core.html
+```
 
-- Cloud sync (Firebase/Supabase integration)
-- Social features (share lists, compare backlogs)
-- Gaming sessions timer and tracker
-- Achievement/trophy tracking
-- Integration with gaming platforms (Steam, PlayStation, Xbox)
-- AI-powered recommendations
-- Budget tracker for game purchases
-- Sale alerts integration (Steam, Epic, etc.)
-   # Node.js
-   npx serve .
-   
-   # PHP
-   php -S localhost:8000
-   ```
+## 🎨 Screenshots
 
-5. **Open in browser**: Navigate to `http://localhost:8000`
+### Web Application
+- **Dark Theme**: Sleek, gaming-inspired interface
+- **Light Theme**: Clean, accessible alternative
+- **Game Cards**: Beautiful cover art, star ratings, platform badges
+- **Priority View**: Smart recommendations with scores
+- **Statistics**: Visual charts for platform/genre distribution
 
-### Important: API Key Security
+### MCP Integration
+- **Claude Desktop**: Natural language game management
+- **AI Tools**: Browse, add, update, complete games via chat
+- **Smart Queries**: "Show me short games I rated highly"
 
-⚠️ **Never commit `js/config.js` to git!**
+## 🔐 Security
 
-The `.gitignore` file is configured to exclude `js/config.js` from version control. This keeps your API keys private. Always use `js/config.example.js` as a template for sharing.
+- ⚠️ **Never commit `js/config.js`** - API key is gitignored
+- 🔒 **Local-first** - No cloud storage, data stays on your device
+- 📦 **Export/Import** - Backup your data anytime via JSON
 
-## 📝 Future Enhancements
+## 📊 Priority Algorithm
 
-- Cloud sync (Firebase/Supabase integration)
-- Social features (share lists, compare backlogs)
-- Gaming sessions timer and tracker
-- Achievement/trophy tracking
-- Integration with gaming platforms (Steam, PlayStation, Xbox)
-- AI-powered recommendations
-- Budget tracker for game purchases
-- Sale alerts integration (Steam, Epic, etc.)
+Games are ranked using configurable weights (adjust in Settings):
+
+- **Interest Level** (30%) - Your 1-5 star rating
+- **Backlog Age** (20%) - How long it's been waiting
+- **Game Length** (15%) - Shorter games ranked higher
+- **Genre Diversity** (10%) - Encourages variety
+- **Metacritic Score** (5%) - Critical reception
+- **Manual Priority** (50%) - Your explicit overrides
+
+## 🌍 RAWG API Integration
+
+Free tier: 20,000 requests/month
+
+**Features:**
+- Game search with auto-complete
+- Cover art and screenshots
+- Metacritic scores
+- Estimated playtime (HowLongToBeat data)
+- Genre, platform, release year
+- Game descriptions
+
+**Caching:** 7-day cache minimizes API calls and enables offline use.
+
+## 🚀 Future Enhancements
+
+- [ ] Cloud sync (Firebase/Supabase)
+- [ ] Social features (share lists, compare backlogs)
+- [ ] Play session timer
+- [ ] Achievement/trophy tracking
+- [ ] Platform integration (Steam, PlayStation, Xbox)
+- [ ] Budget tracker for purchases
+- [ ] Sale alerts (Steam, Epic)
+- [ ] Mobile app (React Native/Flutter)
+
+## 📝 Contributing
+
+This is a personal learning project, but feedback and ideas are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+3. Test thoroughly
+4. Submit a pull request
 
 ## 📄 License
 
 MIT License - Free to use and modify
 
+## 🙏 Acknowledgments
+
+- **RAWG API** - Game database and metadata
+- **Model Context Protocol** - AI integration standard
+- **Claude Desktop** - MCP client implementation
+
 ---
 
 **Version**: 1.0.0  
-**Last Updated**: November 30, 2025
+**Last Updated**: November 30, 2025  
+**Status**: Production Ready ✅
+
+**Author**: [Your Name]  
+**Repository**: [GitHub Link]

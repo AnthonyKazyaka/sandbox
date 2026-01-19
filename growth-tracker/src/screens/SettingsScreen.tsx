@@ -204,6 +204,27 @@ export const SettingsScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
+        {/* Widgets (Android only) */}
+        {Platform.OS === 'android' && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.cardTitle}>
+                Home Screen Widgets
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+                Add widgets to your home screen to track goals at a glance.
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={() => navigation.navigate('WidgetPreview')}
+                icon="widgets"
+              >
+                Preview Widgets
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+
         {/* Stats */}
         <Card style={styles.card}>
           <Card.Content>

@@ -1,5 +1,6 @@
 // App Context - Global state management
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { Goal, AppSettings, StreakGoal, FocusGoal, CounterGoal } from '../models/types';
 import { goalRepository, settingsRepository } from '../storage';
 import { createInitialGrowthState } from '../utils/growthUtils';
@@ -7,6 +8,7 @@ import { createInitialStreakState, processSlip, updateStreak } from '../utils/st
 import { createInitialFocusState, startFocusSession, endFocusSession } from '../utils/focusUtils';
 import { createInitialCounterState, incrementCounter, checkAndResetPeriod } from '../utils/counterUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { updateAllWidgets } from '../services/widgetUpdateService';
 
 // State type
 interface AppState {
@@ -120,6 +122,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshData = useCallback(async () => {
     const goals = await goalRepository.getAll();
     dispatch({ type: 'SET_GOALS', payload: goals });
+    
+    // Update widgets on Android
+    if (Platform.OS === 'android') {
+      updateAllWidgets(goals).catch(console.error);
+    }
+  }, []);
+
+  // Helper to trigger widget updates after goal changes
+  const triggerWidgetUpdate = useCallback((goals: Goal[]) => {
+    if (Platform.OS === 'android') {
+      updateAllWidgets(goals).catch(console.error);
+    }
   }, []);
 
   // Create streak goal
@@ -198,13 +212,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = { ...goal, updatedAt: Date.now() };
     await goalRepository.upsert(updated);
     dispatch({ type: 'UPDATE_GOAL', payload: updated });
-  }, []);
+    // Update widgets
+    const allGoals = state.goals.map((g) => (g.id === updated.id ? updated : g));
+    triggerWidgetUpdate(allGoals);
+  }, [state.goals, triggerWidgetUpdate]);
 
   // Delete goal
   const deleteGoal = useCallback(async (id: string) => {
     await goalRepository.remove(id);
     dispatch({ type: 'REMOVE_GOAL', payload: id });
-  }, []);
+    // Update widgets
+    const remainingGoals = state.goals.filter((g) => g.id !== id);
+    triggerWidgetUpdate(remainingGoals);
+  }, [state.goals, triggerWidgetUpdate]);
 
   // Record slip for streak goal
   const recordSlip = useCallback(async (goalId: string, note?: string) => {
@@ -220,7 +240,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     await goalRepository.upsert(updated);
     dispatch({ type: 'UPDATE_GOAL', payload: updated });
-  }, [state.goals]);
+    // Update widgets
+    const allGoals = state.goals.map((g) => (g.id === updated.id ? updated : g));
+    triggerWidgetUpdate(allGoals);
+  }, [state.goals, triggerWidgetUpdate]);
 
   // Refresh streak (check for new milestones)
   const refreshStreak = useCallback(async (goalId: string) => {
@@ -236,7 +259,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     await goalRepository.upsert(updated);
     dispatch({ type: 'UPDATE_GOAL', payload: updated });
-  }, [state.goals]);
+    // Update widgets
+    const allGoals = state.goals.map((g) => (g.id === updated.id ? updated : g));
+    triggerWidgetUpdate(allGoals);
+  }, [state.goals, triggerWidgetUpdate]);
 
   // Start focus session
   const startFocus = useCallback(async (goalId: string, durationMs?: number) => {

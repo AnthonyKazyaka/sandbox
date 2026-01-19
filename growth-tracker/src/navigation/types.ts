@@ -5,6 +5,7 @@ export type RootStackParamList = {
   CreateGoal: undefined;
   EditGoal: { goalId: string };
   Settings: undefined;
+  WidgetPreview: undefined;
 };
 
 declare global {

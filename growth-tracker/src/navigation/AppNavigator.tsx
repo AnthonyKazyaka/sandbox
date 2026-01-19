@@ -1,5 +1,6 @@
 // App Navigator - Main navigation setup
 import React from 'react';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
@@ -8,6 +9,7 @@ import {
   CreateGoalScreen,
   EditGoalScreen,
   SettingsScreen,
+  WidgetPreviewScreen,
 } from '../screens';
 import { RootStackParamList } from './types';
 
@@ -32,6 +34,16 @@ export const AppNavigator: React.FC = () => {
         />
         <Stack.Screen name="EditGoal" component={EditGoalScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        {Platform.OS === 'android' && (
+          <Stack.Screen 
+            name="WidgetPreview" 
+            component={WidgetPreviewScreen}
+            options={{
+              headerShown: true,
+              headerTitle: 'Widget Preview',
+            }}
+          />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

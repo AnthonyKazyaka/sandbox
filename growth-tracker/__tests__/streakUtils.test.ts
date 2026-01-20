@@ -181,5 +181,90 @@ describe('Streak Utilities', () => {
       expect(result.streakState.bestStreakMs).toBeGreaterThanOrEqual(streakState.bestStreakMs);
       expect(result.streakState.bestStreakMs).toBeGreaterThan(0);
     });
+
+    it('should track milestone achievements with timesAchieved', () => {
+      const now = Date.now();
+      const streakState = createInitialStreakState();
+      // Start 1 day + 1 hour ago to hit 1h, 6h, and 1d milestones
+      streakState.startedAt = now - (25 * 60 * 60 * 1000);
+      const growth = createInitialGrowthState();
+
+      const result = updateStreak(streakState, growth, now);
+
+      // Should have achieved 1h, 6h, 1d milestones
+      expect(result.newMilestones.length).toBe(3);
+      expect(result.streakState.milestoneAchievements['1h'].timesAchieved).toBe(1);
+      expect(result.streakState.milestoneAchievements['6h'].timesAchieved).toBe(1);
+      expect(result.streakState.milestoneAchievements['1d'].timesAchieved).toBe(1);
+    });
+  });
+
+  describe('milestone re-awarding after slip', () => {
+    it('should allow re-awarding milestones after a slip', () => {
+      const now = Date.now();
+      const streakState = createInitialStreakState();
+      const growth = createInitialGrowthState();
+      
+      // First streak: achieve 1h, 6h, 1d milestones
+      streakState.startedAt = now - (25 * 60 * 60 * 1000);
+      const firstUpdate = updateStreak(streakState, growth, now);
+      
+      expect(firstUpdate.streakState.achievedMilestones).toContain('1h');
+      expect(firstUpdate.streakState.achievedMilestones).toContain('1d');
+      expect(firstUpdate.streakState.milestoneAchievements['1d'].timesAchieved).toBe(1);
+      
+      // Record a slip - resets current streak milestones but preserves achievement history
+      const { streakState: slippedState, growth: slippedGrowth } = processSlip(
+        firstUpdate.streakState,
+        firstUpdate.growth
+      );
+      
+      expect(slippedState.achievedMilestones).toEqual([]); // Current streak milestones reset
+      expect(slippedState.milestoneAchievements['1d'].timesAchieved).toBe(1); // History preserved
+      
+      // Second streak: achieve 1d again
+      const newNow = now + (25 * 60 * 60 * 1000); // 25 hours after slip
+      const secondUpdate = updateStreak(slippedState, slippedGrowth, newNow);
+      
+      // Should have re-awarded the milestones
+      expect(secondUpdate.newMilestones.length).toBe(3);
+      expect(secondUpdate.streakState.milestoneAchievements['1d'].timesAchieved).toBe(2); // Achieved twice
+    });
+
+    it('should track lastAwardedAt for milestones', () => {
+      const now = Date.now();
+      const streakState = createInitialStreakState();
+      streakState.startedAt = now - (2 * 60 * 60 * 1000); // 2 hours ago
+      const growth = createInitialGrowthState();
+
+      const result = updateStreak(streakState, growth, now);
+
+      expect(result.streakState.milestoneAchievements['1h'].lastAwardedAt).toBe(now);
+    });
+
+    it('should preserve milestoneAchievements across multiple slips', () => {
+      const now = Date.now();
+      let streakState = createInitialStreakState();
+      let growth = createInitialGrowthState();
+      
+      // First streak
+      streakState.startedAt = now - (2 * 60 * 60 * 1000);
+      const first = updateStreak(streakState, growth, now);
+      expect(first.streakState.milestoneAchievements['1h'].timesAchieved).toBe(1);
+      
+      // First slip
+      const slip1 = processSlip(first.streakState, first.growth);
+      
+      // Second streak
+      const second = updateStreak(slip1.streakState, slip1.growth, now + 2 * 60 * 60 * 1000);
+      expect(second.streakState.milestoneAchievements['1h'].timesAchieved).toBe(2);
+      
+      // Second slip
+      const slip2 = processSlip(second.streakState, second.growth);
+      
+      // Third streak
+      const third = updateStreak(slip2.streakState, slip2.growth, now + 4 * 60 * 60 * 1000);
+      expect(third.streakState.milestoneAchievements['1h'].timesAchieved).toBe(3);
+    });
   });
 });

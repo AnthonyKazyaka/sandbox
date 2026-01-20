@@ -39,6 +39,8 @@ export function startFocusSession(
     actualDurationMs: 0,
     status: 'in-progress',
     pointsEarned: 0,
+    pausedTotalMs: 0,
+    pausedAt: undefined,
   };
 
   return {
@@ -47,6 +49,58 @@ export function startFocusSession(
       currentSession: session,
     },
     session,
+  };
+}
+
+/**
+ * Pause a focus session
+ */
+export function pauseFocusSession(
+  focusState: FocusState,
+  now: number = Date.now()
+): { focusState: FocusState; session: FocusSession | null } {
+  if (!focusState.currentSession || focusState.currentSession.pausedAt) {
+    return { focusState, session: focusState.currentSession };
+  }
+
+  const pausedSession: FocusSession = {
+    ...focusState.currentSession,
+    pausedAt: now,
+  };
+
+  return {
+    focusState: {
+      ...focusState,
+      currentSession: pausedSession,
+    },
+    session: pausedSession,
+  };
+}
+
+/**
+ * Resume a paused focus session
+ */
+export function resumeFocusSession(
+  focusState: FocusState,
+  now: number = Date.now()
+): { focusState: FocusState; session: FocusSession | null } {
+  if (!focusState.currentSession || !focusState.currentSession.pausedAt) {
+    return { focusState, session: focusState.currentSession };
+  }
+
+  const pausedDuration = now - focusState.currentSession.pausedAt;
+  const resumedSession: FocusSession = {
+    ...focusState.currentSession,
+    pausedTotalMs: focusState.currentSession.pausedTotalMs + pausedDuration,
+    pausedAt: undefined,
+  };
+
+  return {
+    focusState: {
+      ...focusState,
+      currentSession: resumedSession,
+    },
+    session: resumedSession,
   };
 }
 
@@ -171,15 +225,29 @@ export function formatTimerDisplay(ms: number): string {
 }
 
 /**
- * Calculate remaining time in session
+ * Calculate remaining time in session, accounting for paused time
+ * This ensures correct remaining time after app restart
  */
 export function getRemainingTime(session: FocusSession, now: number = Date.now()): number {
-  const elapsed = now - session.startedAt;
-  return Math.max(0, session.plannedDurationMs - elapsed);
+  // If currently paused, calculate elapsed up to pause time
+  const effectiveNow = session.pausedAt ?? now;
+  const rawElapsed = effectiveNow - session.startedAt;
+  // Subtract total paused time from elapsed
+  const activeElapsed = rawElapsed - session.pausedTotalMs;
+  return Math.max(0, session.plannedDurationMs - activeElapsed);
 }
 
 /**
- * Check if session is complete (time elapsed)
+ * Calculate actual active focus time (excluding paused periods)
+ */
+export function getActiveFocusTime(session: FocusSession, now: number = Date.now()): number {
+  const effectiveNow = session.pausedAt ?? now;
+  const rawElapsed = effectiveNow - session.startedAt;
+  return Math.max(0, rawElapsed - session.pausedTotalMs);
+}
+
+/**
+ * Check if session is complete (active time elapsed)
  */
 export function isSessionTimeComplete(session: FocusSession, now: number = Date.now()): boolean {
   return getRemainingTime(session, now) <= 0;

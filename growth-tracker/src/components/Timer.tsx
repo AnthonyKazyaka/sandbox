@@ -35,9 +35,11 @@ export const Timer: React.FC<TimerProps> = ({
   const theme = useTheme();
   const [selectedDuration, setSelectedDuration] = useState(defaultDurationMs);
   const [remainingMs, setRemainingMs] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Derive isPaused from session state (for persistence across restarts)
+  const isPaused = session?.pausedAt !== undefined;
 
   // Calculate remaining time for active session
   useEffect(() => {
@@ -64,6 +66,9 @@ export const Timer: React.FC<TimerProps> = ({
           intervalRef.current = null;
         }
       };
+    } else if (session && isPaused) {
+      // When paused, just show the remaining time without updating
+      setRemainingMs(getRemainingTime(session));
     }
   }, [session, isPaused, onComplete]);
 
@@ -97,10 +102,8 @@ export const Timer: React.FC<TimerProps> = ({
 
   const handlePauseResume = useCallback(() => {
     if (isPaused) {
-      setIsPaused(false);
       onResume?.();
     } else {
-      setIsPaused(true);
       onPause?.();
     }
   }, [isPaused, onPause, onResume]);

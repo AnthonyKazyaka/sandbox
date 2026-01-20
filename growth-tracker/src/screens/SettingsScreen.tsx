@@ -152,6 +152,31 @@ export const SettingsScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
+        {/* Time Settings */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.cardTitle}>
+              Time Settings
+            </Text>
+            <Text variant="labelMedium" style={{ marginBottom: 12 }}>
+              Week Starts On
+            </Text>
+            <SegmentedButtons
+              value={state.settings.weekStart}
+              onValueChange={(value) =>
+                updateSettings({ weekStart: value as 'monday' | 'sunday' })
+              }
+              buttons={[
+                { value: 'monday', label: 'Monday' },
+                { value: 'sunday', label: 'Sunday' },
+              ]}
+            />
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+              Affects weekly counter goal resets
+            </Text>
+          </Card.Content>
+        </Card>
+
         {/* Data Management */}
         <Card style={styles.card}>
           <Card.Content>

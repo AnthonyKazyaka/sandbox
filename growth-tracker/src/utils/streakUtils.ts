@@ -4,6 +4,7 @@ import {
   StreakState,
   SlipEvent,
   Milestone,
+  MilestoneAchievement,
   DEFAULT_STREAK_MILESTONES,
   GrowthState,
 } from '../models/types';
@@ -91,6 +92,7 @@ export function calculateMilestonePoints(
 
 /**
  * Process a slip event and update streak state
+ * Milestones can be re-awarded after a slip when re-reached
  */
 export function processSlip(
   streakState: StreakState,
@@ -114,7 +116,8 @@ export function processSlip(
     totalSlips: streakState.totalSlips + 1,
     lastSlipAt: now,
     slipHistory: [...streakState.slipHistory, slipEvent].slice(-100), // Keep last 100 slips
-    achievedMilestones: [], // Reset milestones on slip
+    achievedMilestones: [], // Reset current streak milestones (allows re-awarding)
+    milestoneAchievements: streakState.milestoneAchievements, // Preserve lifetime achievement history
   };
   
   return {
@@ -126,6 +129,7 @@ export function processSlip(
 
 /**
  * Update streak with current time and check for new milestones
+ * Supports milestone re-awarding after slips by tracking achievements separately
  */
 export function updateStreak(
   streakState: StreakState,
@@ -142,6 +146,17 @@ export function updateStreak(
   const pointsEarned = newMilestones.reduce((sum, m) => sum + m.points, 0);
   const newGrowth = pointsEarned > 0 ? addWaterPoints(growth, pointsEarned) : growth;
   
+  // Update milestone achievements tracking (for re-award history)
+  const updatedMilestoneAchievements = { ...streakState.milestoneAchievements };
+  for (const milestone of newMilestones) {
+    const existing = updatedMilestoneAchievements[milestone.id];
+    updatedMilestoneAchievements[milestone.id] = {
+      milestoneId: milestone.id,
+      timesAchieved: (existing?.timesAchieved ?? 0) + 1,
+      lastAwardedAt: now,
+    };
+  }
+  
   const newStreakState: StreakState = {
     ...streakState,
     currentStreakMs,
@@ -149,6 +164,7 @@ export function updateStreak(
       ...streakState.achievedMilestones,
       ...newMilestones.map((m) => m.id),
     ],
+    milestoneAchievements: updatedMilestoneAchievements,
   };
   
   // Update best streak if the current streak is now the longest
@@ -206,6 +222,7 @@ export function createInitialStreakState(
     lastSlipAt: null,
     slipHistory: [],
     achievedMilestones: [],
+    milestoneAchievements: {}, // Track lifetime achievements for re-awarding
     costPerUnit,
     unitsPerDay,
   };

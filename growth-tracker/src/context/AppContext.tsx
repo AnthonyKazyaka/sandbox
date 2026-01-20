@@ -5,7 +5,7 @@ import { Goal, AppSettings, StreakGoal, FocusGoal, CounterGoal } from '../models
 import { goalRepository, settingsRepository } from '../storage';
 import { createInitialGrowthState } from '../utils/growthUtils';
 import { createInitialStreakState, processSlip, updateStreak } from '../utils/streakUtils';
-import { createInitialFocusState, startFocusSession, endFocusSession } from '../utils/focusUtils';
+import { createInitialFocusState, startFocusSession, endFocusSession, pauseFocusSession, resumeFocusSession } from '../utils/focusUtils';
 import { createInitialCounterState, incrementCounter, checkAndResetPeriod } from '../utils/counterUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { updateAllWidgets } from '../services/widgetUpdateService';
@@ -35,6 +35,8 @@ const initialState: AppState = {
     theme: 'system',
     hapticFeedback: true,
     notificationsEnabled: false,
+    weekStart: 'monday',
+    timezone: undefined,
   },
   isLoading: true,
   error: null,
@@ -84,6 +86,8 @@ interface AppContextType {
   refreshStreak: (goalId: string) => Promise<void>;
   // Focus operations
   startFocus: (goalId: string, durationMs?: number) => Promise<void>;
+  pauseFocus: (goalId: string) => Promise<void>;
+  resumeFocus: (goalId: string) => Promise<void>;
   endFocus: (goalId: string, completed: boolean) => Promise<void>;
   // Counter operations
   incrementGoalCounter: (goalId: string, count?: number, note?: string) => Promise<void>;
@@ -279,6 +283,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'UPDATE_GOAL', payload: updated });
   }, [state.goals]);
 
+  // Pause focus session
+  const pauseFocus = useCallback(async (goalId: string) => {
+    const goal = state.goals.find((g) => g.id === goalId);
+    if (!goal || goal.type !== 'focus' || !goal.focusState.currentSession) return;
+
+    const { focusState } = pauseFocusSession(goal.focusState);
+    const updated: FocusGoal = {
+      ...goal,
+      focusState,
+      updatedAt: Date.now(),
+    };
+    await goalRepository.upsert(updated);
+    dispatch({ type: 'UPDATE_GOAL', payload: updated });
+  }, [state.goals]);
+
+  // Resume focus session
+  const resumeFocus = useCallback(async (goalId: string) => {
+    const goal = state.goals.find((g) => g.id === goalId);
+    if (!goal || goal.type !== 'focus' || !goal.focusState.currentSession) return;
+
+    const { focusState } = resumeFocusSession(goal.focusState);
+    const updated: FocusGoal = {
+      ...goal,
+      focusState,
+      updatedAt: Date.now(),
+    };
+    await goalRepository.upsert(updated);
+    dispatch({ type: 'UPDATE_GOAL', payload: updated });
+  }, [state.goals]);
+
   // End focus session
   const endFocus = useCallback(async (goalId: string, completed: boolean) => {
     const goal = state.goals.find((g) => g.id === goalId);
@@ -304,17 +338,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const goal = state.goals.find((g) => g.id === goalId);
     if (!goal || goal.type !== 'counter') return;
 
-    // First check for period reset
+    // First check for period reset with weekStart from settings
     const { counterState: resetState, growth: resetGrowth } = checkAndResetPeriod(
       goal.counterState,
-      goal.growth
+      goal.growth,
+      Date.now(),
+      state.settings.weekStart
     );
     
     const { counterState, growth } = incrementCounter(
       resetState,
       resetGrowth,
       count,
-      note
+      note,
+      state.settings.weekStart
     );
     
     const updated: CounterGoal = {
@@ -325,7 +362,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     await goalRepository.upsert(updated);
     dispatch({ type: 'UPDATE_GOAL', payload: updated });
-  }, [state.goals]);
+  }, [state.goals, state.settings.weekStart]);
 
   // Update settings
   const updateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
@@ -344,6 +381,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordSlip,
     refreshStreak,
     startFocus,
+    pauseFocus,
+    resumeFocus,
     endFocus,
     incrementGoalCounter,
     updateSettings,

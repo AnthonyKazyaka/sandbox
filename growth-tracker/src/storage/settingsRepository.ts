@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   hapticFeedback: true,
   notificationsEnabled: false,
+  weekStart: 'monday',
+  timezone: undefined, // Use device timezone by default
 };
 
 export class SettingsRepositoryImpl implements SettingsRepository {

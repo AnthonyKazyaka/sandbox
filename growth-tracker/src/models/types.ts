@@ -4,6 +4,8 @@ export type GoalType = 'streak' | 'focus' | 'counter';
 
 export type PlantStage = 'seed' | 'sprout' | 'plant' | 'bush' | 'tree';
 
+export type WeekStart = 'monday' | 'sunday';
+
 export interface GrowthState {
   stage: PlantStage;
   currentPoints: number;
@@ -20,6 +22,54 @@ export interface Milestone {
   achievedAt?: number;
 }
 
+// Enhanced milestone achievement tracking for re-awarding after slips
+export interface MilestoneAchievement {
+  milestoneId: string;
+  timesAchieved: number;
+  lastAwardedAt: number;
+}
+
+// Quick action types for widget-ready computed state
+export type QuickActionType = 
+  | 'SLIP' 
+  | 'START_FOCUS' 
+  | 'PAUSE_FOCUS' 
+  | 'RESUME_FOCUS' 
+  | 'END_FOCUS' 
+  | 'INCREMENT';
+
+export interface QuickAction {
+  type: QuickActionType;
+  enabled: boolean;
+  label: string;
+}
+
+// GoalComputed snapshot - widget-ready, no event scanning needed
+export interface GoalComputed {
+  goalId: string;
+  goalType: GoalType;
+  goalName: string;
+  stage: PlantStage;
+  pointsTotal: number;
+  pointsIntoStage: number;
+  pointsForNextStage: number;
+  progressToNextStage: number; // 0..1
+  primaryStatText: string; // e.g., "3d 4h", "18m left", "5/8 today"
+  secondaryStatText?: string;
+  quickAction: QuickAction;
+  updatedAt: number;
+}
+
+// Active focus timer state for persistence across app restarts
+export interface ActiveFocusSession {
+  goalId: string;
+  sessionId: string;
+  startAt: number;
+  durationMs: number;
+  pausedTotalMs: number;
+  pausedAt?: number; // If currently paused, when it was paused
+}
+
 // Streak/Abstinence goal specific types
 export interface SlipEvent {
   id: string;
@@ -34,7 +84,9 @@ export interface StreakState {
   totalSlips: number;
   lastSlipAt: number | null;
   slipHistory: SlipEvent[];
-  achievedMilestones: string[]; // Milestone IDs
+  achievedMilestones: string[]; // Milestone IDs for current streak
+  // Enhanced milestone tracking for re-awarding after slips
+  milestoneAchievements: Record<string, MilestoneAchievement>;
   // Optional tracking stats
   costPerUnit?: number;
   unitsPerDay?: number;
@@ -52,6 +104,9 @@ export interface FocusSession {
   status: FocusSessionStatus;
   endedAt?: number;
   pointsEarned: number;
+  // Timer persistence fields
+  pausedTotalMs: number;
+  pausedAt?: number; // If paused, when it was paused
 }
 
 export interface FocusState {
@@ -117,6 +172,9 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   hapticFeedback: boolean;
   notificationsEnabled: boolean;
+  // Time settings
+  weekStart: WeekStart;
+  timezone?: string; // IANA timezone string, undefined = device timezone
 }
 
 // Event types for goal updates

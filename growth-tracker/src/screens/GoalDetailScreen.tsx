@@ -113,12 +113,20 @@ const StreakDetail: React.FC<{ goal: StreakGoal; onSlip: () => void }> = ({ goal
 // Focus Detail Component
 const FocusDetail: React.FC<{ goal: FocusGoal }> = ({ goal }) => {
   const theme = useTheme();
-  const { startFocus, endFocus } = useApp();
+  const { startFocus, pauseFocus, resumeFocus, endFocus } = useApp();
   const stats = getSessionStats(goal.focusState);
 
   const handleStart = useCallback((durationMs: number) => {
     startFocus(goal.id, durationMs);
   }, [goal.id, startFocus]);
+
+  const handlePause = useCallback(() => {
+    pauseFocus(goal.id);
+  }, [goal.id, pauseFocus]);
+
+  const handleResume = useCallback(() => {
+    resumeFocus(goal.id);
+  }, [goal.id, resumeFocus]);
 
   const handleComplete = useCallback(() => {
     endFocus(goal.id, true);
@@ -140,6 +148,8 @@ const FocusDetail: React.FC<{ goal: FocusGoal }> = ({ goal }) => {
       <Timer
         session={goal.focusState.currentSession}
         onStart={handleStart}
+        onPause={handlePause}
+        onResume={handleResume}
         onComplete={handleComplete}
         onAbandon={handleAbandon}
         defaultDurationMs={goal.focusState.defaultDurationMs}

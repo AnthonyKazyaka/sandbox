@@ -37,6 +37,13 @@ export const sampleGoals: Goal[] = [
       lastSlipAt: null,
       slipHistory: [],
       achievedMilestones: ['1h', '6h', '1d', '3d', '1w'],
+      milestoneAchievements: {
+        '1h': { milestoneId: '1h', timesAchieved: 1, lastAwardedAt: Date.now() - 7 * 24 * 60 * 60 * 1000 },
+        '6h': { milestoneId: '6h', timesAchieved: 1, lastAwardedAt: Date.now() - 7 * 24 * 60 * 60 * 1000 },
+        '1d': { milestoneId: '1d', timesAchieved: 1, lastAwardedAt: Date.now() - 6 * 24 * 60 * 60 * 1000 },
+        '3d': { milestoneId: '3d', timesAchieved: 1, lastAwardedAt: Date.now() - 4 * 24 * 60 * 60 * 1000 },
+        '1w': { milestoneId: '1w', timesAchieved: 1, lastAwardedAt: Date.now() },
+      },
       costPerUnit: 0.50,
       unitsPerDay: 20,
     },
@@ -66,6 +73,12 @@ export const sampleGoals: Goal[] = [
         },
       ],
       achievedMilestones: ['1h', '6h', '1d', '3d'],
+      milestoneAchievements: {
+        '1h': { milestoneId: '1h', timesAchieved: 2, lastAwardedAt: Date.now() - 3 * 24 * 60 * 60 * 1000 },
+        '6h': { milestoneId: '6h', timesAchieved: 2, lastAwardedAt: Date.now() - 3 * 24 * 60 * 60 * 1000 },
+        '1d': { milestoneId: '1d', timesAchieved: 2, lastAwardedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+        '3d': { milestoneId: '3d', timesAchieved: 2, lastAwardedAt: Date.now() },
+      },
     },
   } as StreakGoal,
 
@@ -91,6 +104,7 @@ export const sampleGoals: Goal[] = [
           status: 'completed',
           endedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000,
           pointsEarned: 55, // 45 + 10 bonus
+          pausedTotalMs: 0,
         },
         {
           id: 'session-2',
@@ -101,6 +115,7 @@ export const sampleGoals: Goal[] = [
           status: 'completed',
           endedAt: Date.now() - 1 * 24 * 60 * 60 * 1000 + 25 * 60 * 1000,
           pointsEarned: 35,
+          pausedTotalMs: 0,
         },
         {
           id: 'session-3',
@@ -111,6 +126,7 @@ export const sampleGoals: Goal[] = [
           status: 'abandoned',
           endedAt: Date.now() - 12 * 60 * 60 * 1000 + 15 * 60 * 1000,
           pointsEarned: 0,
+          pausedTotalMs: 0,
         },
       ],
       totalCompletedSessions: 2,
@@ -141,6 +157,7 @@ export const sampleGoals: Goal[] = [
           status: 'completed',
           endedAt: Date.now() - 1 * 24 * 60 * 60 * 1000 + 15 * 60 * 1000,
           pointsEarned: 25,
+          pausedTotalMs: 0,
         },
       ],
       totalCompletedSessions: 6,

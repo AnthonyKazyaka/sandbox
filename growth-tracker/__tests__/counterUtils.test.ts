@@ -178,4 +178,97 @@ describe('Counter Utilities', () => {
       expect(stats.totalEntries).toBe(2);
     });
   });
+
+  describe('Week start configuration', () => {
+    it('should start week on Monday by default', () => {
+      // Wednesday June 19, 2024
+      const wednesday = new Date(2024, 5, 19, 14, 30, 0).getTime();
+      const startMonday = getPeriodStartTime('weekly', wednesday, 'monday');
+      const startDate = new Date(startMonday);
+      
+      expect(startDate.getDay()).toBe(1); // Monday
+      expect(startDate.getDate()).toBe(17); // June 17
+    });
+
+    it('should start week on Sunday when configured', () => {
+      // Wednesday June 19, 2024
+      const wednesday = new Date(2024, 5, 19, 14, 30, 0).getTime();
+      const startSunday = getPeriodStartTime('weekly', wednesday, 'sunday');
+      const startDate = new Date(startSunday);
+      
+      expect(startDate.getDay()).toBe(0); // Sunday
+      expect(startDate.getDate()).toBe(16); // June 16
+    });
+
+    it('should handle Sunday as same-day start when weekStart is Sunday', () => {
+      // Sunday June 16, 2024
+      const sunday = new Date(2024, 5, 16, 14, 30, 0).getTime();
+      const startSunday = getPeriodStartTime('weekly', sunday, 'sunday');
+      const startDate = new Date(startSunday);
+      
+      expect(startDate.getDay()).toBe(0); // Sunday
+      expect(startDate.getDate()).toBe(16); // June 16 (same day)
+    });
+  });
+
+  describe('DST boundary handling', () => {
+    // Test scenario: US Eastern Time DST transition in March 2024
+    // DST starts March 10, 2024 at 2:00 AM (clocks spring forward to 3:00 AM)
+    
+    it('should handle period reset across spring DST boundary (daily)', () => {
+      // March 9, 2024 at 11:00 PM (before DST)
+      const beforeDST = new Date(2024, 2, 9, 23, 0, 0).getTime();
+      const counterState = createInitialCounterState(5, 'daily');
+      counterState.periodStartedAt = getPeriodStartTime('daily', beforeDST);
+      counterState.currentCount = 3;
+      
+      // March 10, 2024 at 10:00 AM (after DST transition)
+      const afterDST = new Date(2024, 2, 10, 10, 0, 0).getTime();
+      
+      // Should detect new period (new day)
+      expect(isNewPeriod('daily', counterState.periodStartedAt, afterDST)).toBe(true);
+      
+      const growth = createInitialGrowthState();
+      const result = checkAndResetPeriod(counterState, growth, afterDST);
+      
+      expect(result.counterState.currentCount).toBe(0);
+      expect(result.periodCompleted).toBe(false); // Didn't hit target of 5
+    });
+
+    it('should handle period reset across fall DST boundary (daily)', () => {
+      // November 2, 2024 at 11:00 PM (before DST ends)
+      // DST ends November 3, 2024 at 2:00 AM (clocks fall back to 1:00 AM)
+      const beforeDSTEnd = new Date(2024, 10, 2, 23, 0, 0).getTime();
+      const counterState = createInitialCounterState(5, 'daily');
+      counterState.periodStartedAt = getPeriodStartTime('daily', beforeDSTEnd);
+      counterState.currentCount = 5; // Hit target
+      
+      // November 3, 2024 at 10:00 AM (after DST ends)
+      const afterDSTEnd = new Date(2024, 10, 3, 10, 0, 0).getTime();
+      
+      // Should detect new period
+      expect(isNewPeriod('daily', counterState.periodStartedAt, afterDSTEnd)).toBe(true);
+      
+      const growth = createInitialGrowthState();
+      const result = checkAndResetPeriod(counterState, growth, afterDSTEnd);
+      
+      expect(result.counterState.currentCount).toBe(0);
+      expect(result.periodCompleted).toBe(true); // Hit target
+      expect(result.counterState.completedPeriods).toBe(1);
+    });
+
+    it('should maintain same-day stability across DST boundary', () => {
+      // March 10, 2024 at 1:30 AM (theoretically, this time doesn't exist due to DST)
+      // But JavaScript will handle it by adjusting
+      const earlyMorning = new Date(2024, 2, 10, 1, 30, 0).getTime();
+      const counterState = createInitialCounterState(5, 'daily');
+      counterState.periodStartedAt = getPeriodStartTime('daily', earlyMorning);
+      
+      // Later same day at 4:00 PM
+      const afternoon = new Date(2024, 2, 10, 16, 0, 0).getTime();
+      
+      // Should NOT detect new period (same day)
+      expect(isNewPeriod('daily', counterState.periodStartedAt, afternoon)).toBe(false);
+    });
+  });
 });

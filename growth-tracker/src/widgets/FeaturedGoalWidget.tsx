@@ -49,20 +49,20 @@ export function FeaturedGoalWidget({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: isLarge ? 8 : 4,
+          width: 'match_parent',
         }}
       >
-        <TextWidget
-          text={goalName}
-          style={{
-            fontSize: isLarge ? 14 : 12,
-            color: theme.text,
-            fontWeight: '600',
-            flex: 1,
-            marginRight: 6,
-          }}
-          maxLines={1}
-          ellipsize="end"
-        />
+        <FlexWidget style={{ flex: 1, marginRight: 6 }}>
+          <TextWidget
+            text={goalName}
+            style={{
+              fontSize: isLarge ? 14 : 12,
+              color: theme.text,
+              fontWeight: '600',
+            }}
+            maxLines={1}
+          />
+        </FlexWidget>
         <TextWidget
           text={stageEmoji}
           style={{
@@ -78,6 +78,7 @@ export function FeaturedGoalWidget({
           alignItems: 'center',
           justifyContent: 'center',
           flex: 1,
+          width: 'match_parent',
         }}
       >
         <TextWidget
@@ -105,6 +106,7 @@ export function FeaturedGoalWidget({
         style={{
           flexDirection: 'column',
           marginTop: isLarge ? 8 : 4,
+          width: 'match_parent',
         }}
       >
         <FlexWidget
@@ -113,15 +115,15 @@ export function FeaturedGoalWidget({
             width: 'match_parent',
             backgroundColor: theme.surfaceVariant,
             borderRadius: 3,
-            overflow: 'hidden',
             marginBottom: 4,
           }}
         >
           <FlexWidget
             style={{
               height: 'match_parent',
-              width: `${progressPercent}%`,
+              width: Math.round((progressPercent / 100) * 200), // Use numeric width
               backgroundColor: theme.accent,
+              borderRadius: 3,
             }}
           />
         </FlexWidget>
@@ -141,11 +143,9 @@ function getStageEmoji(stage: string): string {
   const stageMap: Record<string, string> = {
     seed: '🌱',
     sprout: '🌿',
-    seedling: '🪴',
-    youngPlant: '🌳',
-    maturePlant: '🌲',
-    flowering: '🌸',
-    fruiting: '🍎',
+    plant: '🪴',
+    bush: '🌳',
+    tree: '🌲',
   };
   return stageMap[stage] || '🌱';
 }

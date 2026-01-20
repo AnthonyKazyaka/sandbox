@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import type { WidgetSnapshot } from './widgetSnapshot';
 import type { Goal, StreakGoal, FocusGoal, CounterGoal } from '../models/types';
-import { calculateStreakDuration } from '../utils/streakUtils';
-import { calculateProgress } from '../utils/growthUtils';
+import { calculateStreakDuration, formatStreakDuration } from '../utils/streakUtils';
+import { getStageProgress } from '../utils/growthUtils';
 
 export const WIDGET_SNAPSHOT_KEY = '@growth_tracker/widget_snapshot';
 
@@ -22,35 +22,40 @@ export async function generateWidgetSnapshot(goals: Goal[]): Promise<WidgetSnaps
 
   if (featuredGoal.type === 'streak') {
     const streakGoal = featuredGoal as StreakGoal;
-    const duration = calculateStreakDuration(streakGoal);
-    primaryText = formatDuration(duration);
+    const duration = calculateStreakDuration(streakGoal.streakState.startedAt);
+    primaryText = formatStreakDuration(duration);
     goalType = 'streak';
   } else if (featuredGoal.type === 'focus') {
     const focusGoal = featuredGoal as FocusGoal;
-    primaryText = `${focusGoal.sessionsCompleted} sessions`;
+    primaryText = `${focusGoal.focusState.totalCompletedSessions} sessions`;
     goalType = 'focus';
   } else if (featuredGoal.type === 'counter') {
     const counterGoal = featuredGoal as CounterGoal;
-    primaryText = `${counterGoal.currentCount} / ${counterGoal.targetCount}`;
+    primaryText = `${counterGoal.counterState.currentCount} / ${counterGoal.counterState.targetCount}`;
     goalType = 'counter';
   }
 
-  const progress = calculateProgress(featuredGoal);
+  // Calculate progress (0 to 1) based on growth state
+  const progressInfo = getStageProgress(featuredGoal.growth);
+  const progress = progressInfo.progressPercentage / 100;
 
   // Top goals for garden widget
-  const topGoals = goals.slice(0, 8).map((goal) => ({
-    id: goal.id,
-    title: goal.title,
-    stage: goal.plantStage,
-    progress: calculateProgress(goal),
-  }));
+  const topGoals = goals.slice(0, 8).map((goal) => {
+    const goalProgress = getStageProgress(goal.growth);
+    return {
+      id: goal.id,
+      title: goal.name,
+      stage: goal.growth.stage,
+      progress: goalProgress.progressPercentage / 100,
+    };
+  });
 
   const snapshot: WidgetSnapshot = {
     updatedAt: Date.now(),
     featuredGoalId: featuredGoal.id,
-    title: featuredGoal.title,
+    title: featuredGoal.name,
     primaryText,
-    stage: featuredGoal.plantStage,
+    stage: featuredGoal.growth.stage,
     progress0to1: progress,
     goalType,
     topGoals,
@@ -91,32 +96,23 @@ export async function updateAllWidgets(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
   try {
+    // Update the 3 primary widgets
     await requestWidgetUpdate({
-      widgetName: 'FeaturedGoal2x1',
-      renderWidget: () => <></>, // Handler will render
+      widgetName: 'FeaturedGoal',
+      renderWidget: () => null as any, // Handler will render
       widgetNotFound: () => {
-        // Widget not added to home screen
+        // Widget not added to home screen - ignore
       },
     });
     await requestWidgetUpdate({
-      widgetName: 'FeaturedGoal2x2',
-      renderWidget: () => <></>,
+      widgetName: 'FocusLauncher',
+      renderWidget: () => null as any,
+      widgetNotFound: () => {},
     });
     await requestWidgetUpdate({
-      widgetName: 'FocusLauncher2x2',
-      renderWidget: () => <></>,
-    });
-    await requestWidgetUpdate({
-      widgetName: 'FocusLauncher4x2',
-      renderWidget: () => <></>,
-    });
-    await requestWidgetUpdate({
-      widgetName: 'Garden4x2',
-      renderWidget: () => <></>,
-    });
-    await requestWidgetUpdate({
-      widgetName: 'Garden4x4',
-      renderWidget: () => <></>,
+      widgetName: 'GardenOverview',
+      renderWidget: () => null as any,
+      widgetNotFound: () => {},
     });
   } catch (error) {
     console.error('Failed to update widgets:', error);
@@ -131,25 +127,5 @@ export async function refreshWidgetsFromGoals(goals: Goal[]): Promise<void> {
   if (snapshot) {
     await saveWidgetSnapshot(snapshot);
     await updateAllWidgets();
-  }
-}
-
-// Helper: Format duration for display
-function formatDuration(milliseconds: number): string {
-  const seconds = Math.floor(milliseconds / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) {
-    const remainingHours = hours % 24;
-    return `${days}d ${remainingHours}h`;
-  } else if (hours > 0) {
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m`;
-  } else {
-    return `${seconds}s`;
   }
 }

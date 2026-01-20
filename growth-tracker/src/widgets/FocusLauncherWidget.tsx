@@ -39,6 +39,7 @@ export function FocusLauncherWidget({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 6,
+          width: 'match_parent',
         }}
       >
         <TextWidget
@@ -55,7 +56,7 @@ export function FocusLauncherWidget({
         />
       </FlexWidget>
 
-      {/* Start Button - Smaller padding */}
+      {/* Start Button */}
       <FlexWidget
         style={{
           backgroundColor: theme.accent,
@@ -64,7 +65,9 @@ export function FocusLauncherWidget({
           alignItems: 'center',
           justifyContent: 'center',
           flex: 1,
-          marginVertical: 6,
+          marginTop: 6,
+          marginBottom: 6,
+          width: 'match_parent',
         }}
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'growthtracker://focus/start' }}
@@ -80,45 +83,82 @@ export function FocusLauncherWidget({
       </FlexWidget>
 
       {isWide && (
-        /* Preset Chips - More compact */
+        /* Preset Chips */
         <FlexWidget
           style={{
             flexDirection: 'row',
             justifyContent: 'space-around',
             marginBottom: 6,
+            width: 'match_parent',
           }}
         >
-          {[25, 45, 60].map((minutes) => (
-            <FlexWidget
-              key={minutes}
+          <FlexWidget
+            style={{
+              backgroundColor: theme.surfaceVariant,
+              borderRadius: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'growthtracker://focus/start?duration=25' }}
+          >
+            <TextWidget
+              text="25m"
               style={{
-                backgroundColor: theme.surfaceVariant,
-                borderRadius: 6,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
+                fontSize: 11,
+                color: theme.text,
+                fontWeight: '500',
               }}
-              clickAction="OPEN_URI"
-              clickActionData={{ uri: `growthtracker://focus/start?duration=${minutes}` }}
-            >
-              <TextWidget
-                text={`${minutes}m`}
-                style={{
-                  fontSize: 11,
-                  color: theme.text,
-                  fontWeight: '500',
-                }}
-              />
-            </FlexWidget>
-          ))}
+            />
+          </FlexWidget>
+          <FlexWidget
+            style={{
+              backgroundColor: theme.surfaceVariant,
+              borderRadius: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'growthtracker://focus/start?duration=45' }}
+          >
+            <TextWidget
+              text="45m"
+              style={{
+                fontSize: 11,
+                color: theme.text,
+                fontWeight: '500',
+              }}
+            />
+          </FlexWidget>
+          <FlexWidget
+            style={{
+              backgroundColor: theme.surfaceVariant,
+              borderRadius: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'growthtracker://focus/start?duration=60' }}
+          >
+            <TextWidget
+              text="60m"
+              style={{
+                fontSize: 11,
+                color: theme.text,
+                fontWeight: '500',
+              }}
+            />
+          </FlexWidget>
         </FlexWidget>
       )}
 
-      {/* Stats Footer - Compact */}
+      {/* Stats Footer */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
+          width: 'match_parent',
         }}
       >
         <TextWidget

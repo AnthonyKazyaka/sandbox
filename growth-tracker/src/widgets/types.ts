@@ -24,6 +24,7 @@ export interface WidgetGoalData {
 export interface WidgetTheme {
   background: ColorProp;
   surface: ColorProp;
+  surfaceVariant: ColorProp;
   text: ColorProp;
   textSecondary: ColorProp;
   accent: ColorProp;
@@ -34,6 +35,7 @@ export interface WidgetTheme {
 export const lightTheme: WidgetTheme = {
   background: '#F5F5F5',
   surface: '#FFFFFF',
+  surfaceVariant: '#E8E8E8',
   text: '#1A1A1A',
   textSecondary: '#666666',
   accent: '#4CAF50',
@@ -44,6 +46,7 @@ export const lightTheme: WidgetTheme = {
 export const darkTheme: WidgetTheme = {
   background: '#1A1A1A',
   surface: '#2D2D2D',
+  surfaceVariant: '#3D3D3D',
   text: '#FFFFFF',
   textSecondary: '#B0B0B0',
   accent: '#81C784',
@@ -66,3 +69,12 @@ export const GOAL_TYPE_ICON: Record<GoalType, string> = {
   focus: '🎯',
   counter: '📊',
 };
+
+// Theme getter functions for widget task handler
+export function getLightTheme(): WidgetTheme {
+  return lightTheme;
+}
+
+export function getDarkTheme(): WidgetTheme {
+  return darkTheme;
+}

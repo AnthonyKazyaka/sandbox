@@ -20,6 +20,10 @@ export function GardenWidget({ goals, theme, size }: GardenWidgetProps) {
   const maxGoals = isLarge ? 8 : 4;
   const displayGoals = goals.slice(0, maxGoals);
 
+  // Calculate tile dimensions based on widget size
+  const tileWidth = isLarge ? 70 : 60;
+  const columns = isLarge ? 4 : 4;
+
   return (
     <FlexWidget
       style={{
@@ -31,7 +35,7 @@ export function GardenWidget({ goals, theme, size }: GardenWidgetProps) {
         flexDirection: 'column',
       }}
     >
-      {/* Header - More Compact */}
+      {/* Header */}
       <FlexWidget
         style={{
           flexDirection: 'row',
@@ -56,72 +60,119 @@ export function GardenWidget({ goals, theme, size }: GardenWidgetProps) {
         />
       </FlexWidget>
 
-      {/* Goal Grid - Adjusted spacing */}
+      {/* Goal Grid - Row based layout */}
       <FlexWidget
         style={{
           flex: 1,
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'flex-start',
-          alignContent: 'flex-start',
+          flexDirection: 'column',
+          width: 'match_parent',
         }}
       >
-        {displayGoals.map((goal, index) => (
+        {/* First row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            width: 'match_parent',
+            marginBottom: 6,
+          }}
+        >
+          {displayGoals.slice(0, columns).map((goal) => (
+            <GoalTileWidget
+              key={goal.id}
+              goal={goal}
+              theme={theme}
+              tileWidth={tileWidth}
+              isLarge={isLarge}
+            />
+          ))}
+        </FlexWidget>
+
+        {/* Second row (for 4x4 widgets) */}
+        {isLarge && displayGoals.length > 4 && (
           <FlexWidget
-            key={goal.id}
             style={{
-              width: isLarge ? '48%' : '23.5%',
-              backgroundColor: theme.surfaceVariant,
-              borderRadius: 8,
-              padding: 6,
-              marginRight: index % (isLarge ? 2 : 4) === (isLarge ? 0 : 3) ? 0 : isLarge ? '4%' : '2%',
-              marginBottom: 6,
-              flexDirection: 'column',
-              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+              width: 'match_parent',
             }}
-            clickAction="OPEN_URI"
-            clickActionData={{ uri: `growthtracker://goal/${goal.id}` }}
           >
-            {/* Stage Icon */}
-            <TextWidget
-              text={getStageEmoji(goal.stage)}
-              style={{ fontSize: isLarge ? 28 : 22 }}
-            />
-
-            {/* Progress */}
-            <FlexWidget
-              style={{
-                height: 3,
-                width: '100%',
-                backgroundColor: theme.background,
-                borderRadius: 2,
-                overflow: 'hidden',
-                marginVertical: 4,
-              }}
-            >
-              <FlexWidget
-                style={{
-                  height: 'match_parent',
-                  width: `${Math.round(goal.progress * 100)}%`,
-                  backgroundColor: theme.accent,
-                }}
+            {displayGoals.slice(4, 8).map((goal) => (
+              <GoalTileWidget
+                key={goal.id}
+                goal={goal}
+                theme={theme}
+                tileWidth={tileWidth}
+                isLarge={isLarge}
               />
-            </FlexWidget>
-
-            {/* Title */}
-            <TextWidget
-              text={goal.title}
-              style={{
-                fontSize: isLarge ? 10 : 8,
-                color: theme.text,
-                textAlign: 'center',
-              }}
-              maxLines={isLarge ? 2 : 1}
-              ellipsize="end"
-            />
+            ))}
           </FlexWidget>
-        ))}
+        )}
       </FlexWidget>
+    </FlexWidget>
+  );
+}
+
+interface GoalTileWidgetProps {
+  goal: GoalTile;
+  theme: WidgetTheme;
+  tileWidth: number;
+  isLarge: boolean;
+}
+
+function GoalTileWidget({ goal, theme, tileWidth, isLarge }: GoalTileWidgetProps) {
+  const progressWidth = Math.max(2, Math.round((goal.progress) * (tileWidth - 12)));
+
+  return (
+    <FlexWidget
+      style={{
+        width: tileWidth,
+        backgroundColor: theme.surfaceVariant,
+        borderRadius: 8,
+        padding: 6,
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: `growthtracker://goal/${goal.id}` }}
+    >
+      {/* Stage Icon */}
+      <TextWidget
+        text={getStageEmoji(goal.stage)}
+        style={{ fontSize: isLarge ? 28 : 22 }}
+      />
+
+      {/* Progress bar */}
+      <FlexWidget
+        style={{
+          height: 3,
+          width: tileWidth - 12,
+          backgroundColor: theme.background,
+          borderRadius: 2,
+          marginTop: 4,
+          marginBottom: 4,
+        }}
+      >
+        <FlexWidget
+          style={{
+            height: 3,
+            width: progressWidth,
+            backgroundColor: theme.accent,
+            borderRadius: 2,
+          }}
+        />
+      </FlexWidget>
+
+      {/* Title */}
+      <TextWidget
+        text={goal.title}
+        style={{
+          fontSize: isLarge ? 10 : 8,
+          color: theme.text,
+          textAlign: 'center',
+        }}
+        maxLines={isLarge ? 2 : 1}
+      />
     </FlexWidget>
   );
 }
@@ -130,11 +181,9 @@ function getStageEmoji(stage: string): string {
   const stageMap: Record<string, string> = {
     seed: '🌱',
     sprout: '🌿',
-    seedling: '🪴',
-    youngPlant: '🌳',
-    maturePlant: '🌲',
-    flowering: '🌸',
-    fruiting: '🍎',
+    plant: '🪴',
+    bush: '🌳',
+    tree: '🌲',
   };
   return stageMap[stage] || '🌱';
 }

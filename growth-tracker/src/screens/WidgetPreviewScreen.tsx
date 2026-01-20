@@ -1,90 +1,121 @@
 // Widget Preview Screen - For development/testing of widgets
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { WidgetPreview } from 'react-native-android-widget';
-import { GoalOverviewWidget } from '../widgets/GoalOverviewWidget';
-import { StreakWidget } from '../widgets/StreakWidget';
-import { QuickStatsWidget } from '../widgets/QuickStatsWidget';
-import { WidgetGoalData } from '../widgets/types';
+import { FeaturedGoalWidget } from '../widgets/FeaturedGoalWidget';
+import { FocusLauncherWidget } from '../widgets/FocusLauncherWidget';
+import { GardenWidget } from '../widgets/GardenWidget';
+import { getLightTheme, getDarkTheme, WidgetTheme } from '../widgets/types';
 import { useApp } from '../context/AppContext';
 import { Goal, StreakGoal, FocusGoal, CounterGoal } from '../models/types';
-import { calculateStreakDuration } from '../utils/streakUtils';
+import { calculateStreakDuration, formatStreakDuration } from '../utils/streakUtils';
+import { getStageProgress } from '../utils/growthUtils';
 
-// Convert Goal to WidgetGoalData
-function goalToWidgetData(goal: Goal): WidgetGoalData {
-  const baseData: WidgetGoalData = {
-    id: goal.id,
-    name: goal.name,
-    type: goal.type,
-    plantStage: goal.growth.stage,
-    totalPoints: goal.growth.totalPointsEarned,
-  };
-
-  if (goal.type === 'streak') {
-    const streakGoal = goal as StreakGoal;
-    const duration = calculateStreakDuration(streakGoal.streakState.startedAt);
+// Generate widget snapshot data from goals (matches widgetTaskHandler logic)
+function generatePreviewData(goals: Goal[]) {
+  if (goals.length === 0) {
     return {
-      ...baseData,
-      streakDays: duration.days,
-      streakHours: duration.hours,
-      streakMinutes: duration.minutes,
-    };
-  } else if (goal.type === 'focus') {
-    const focusGoal = goal as FocusGoal;
-    return {
-      ...baseData,
-      totalFocusMinutes: Math.floor(focusGoal.focusState.totalFocusTimeMs / (1000 * 60)),
-      sessionsCompleted: focusGoal.focusState.totalCompletedSessions,
-    };
-  } else if (goal.type === 'counter') {
-    const counterGoal = goal as CounterGoal;
-    return {
-      ...baseData,
-      currentCount: counterGoal.counterState.currentCount,
-      targetCount: counterGoal.counterState.targetCount,
-      period: counterGoal.counterState.period,
+      title: 'No Goals',
+      primaryText: 'Create a goal',
+      stage: 'seed',
+      progress: 0,
+      goalId: '',
+      topGoals: [],
+      todayFocusMinutes: 0,
+      lastSessionResult: null as 'success' | 'cancelled' | null,
     };
   }
 
-  return baseData;
+  const featuredGoal = goals[0];
+  let primaryText = '';
+
+  if (featuredGoal.type === 'streak') {
+    const streakGoal = featuredGoal as StreakGoal;
+    const duration = calculateStreakDuration(streakGoal.streakState.startedAt);
+    primaryText = formatStreakDuration(duration);
+  } else if (featuredGoal.type === 'focus') {
+    const focusGoal = featuredGoal as FocusGoal;
+    primaryText = `${focusGoal.focusState.totalCompletedSessions} sessions`;
+  } else if (featuredGoal.type === 'counter') {
+    const counterGoal = featuredGoal as CounterGoal;
+    primaryText = `${counterGoal.counterState.currentCount} / ${counterGoal.counterState.targetCount}`;
+  }
+
+  const progressInfo = getStageProgress(featuredGoal.growth);
+  const progress = progressInfo.progressPercentage / 100;
+
+  const topGoals = goals.slice(0, 8).map((goal) => {
+    const goalProgress = getStageProgress(goal.growth);
+    return {
+      id: goal.id,
+      title: goal.name,
+      stage: goal.growth.stage,
+      progress: goalProgress.progressPercentage / 100,
+    };
+  });
+
+  // Get focus stats
+  const focusGoals = goals.filter((g) => g.type === 'focus') as FocusGoal[];
+  const todayFocusMinutes = focusGoals.reduce((sum, g) => {
+    return sum + Math.floor(g.focusState.totalFocusTimeMs / (1000 * 60));
+  }, 0);
+
+  return {
+    title: featuredGoal.name,
+    primaryText,
+    stage: featuredGoal.growth.stage,
+    progress,
+    goalId: featuredGoal.id,
+    topGoals,
+    todayFocusMinutes,
+    lastSessionResult: null as 'success' | 'cancelled' | null,
+  };
 }
 
-type WidgetType = 'overview' | 'streak' | 'stats';
+// Widget types that match app.config.ts
+type WidgetType = 'featured' | 'focus' | 'garden';
 type ThemeType = 'light' | 'dark';
 
 export function WidgetPreviewScreen() {
   const { state } = useApp();
-  const [selectedWidget, setSelectedWidget] = useState<WidgetType>('overview');
+  const [selectedWidget, setSelectedWidget] = useState<WidgetType>('featured');
   const [selectedTheme, setSelectedTheme] = useState<ThemeType>('light');
 
   const activeGoals = state.goals.filter((g) => !g.isArchived);
-  const widgetGoals = activeGoals.map(goalToWidgetData);
-  const firstStreakGoal = widgetGoals.find((g) => g.type === 'streak');
-
-  const quickStats = {
-    totalGoals: activeGoals.length,
-    activeStreaks: activeGoals.filter((g) => g.type === 'streak').length,
-    totalPoints: activeGoals.reduce((sum, g) => sum + g.growth.totalPointsEarned, 0),
-    bestPlantStage: activeGoals.reduce((best, g) => {
-      const stages = ['seed', 'sprout', 'plant', 'bush', 'tree'];
-      return stages.indexOf(g.growth.stage) > stages.indexOf(best) ? g.growth.stage : best;
-    }, 'seed' as string),
-  };
+  const previewData = generatePreviewData(activeGoals);
+  
+  const theme: WidgetTheme = selectedTheme === 'light' ? getLightTheme() : getDarkTheme();
 
   const renderWidget = () => {
     switch (selectedWidget) {
-      case 'overview':
-        return <GoalOverviewWidget goals={widgetGoals} theme={selectedTheme} />;
-      case 'streak':
-        return <StreakWidget goal={firstStreakGoal} theme={selectedTheme} />;
-      case 'stats':
+      case 'featured':
         return (
-          <QuickStatsWidget
-            totalGoals={quickStats.totalGoals}
-            activeStreaks={quickStats.activeStreaks}
-            totalPoints={quickStats.totalPoints}
-            bestPlantStage={quickStats.bestPlantStage}
-            theme={selectedTheme}
+          <FeaturedGoalWidget
+            goalName={previewData.title}
+            primaryStat={previewData.primaryText}
+            stage={previewData.stage}
+            progress={previewData.progress}
+            theme={theme}
+            size="2x2"
+            goalId={previewData.goalId}
+          />
+        );
+      case 'focus':
+        return (
+          <FocusLauncherWidget
+            lastSessionResult={previewData.lastSessionResult}
+            todayFocusMinutes={previewData.todayFocusMinutes}
+            plantProgress={previewData.progress}
+            theme={theme}
+            size="2x2"
+          />
+        );
+      case 'garden':
+        return (
+          <GardenWidget
+            goals={previewData.topGoals}
+            theme={theme}
+            size="4x2"
           />
         );
     }
@@ -92,12 +123,23 @@ export function WidgetPreviewScreen() {
 
   const getWidgetDimensions = () => {
     switch (selectedWidget) {
-      case 'overview':
-        return { width: 320, height: 120 };
-      case 'streak':
+      case 'featured':
         return { width: 180, height: 180 };
-      case 'stats':
-        return { width: 320, height: 80 };
+      case 'focus':
+        return { width: 180, height: 180 };
+      case 'garden':
+        return { width: 320, height: 180 };
+    }
+  };
+
+  const getWidgetDescription = () => {
+    switch (selectedWidget) {
+      case 'featured':
+        return 'FeaturedGoal (2x2) - Shows your primary goal';
+      case 'focus':
+        return 'FocusLauncher (2x2) - Quick start focus sessions';
+      case 'garden':
+        return 'GardenOverview (4x2) - See all your goals';
     }
   };
 
@@ -112,7 +154,7 @@ export function WidgetPreviewScreen() {
       <View style={styles.selectorContainer}>
         <Text style={styles.selectorLabel}>Widget Type:</Text>
         <View style={styles.buttonGroup}>
-          {(['overview', 'streak', 'stats'] as WidgetType[]).map((type) => (
+          {(['featured', 'focus', 'garden'] as WidgetType[]).map((type) => (
             <TouchableOpacity
               key={type}
               style={[
@@ -138,22 +180,22 @@ export function WidgetPreviewScreen() {
       <View style={styles.selectorContainer}>
         <Text style={styles.selectorLabel}>Theme:</Text>
         <View style={styles.buttonGroup}>
-          {(['light', 'dark'] as ThemeType[]).map((theme) => (
+          {(['light', 'dark'] as ThemeType[]).map((themeOption) => (
             <TouchableOpacity
-              key={theme}
+              key={themeOption}
               style={[
                 styles.selectorButton,
-                selectedTheme === theme && styles.selectorButtonActive,
+                selectedTheme === themeOption && styles.selectorButtonActive,
               ]}
-              onPress={() => setSelectedTheme(theme)}
+              onPress={() => setSelectedTheme(themeOption)}
             >
               <Text
                 style={[
                   styles.selectorButtonText,
-                  selectedTheme === theme && styles.selectorButtonTextActive,
+                  selectedTheme === themeOption && styles.selectorButtonTextActive,
                 ]}
               >
-                {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -175,11 +217,12 @@ export function WidgetPreviewScreen() {
       {/* Widget Info */}
       <View style={styles.infoContainer}>
         <Text style={styles.infoTitle}>Widget Info</Text>
+        <Text style={styles.infoText}>{getWidgetDescription()}</Text>
         <Text style={styles.infoText}>Size: {dimensions.width}x{dimensions.height}dp</Text>
-        <Text style={styles.infoText}>Goals shown: {widgetGoals.length}</Text>
-        {selectedWidget === 'streak' && (
+        <Text style={styles.infoText}>Goals available: {activeGoals.length}</Text>
+        {selectedWidget === 'featured' && (
           <Text style={styles.infoText}>
-            Streak goal: {firstStreakGoal?.name || 'None'}
+            Featured goal: {previewData.title}
           </Text>
         )}
       </View>

@@ -8,30 +8,7 @@ import { loadWidgetSnapshot } from './services/widgetSnapshotService';
 import { getLightTheme, getDarkTheme } from './widgets/types';
 
 /**
- * Get theme configuration
- */
-function getLightTheme() {
-  return {
-    background: '#FFFFFF',
-    text: '#1C1B1F',
-    textSecondary: '#49454F',
-    accent: '#65A30D',
-    surfaceVariant: '#E7E0EC',
-  };
-}
-
-function getDarkTheme() {
-  return {
-    background: '#1C1B1F',
-    text: '#E6E1E5',
-    textSecondary: '#CAC4D0',
-    accent: '#84CC16',
-    surfaceVariant: '#49454F',
-  };
-}
-
-/**
- * Main widget task handler
+ * Main widget task handler - routes to appropriate widget renderer
  */
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const { widgetInfo, widgetAction } = props;
@@ -50,27 +27,35 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     return;
   }
 
-  // Route to appropriate widget handler
+  // Route to appropriate widget handler based on widget name
   switch (widgetInfo.widgetName) {
-    case 'FeaturedGoal2x1':
-      renderFeaturedGoalWidget(props, snapshot, '2x1');
+    case 'FeaturedGoal':
+      renderFeaturedGoalWidget(props, snapshot);
       break;
 
-    case 'FeaturedGoal2x2':
-      renderFeaturedGoalWidget(props, snapshot, '2x2');
+    case 'FocusLauncher':
+      renderFocusLauncherWidget(props, snapshot);
       break;
 
-    case 'FocusLauncher2x2':
-      renderFocusLauncherWidget(props, snapshot, '2x2');
-   Render Featured Goal Widget
+    case 'GardenOverview':
+      renderGardenWidget(props, snapshot);
+      break;
+
+    default:
+      console.log('Unknown widget:', widgetInfo.widgetName);
+      renderEmptyWidget(props);
+      break;
+  }
+}
+
+/**
+ * Render Featured Goal Widget (2x2)
+ * Shows the primary goal with stats and progress
  */
 function renderFeaturedGoalWidget(
   props: WidgetTaskHandlerProps,
-  snapshot: Awaited<ReturnType<typeof loadWidgetSnapshot>>,
-  size: '2x1' | '2x2'
+  snapshot: NonNullable<Awaited<ReturnType<typeof loadWidgetSnapshot>>>
 ) {
-  if (!snapshot) return;
-
   const lightTheme = getLightTheme();
   const darkTheme = getDarkTheme();
 
@@ -82,7 +67,7 @@ function renderFeaturedGoalWidget(
         stage={snapshot.stage}
         progress={snapshot.progress0to1}
         theme={lightTheme}
-        size={size}
+        size="2x2"
         goalId={snapshot.featuredGoalId}
       />
     ),
@@ -93,7 +78,7 @@ function renderFeaturedGoalWidget(
         stage={snapshot.stage}
         progress={snapshot.progress0to1}
         theme={darkTheme}
-        size={size}
+        size="2x2"
         goalId={snapshot.featuredGoalId}
       />
     ),
@@ -101,15 +86,13 @@ function renderFeaturedGoalWidget(
 }
 
 /**
- * Render Focus Launcher Widget
+ * Render Focus Launcher Widget (2x2)
+ * Quick start focus sessions with one tap
  */
 function renderFocusLauncherWidget(
   props: WidgetTaskHandlerProps,
-  snapshot: Awaited<ReturnType<typeof loadWidgetSnapshot>>,
-  size: '2x2' | '4x2'
+  snapshot: NonNullable<Awaited<ReturnType<typeof loadWidgetSnapshot>>>
 ) {
-  if (!snapshot) return;
-
   const lightTheme = getLightTheme();
   const darkTheme = getDarkTheme();
 
@@ -124,7 +107,7 @@ function renderFocusLauncherWidget(
         todayFocusMinutes={todayMinutes}
         plantProgress={progress}
         theme={lightTheme}
-        size={size}
+        size="2x2"
       />
     ),
     dark: (
@@ -133,38 +116,38 @@ function renderFocusLauncherWidget(
         todayFocusMinutes={todayMinutes}
         plantProgress={progress}
         theme={darkTheme}
-        size={size}
+        size="2x2"
       />
     ),
   });
 }
 
 /**
- * Render Garden Widget
+ * Render Garden Overview Widget (4x2)
+ * Shows all goals at a glance
  */
 function renderGardenWidget(
   props: WidgetTaskHandlerProps,
-  snapshot: Awaited<ReturnType<typeof loadWidgetSnapshot>>,
-  size: '4x2' | '4x4'
+  snapshot: NonNullable<Awaited<ReturnType<typeof loadWidgetSnapshot>>>
 ) {
-  if (!snapshot || !snapshot.topGoals) return;
-
   const lightTheme = getLightTheme();
   const darkTheme = getDarkTheme();
+
+  const goals = snapshot.topGoals || [];
 
   props.renderWidget({
     light: (
       <GardenWidget
-        goals={snapshot.topGoals}
+        goals={goals}
         theme={lightTheme}
-        size={size}
+        size="4x2"
       />
     ),
     dark: (
       <GardenWidget
-        goals={snapshot.topGoals}
+        goals={goals}
         theme={darkTheme}
-        size={size}
+        size="4x2"
       />
     ),
   });
@@ -177,12 +160,11 @@ function renderEmptyWidget(props: WidgetTaskHandlerProps) {
   const lightTheme = getLightTheme();
   const darkTheme = getDarkTheme();
 
-  // Render a simple "No goals yet" message using FeaturedGoalWidget
   props.renderWidget({
     light: (
       <FeaturedGoalWidget
-        goalName="No goals yet"
-        primaryStat="Create a goal"
+        goalName="Growth Tracker"
+        primaryStat="Open app"
         stage="seed"
         progress={0}
         theme={lightTheme}
@@ -192,8 +174,8 @@ function renderEmptyWidget(props: WidgetTaskHandlerProps) {
     ),
     dark: (
       <FeaturedGoalWidget
-        goalName="No goals yet"
-        primaryStat="Create a goal"
+        goalName="Growth Tracker"
+        primaryStat="Open app"
         stage="seed"
         progress={0}
         theme={darkTheme}
@@ -201,25 +183,5 @@ function renderEmptyWidget(props: WidgetTaskHandlerProps) {
         goalId=""
       />
     ),
-  });       activeStreaks={quickStats.activeStreaks}
-          totalPoints={quickStats.totalPoints}
-          bestPlantStage={quickStats.bestPlantStage}
-          theme="dark"
-        />
-      ),
-    });
-  };
-
-  switch (props.widgetAction) {
-    case 'WIDGET_ADDED':
-    case 'WIDGET_UPDATE':
-    case 'WIDGET_RESIZED':
-    case 'WIDGET_CLICK':
-      renderWidget();
-      break;
-
-    case 'WIDGET_DELETED':
-      // Nothing to clean up
-      break;
-  }
+  });
 }

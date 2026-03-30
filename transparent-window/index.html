@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transparent Window</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Draggable title bar -->
+  <div class="title-bar" id="titleBar">
+    <div class="title-bar-controls">
+      <button class="btn btn-pin" id="btnPin" title="Toggle always-on-top">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L12 22M12 2L8 6M12 2L16 6"/>
+        </svg>
+      </button>
+      <button class="btn btn-minimize" id="btnMinimize" title="Minimize">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14"/>
+        </svg>
+      </button>
+      <button class="btn btn-close" id="btnClose" title="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Transparent content area -->
+  <div class="content">
+    <div class="center-hint" id="centerHint">
+      <p>Transparent overlay active</p>
+      <p class="hint-sub">Drag the top bar to move &bull; Resize from edges</p>
+      <button class="btn-dismiss" id="btnDismissHint">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    // Window controls
+    document.getElementById('btnClose').addEventListener('click', () => {
+      window.electronAPI.closeWindow();
+    });
+
+    document.getElementById('btnMinimize').addEventListener('click', () => {
+      window.electronAPI.minimizeWindow();
+    });
+
+    const btnPin = document.getElementById('btnPin');
+    btnPin.classList.add('active');
+
+    btnPin.addEventListener('click', () => {
+      window.electronAPI.toggleAlwaysOnTop();
+    });
+
+    window.electronAPI.onAlwaysOnTopChanged((isOnTop) => {
+      btnPin.classList.toggle('active', isOnTop);
+    });
+
+    // Dismiss hint
+    document.getElementById('btnDismissHint').addEventListener('click', () => {
+      document.getElementById('centerHint').style.display = 'none';
+    });
+  </script>
+</body>
+</html>

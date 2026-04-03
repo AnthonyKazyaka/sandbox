@@ -74,3 +74,9 @@ A modern, intelligent web application for managing and prioritizing your video g
 [Live version](https://anthonykazyaka.github.io/sandbox/game-backlog-tracker)
 
 **Note:** RAWG API key required - get one free at [rawg.io/apidocs](https://rawg.io/apidocs)
+
+### Pixel Sandbox
+A 3D VR pixel sandbox game.
+
+**Location:** `/pixel-sandbox/`
+[Live version](https://anthonykazyaka.github.io/sandbox/pixel-sandbox/index.html)

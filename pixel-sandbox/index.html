@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SANDBOX³</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ui-bg:rgba(8,12,16,0.9);--ui-border:rgba(80,160,255,0.22);--accent:#50a0ff;--text:#a0c8ff;--void:#0a0e14}
+body{background:var(--void);overflow:hidden;font-family:'Share Tech Mono',monospace;color:var(--text)}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+#title{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;letter-spacing:.45em;color:var(--accent);opacity:.5;text-transform:uppercase}
+#toolbar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:14px;padding:9px 13px;pointer-events:all;backdrop-filter:blur(14px);align-items:center}
+.mat-btn{width:44px;height:44px;border-radius:8px;border:2px solid transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(255,255,255,0.05);transition:transform .1s,border-color .12s}
+.mat-btn:hover{transform:translateY(-2px)}
+.mat-btn.active{border-color:var(--accent);background:rgba(80,160,255,0.14)}
+.mat-btn .sw{width:20px;height:20px;border-radius:4px}
+.mat-btn .lb{font-size:7px;letter-spacing:.07em;text-transform:uppercase;opacity:.6}
+.mat-btn[data-mat="STONE"] .sw{background:#7a7a8a}
+.mat-btn[data-mat="SAND"]  .sw{background:#e8c87a}
+.mat-btn[data-mat="WATER"] .sw{background:#3a8fff}
+.mat-btn[data-mat="LAVA"]  .sw{background:#ff4f00}
+.mat-btn[data-mat="OIL"]   .sw{background:#2a1a3a;border:1px solid #553366}
+.mat-btn[data-mat="FIRE"]  .sw{background:linear-gradient(180deg,#ffdd00,#ff4400)}
+.sep{width:1px;height:32px;background:var(--ui-border);margin:0 2px}
+.tbtn{padding:0 11px;border-radius:7px;border:1px solid var(--ui-border);background:rgba(255,255,255,0.04);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;pointer-events:all;transition:background .13s,border-color .13s;text-transform:uppercase;height:44px}
+.tbtn:hover{background:rgba(80,160,255,0.11);border-color:var(--accent)}
+.tbtn.active{background:rgba(80,160,255,0.2);border-color:var(--accent);color:#fff}
+#rain-btn{background:rgba(80,180,255,0.08);border-color:rgba(80,180,255,0.25);color:#80c8ff}
+#rain-btn:hover,#rain-btn.active{background:rgba(80,180,255,0.22);border-color:#50a0ff;color:#c0e8ff}
+#bwrap{display:flex;flex-direction:column;align-items:center;gap:3px;height:44px;justify-content:center}
+#bwrap label{font-size:7px;letter-spacing:.1em;text-transform:uppercase;opacity:.4}
+#bsize{-webkit-appearance:none;width:68px;height:3px;background:var(--ui-border);border-radius:2px;outline:none;cursor:pointer}
+#bsize::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer}
+#mode-indicator{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:8px;padding:6px 16px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px}
+#mode-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+#rate-bar-wrap{display:flex;align-items:center;gap:6px;font-size:9px;opacity:.7}
+#rate-bar{width:60px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden}
+#rate-fill{height:100%;background:var(--accent);width:50%;transition:width .1s}
+#stats{position:absolute;top:14px;right:14px;background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:9px;padding:9px 13px;font-size:10px;line-height:1.9;letter-spacing:.05em;backdrop-filter:blur(8px);min-width:144px}
+#stats .v{color:#fff;float:right;margin-left:14px}
+#hints{position:absolute;top:14px;left:14px;background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:9px;padding:9px 13px;font-size:9px;line-height:2.1;letter-spacing:.04em;backdrop-filter:blur(8px);opacity:.85}
+.key{display:inline-block;background:rgba(80,160,255,0.13);border:1px solid var(--ui-border);border-radius:3px;padding:0 4px;margin-right:3px;font-size:8px}
+#xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;pointer-events:none}
+#xhair::before,#xhair::after{content:'';position:absolute;background:rgba(255,255,255,.85);border-radius:1px}
+#xhair::before{width:18px;height:1px;top:50%;left:0;transform:translateY(-50%)}
+#xhair::after{width:1px;height:18px;left:50%;top:0;transform:translateX(-50%)}
+#xhair.h{display:none}
+#prompt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:all;cursor:pointer}
+#prompt .big{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;color:var(--accent);letter-spacing:.15em;display:block;margin-bottom:10px}
+#prompt .sub{font-size:11px;letter-spacing:.2em;opacity:.4;text-transform:uppercase}
+#prompt.h{display:none}
+#reach-wrap{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:9px;padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;backdrop-filter:blur(8px)}
+#reach-wrap label{font-size:7px;letter-spacing:.1em;text-transform:uppercase;opacity:.4;writing-mode:vertical-rl;transform:rotate(180deg)}
+#reach-val{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--accent)}
+#hit-info{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.1em;opacity:.4;white-space:nowrap}
+#vr-btn-wrap{position:absolute;bottom:18px;right:18px;pointer-events:all}
+#vr-btn-wrap button{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.12em;padding:10px 18px;border-radius:8px;border:1px solid var(--ui-border);background:rgba(80,160,255,0.12);color:var(--accent);cursor:pointer;transition:background .15s;text-transform:uppercase}
+#vr-btn-wrap button:hover{background:rgba(80,160,255,0.28)}
+#vr-btn-wrap button:disabled{opacity:.3;cursor:not-allowed}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="title">SANDBOX³</div>
+  <div id="xhair" class="h"></div>
+  <div id="prompt"><span class="big">SANDBOX³</span><span class="sub">Click to enter · ESC to exit</span></div>
+  <div id="hints">
+    <div style="opacity:.7;font-size:8px;letter-spacing:.12em;margin-bottom:3px">DESKTOP</div>
+    <div><span class="key">W A S D</span> Fly &nbsp;<span class="key">SPC/Q</span> Up/Down</div>
+    <div><span class="key">SHIFT</span> Sprint &nbsp;<span class="key">1-6</span> Material</div>
+    <div><span class="key">LMB</span> Pour &nbsp;<span class="key">RMB</span> Erase</div>
+    <div><span class="key">E</span> Mode &nbsp;<span class="key">SCROLL</span> Rate/Reach</div>
+    <div><span class="key">MMB</span> Confirm spout</div>
+    <div style="opacity:.7;font-size:8px;letter-spacing:.12em;margin-top:5px">VR CONTROLS</div>
+    <div><span class="key">L&#x2713;</span> Fly &nbsp;<span class="key">L-TRIG</span> Material</div>
+    <div><span class="key">L-CLICK</span> Mode &nbsp;<span class="key">L-GRIP+R-GRIP</span> Scale</div>
+    <div><span class="key">R-TRIG</span> Pour (pressure=rate)</div>
+    <div><span class="key">R-GRIP</span> Erase &nbsp;<span class="key">R&#x2713;</span> Brush/Rate</div>
+  </div>
+  <div id="stats">
+    <div>CELLS <span class="v" id="s-cells">0</span></div>
+    <div>ACTIVE <span class="v" id="s-active">0</span></div>
+    <div>SPOUTS <span class="v" id="s-spouts">0</span></div>
+    <div>TICK <span class="v" id="s-tick">0ms</span></div>
+    <div>FPS <span class="v" id="s-fps">0</span></div>
+  </div>
+  <div id="reach-wrap"><div id="reach-val">--</div><label>Reach</label></div>
+  <div id="mode-indicator">
+    <div id="mode-dot"></div>
+    <span id="mode-label">POUR</span>
+    <div id="rate-bar-wrap">RATE <div id="rate-bar"><div id="rate-fill"></div></div> <span id="rate-val">4</span></div>
+  </div>
+  <div id="hit-info">aim at floor to begin</div>
+  <div id="toolbar">
+    <button class="mat-btn active" data-mat="STONE"><div class="sw"></div><div class="lb">Stone</div></button>
+    <button class="mat-btn" data-mat="SAND"><div class="sw"></div><div class="lb">Sand</div></button>
+    <button class="mat-btn" data-mat="WATER"><div class="sw"></div><div class="lb">Water</div></button>
+    <button class="mat-btn" data-mat="LAVA"><div class="sw"></div><div class="lb">Lava</div></button>
+    <button class="mat-btn" data-mat="OIL"><div class="sw"></div><div class="lb">Oil</div></button>
+    <button class="mat-btn" data-mat="FIRE"><div class="sw"></div><div class="lb">Fire</div></button>
+    <div class="sep"></div>
+    <div id="bwrap"><label>Brush</label><input type="range" id="bsize" min="1" max="5" value="1"></div>
+    <div class="sep"></div>
+    <button class="tbtn" id="rain-btn">&#x2601; Rain</button>
+    <button class="tbtn" id="clear-btn">&#x2715; Clear</button>
+  </div>
+  <div id="vr-btn-wrap"><button id="vr-btn" disabled>VR not available</button></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const GRID = 32;
+const MAT = { EMPTY:0,STONE:1,SAND:2,WATER:3,LAVA:4,OIL:5,STEAM:6,FIRE:7,SMOKE:8,SPOUT:9 };
+const PLACE_MATS = [MAT.STONE,MAT.SAND,MAT.WATER,MAT.LAVA,MAT.OIL,MAT.FIRE];
+const PLACE_NAMES= ['STONE','SAND','WATER','LAVA','OIL','FIRE'];
+const MODES = ['POUR','SPOUT','ERASE'];
+const MODE_COLORS = { POUR:'#50a0ff', SPOUT:'#ffaa00', ERASE:'#ff4444' };
+
+//                    0    1    2    3    4   5   6   7   8   9
+const DENSITY  = [    0, 999, 180, 100, 320, 55,  2,  3,  1, 999];
+const IS_LIQ   = [    0,   0,   0,   1,   1,  1,  0,  0,  0,   0];
+const IS_GAS   = [    0,   0,   0,   0,   0,  0,  1,  1,  1,   0];
+const LIFETIME = [    0,   0,   0,   0,   0,  0, 55, 22, 80,   0];
+
+const COLORS = {
+  [MAT.STONE]:[0x7a7a8a,0x8c8c9c,0x666678],
+  [MAT.SAND]: [0xe8c87a,0xf4d888,0xd4b060],
+  [MAT.WATER]:[0x1a55bb,0x2266cc,0x3080dd],
+  [MAT.LAVA]: [0xff4400,0xff6600,0xdd2200],
+  [MAT.OIL]:  [0x1a0d28,0x221133,0x2c1a40],
+  [MAT.STEAM]:[0x889aaa,0x99aabb,0x778899],
+  [MAT.FIRE]: [0xff8800,0xffcc00,0xff4400],
+  [MAT.SMOKE]:[0x445566,0x334455,0x556677],
+};
+
+// Per-material hex for wrist UI / spout tinting
+const MAT_HEX = {
+  [MAT.STONE]:'#7a7a8a',[MAT.SAND]:'#e8c87a',[MAT.WATER]:'#3a8fff',
+  [MAT.LAVA]:'#ff4f00',[MAT.OIL]:'#553366',[MAT.FIRE]:'#ff8800',
+};
+
+const TICK_MS = 75;
+
+// ─── WORLD ────────────────────────────────────────────────────────────────────
+class World {
+  constructor() {
+    const N = GRID*GRID*GRID;
+    this.cells     = new Uint8Array(N);
+    this.variant   = new Uint8Array(N);
+    this.age       = new Uint16Array(N);
+    this.spoutMat  = new Uint8Array(N);   // which material a spout emits
+    this.spoutRate = new Uint8Array(N);   // cells per tick per spout (1-8)
+    this.active    = new Set();
+    this.spouts    = new Set();           // indices of all spout cells
+    this._buildFloor();
+  }
+
+  idx(x,y,z)      { return x + GRID*(y + GRID*z); }
+  inBounds(x,y,z) { return x>=0&&x<GRID&&y>=0&&y<GRID&&z>=0&&z<GRID; }
+  get(x,y,z)      { if(!this.inBounds(x,y,z)) return MAT.STONE; return this.cells[this.idx(x,y,z)]; }
+
+  set(x,y,z,mat) {
+    if(!this.inBounds(x,y,z)) return;
+    const i = this.idx(x,y,z);
+    const prev = this.cells[i];
+    if(prev===MAT.SPOUT) this.spouts.delete(i);
+    this.cells[i]=mat; this.variant[i]=Math.random()*3|0; this.age[i]=0;
+    if(mat!==MAT.EMPTY) this.active.add(i);
+    this._wake(x,y,z);
+  }
+
+  setSpout(x,y,z,emitMat,rate) {
+    if(!this.inBounds(x,y,z)) return;
+    if(y===0) return; // protect floor
+    const i = this.idx(x,y,z);
+    this.cells[i]=MAT.SPOUT; this.variant[i]=0; this.age[i]=0;
+    this.spoutMat[i]=emitMat; this.spoutRate[i]=rate;
+    this.spouts.add(i);
+    this.active.add(i);
+    this._wake(x,y,z);
+  }
+
+  swap(ax,ay,az,bx,by,bz) {
+    const ia=this.idx(ax,ay,az), ib=this.idx(bx,by,bz);
+    let t;
+    t=this.cells[ia];  this.cells[ia]=this.cells[ib];   this.cells[ib]=t;
+    t=this.variant[ia];this.variant[ia]=this.variant[ib];this.variant[ib]=t;
+    t=this.age[ia];    this.age[ia]=this.age[ib];        this.age[ib]=t;
+    this.active.add(ia); this.active.add(ib);
+    this._wake(ax,ay,az); this._wake(bx,by,bz);
+  }
+
+  _wake(x,y,z) {
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++) {
+      const nx=x+dx,ny=y+dy,nz=z+dz;
+      if(this.inBounds(nx,ny,nz)) { const ni=this.idx(nx,ny,nz); if(this.cells[ni]!==MAT.EMPTY) this.active.add(ni); }
+    }
+  }
+
+  _buildFloor() { for(let x=0;x<GRID;x++) for(let z=0;z<GRID;z++) this.set(x,0,z,MAT.STONE); }
+
+  _canDisplace(mover,tx,ty,tz) {
+    if(!this.inBounds(tx,ty,tz)) return false;
+    const t=this.cells[this.idx(tx,ty,tz)];
+    if(t===MAT.EMPTY) return true;
+    if(t===MAT.STONE||t===MAT.SPOUT) return false;
+    return DENSITY[t]<DENSITY[mover];
+  }
+
+  step() {
+    // ── Spout emission ──
+    for(const si of this.spouts) {
+      if(this.cells[si]!==MAT.SPOUT) { this.spouts.delete(si); continue; }
+      const x=si%GRID, y=(si/GRID|0)%GRID, z=si/(GRID*GRID)|0;
+      const eMat=this.spoutMat[si], rate=this.spoutRate[si];
+      let placed=0;
+      // Try directly below, then fan out in a radius
+      const below=y-1;
+      if(below>=0 && this.get(x,below,z)===MAT.EMPTY) { this.set(x,below,z,eMat); placed++; }
+      // Fill remaining rate with random cells in downward cone
+      let tries=0;
+      while(placed<rate && tries<rate*4) {
+        tries++;
+        const r=Math.random()*2|0; // cone radius 0-1
+        const angle=Math.random()*Math.PI*2;
+        const ox=Math.round(Math.cos(angle)*r), oz=Math.round(Math.sin(angle)*r);
+        const dy=-(Math.random()*2|0)-1; // 1 or 2 below
+        const nx=x+ox, ny=y+dy, nz=z+oz;
+        if(this.inBounds(nx,ny,nz)&&this.get(nx,ny,nz)===MAT.EMPTY) { this.set(nx,ny,nz,eMat); placed++; }
+      }
+      this.active.add(si); // spouts always stay active
+    }
+
+    // ── Cell simulation ──
+    const list=Array.from(this.active);
+    for(let i=list.length-1;i>0;i--) { const j=Math.random()*i|0; const t=list[i];list[i]=list[j];list[j]=t; }
+    const next=new Set();
+
+    for(const ci of list) {
+      const mat=this.cells[ci]; if(mat===MAT.EMPTY) continue;
+      const x=ci%GRID, y=(ci/GRID|0)%GRID, z=ci/(GRID*GRID)|0;
+
+      // Spouts are immortal and handled above
+      if(mat===MAT.SPOUT) { next.add(ci); continue; }
+
+      this.age[ci]++;
+      const life=LIFETIME[mat];
+      if(life>0 && this.age[ci]>life+(Math.random()*20|0)) {
+        if(mat===MAT.FIRE) { this.cells[ci]=MAT.SMOKE; this.variant[ci]=Math.random()*3|0; this.age[ci]=0; next.add(ci); }
+        else this.cells[ci]=MAT.EMPTY;
+        this._wake(x,y,z); continue;
+      }
+      if(mat===MAT.STONE) { next.add(ci); continue; }
+
+      let moved=false;
+      if(mat===MAT.SAND)       moved=this._sand(x,y,z,next);
+      else if(IS_LIQ[mat])     moved=this._liquid(x,y,z,mat,next);
+      else if(mat===MAT.FIRE)  moved=this._fire(x,y,z,next);
+      else if(IS_GAS[mat])     moved=this._gas(x,y,z,mat,next);
+
+      if(!moved&&mat!==MAT.STONE) {
+        const b=this.get(x,y-1,z);
+        if(b===MAT.EMPTY||DENSITY[b]<DENSITY[mat]) next.add(ci);
+        else if(IS_LIQ[mat]||IS_GAS[mat]||mat===MAT.FIRE) next.add(ci);
+      }
+    }
+    this.active=next;
+  }
+
+  _sand(x,y,z,next) {
+    if(y>0&&this._canDisplace(MAT.SAND,x,y-1,z)){this.swap(x,y,z,x,y-1,z);next.add(this.idx(x,y-1,z));return true;}
+    const dirs=_shuf([[-1,-1,0],[1,-1,0],[0,-1,-1],[0,-1,1]]);
+    for(const[dx,dy,dz]of dirs){const nx=x+dx,ny=y+dy,nz=z+dz;if(this._canDisplace(MAT.SAND,nx,ny,nz)){this.swap(x,y,z,nx,ny,nz);next.add(this.idx(nx,ny,nz));return true;}}
+    return false;
+  }
+
+  _liquid(x,y,z,mat,next) {
+    if(mat===MAT.LAVA) {
+      const nb6=[[-1,0,0],[1,0,0],[0,1,0],[0,-1,0],[0,0,-1],[0,0,1]];
+      for(const[dx,dy,dz]of nb6){
+        const nx=x+dx,ny=y+dy,nz=z+dz; if(!this.inBounds(nx,ny,nz))continue;
+        const nm=this.get(nx,ny,nz);
+        if(nm===MAT.WATER){this.set(x,y,z,MAT.STONE);this.set(nx,ny,nz,MAT.STEAM);next.add(this.idx(x,y,z));next.add(this.idx(nx,ny,nz));return true;}
+        if(nm===MAT.OIL&&Math.random()<0.04){this.set(nx,ny,nz,MAT.FIRE);next.add(this.idx(nx,ny,nz));}
+      }
+    }
+    if(y>0&&this._canDisplace(mat,x,y-1,z)){this.swap(x,y,z,x,y-1,z);next.add(this.idx(x,y-1,z));return true;}
+    const dirs=_shuf([[-1,0,0],[1,0,0],[0,0,-1],[0,0,1],[-1,0,-1],[1,0,-1],[-1,0,1],[1,0,1]]);
+    for(const[dx,,dz]of dirs){const nx=x+dx,nz2=z+dz;if(this._canDisplace(mat,nx,y,nz2)){this.swap(x,y,z,nx,y,nz2);next.add(this.idx(nx,y,nz2));return true;}}
+    return false;
+  }
+
+  _fire(x,y,z,next) {
+    const nb6=[[-1,0,0],[1,0,0],[0,1,0],[0,-1,0],[0,0,-1],[0,0,1]];
+    for(const[dx,dy,dz]of nb6){
+      const nx=x+dx,ny=y+dy,nz=z+dz; if(!this.inBounds(nx,ny,nz))continue;
+      if(this.get(nx,ny,nz)===MAT.OIL&&Math.random()<0.08){this.set(nx,ny,nz,MAT.FIRE);next.add(this.idx(nx,ny,nz));}
+    }
+    if(y<GRID-1&&this.get(x,y+1,z)===MAT.EMPTY&&Math.random()<0.25){this.swap(x,y,z,x,y+1,z);next.add(this.idx(x,y+1,z));return true;}
+    next.add(this.idx(x,y,z)); return false;
+  }
+
+  _gas(x,y,z,mat,next) {
+    if(y<GRID-1&&this.get(x,y+1,z)===MAT.EMPTY){this.swap(x,y,z,x,y+1,z);next.add(this.idx(x,y+1,z));return true;}
+    const dirs=_shuf([[-1,1,0],[1,1,0],[0,1,-1],[0,1,1]]);
+    for(const[dx,dy,dz]of dirs){const nx=x+dx,ny=y+dy,nz=z+dz;if(this.inBounds(nx,ny,nz)&&this.get(nx,ny,nz)===MAT.EMPTY){this.swap(x,y,z,nx,ny,nz);next.add(this.idx(nx,ny,nz));return true;}}
+    next.add(this.idx(x,y,z)); return false;
+  }
+}
+
+function _shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.random()*i|0;const t=r[i];r[i]=r[j];r[j]=t;}return r;}
+
+// ─── DDA RAYCAST ─────────────────────────────────────────────────────────────
+function ddaRaycast(world,origin,dir,maxDist) {
+  let x=Math.floor(origin.x),y=Math.floor(origin.y),z=Math.floor(origin.z);
+  const sx=dir.x>0?1:-1,sy=dir.y>0?1:-1,sz=dir.z>0?1:-1;
+  const tdx=Math.abs(dir.x)<1e-9?1e30:1/Math.abs(dir.x);
+  const tdy=Math.abs(dir.y)<1e-9?1e30:1/Math.abs(dir.y);
+  const tdz=Math.abs(dir.z)<1e-9?1e30:1/Math.abs(dir.z);
+  let tx=dir.x>0?(x+1-origin.x)*tdx:(origin.x-x)*tdx;
+  let ty=dir.y>0?(y+1-origin.y)*tdy:(origin.y-y)*tdy;
+  let tz=dir.z>0?(z+1-origin.z)*tdz:(origin.z-z)*tdz;
+  let dist=0,face='y';
+  while(dist<maxDist){
+    if(tx<ty&&tx<tz){x+=sx;dist=tx;tx+=tdx;face='x';}
+    else if(ty<tz)  {y+=sy;dist=ty;ty+=tdy;face='y';}
+    else            {z+=sz;dist=tz;tz+=tdz;face='z';}
+    if(!world.inBounds(x,y,z)) return null;
+    if(world.get(x,y,z)!==MAT.EMPTY) return{x,y,z,dist,face};
+  }
+  return null;
+}
+
+// ─── SPOUT VISUALS ───────────────────────────────────────────────────────────
+class SpoutVisuals {
+  constructor(scene) {
+    this.scene = scene;
+    // Cone indicator pointing downward per spout
+    this.coneGeo = new THREE.ConeGeometry(0.28, 0.55, 8);
+    this.cones   = new THREE.InstancedMesh(this.coneGeo, new THREE.MeshLambertMaterial({transparent:true,opacity:0.88}), 2048);
+    this.cones.count = 0; this.cones.frustumCulled = false;
+    scene.add(this.cones);
+    // Ring pulsing around spout base
+    this.ringGeo = new THREE.TorusGeometry(0.55, 0.06, 8, 24);
+    this.rings   = new THREE.InstancedMesh(this.ringGeo, new THREE.MeshLambertMaterial({transparent:true,opacity:0.6}), 2048);
+    this.rings.count = 0; this.rings.frustumCulled = false;
+    scene.add(this.rings);
+    this.dummy = new THREE.Object3D();
+    this.colObj = new THREE.Color();
+    this.t = 0;
+  }
+
+  update(world, dt) {
+    this.t += dt;
+    const spoutArr = Array.from(world.spouts);
+    const n = spoutArr.length;
+    this.cones.count = n;
+    this.rings.count = n;
+
+    for(let i=0;i<n;i++) {
+      const ci = spoutArr[i];
+      if(world.cells[ci]!==MAT.SPOUT) continue;
+      const x=ci%GRID, y=(ci/GRID|0)%GRID, z=ci/(GRID*GRID)|0;
+      const eMat = world.spoutMat[ci];
+      const rate = world.spoutRate[ci];
+      const hex  = MAT_HEX[eMat] || '#ffffff';
+      this.colObj.set(hex);
+
+      // Cone points down, bobs gently
+      const bob = Math.sin(this.t*2 + i*0.7)*0.08;
+      this.dummy.position.set(x+0.5, y - 0.5 + bob, z+0.5);
+      this.dummy.rotation.set(0,0,Math.PI); // flip cone to point down
+      const coneScale = 0.6 + rate*0.08;
+      this.dummy.scale.setScalar(coneScale);
+      this.dummy.updateMatrix();
+      this.cones.setMatrixAt(i, this.dummy.matrix);
+      this.cones.setColorAt(i, this.colObj);
+
+      // Ring pulses: faster = higher rate
+      const pulse = 0.82 + Math.sin(this.t*(1+rate*0.4) + i)*0.18;
+      this.dummy.position.set(x+0.5, y+0.55, z+0.5);
+      this.dummy.rotation.set(Math.PI/2, 0, 0);
+      this.dummy.scale.setScalar(pulse);
+      this.dummy.updateMatrix();
+      this.rings.setMatrixAt(i, this.dummy.matrix);
+      this.rings.setColorAt(i, this.colObj);
+    }
+    this.cones.instanceMatrix.needsUpdate = true;
+    this.rings.instanceMatrix.needsUpdate = true;
+    if(this.cones.instanceColor) this.cones.instanceColor.needsUpdate = true;
+    if(this.rings.instanceColor) this.rings.instanceColor.needsUpdate = true;
+  }
+}
+
+// ─── RENDERER ─────────────────────────────────────────────────────────────────
+class VoxelRenderer {
+  constructor(world,canvas) {
+    this.world=world; this.canvas=canvas;
+
+    this.renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    this.renderer.setSize(innerWidth,innerHeight);
+    this.renderer.sortObjects=true;
+    this.renderer.xr.enabled=true;
+
+    this.scene=new THREE.Scene();
+    this.scene.background=new THREE.Color(0x060a0e);
+    this.scene.fog=new THREE.Fog(0x060a0e,GRID*1.6,GRID*3.2);
+
+    // Camera
+    this.camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.1,300);
+    this.camera.position.set(GRID*0.5,GRID*0.6,GRID*1.5);
+    this.camera.lookAt(GRID*0.5,GRID*0.25,GRID*0.5);
+
+    // Scene group — VR scale+position transforms this, not the camera rig
+    this.sceneGroup=new THREE.Group();
+    this.scene.add(this.sceneGroup);
+    this.sceneGroup.scale.setScalar(1);
+
+    // ── Lighting ──
+    // Strong ambient so everything is visible
+    this.scene.add(new THREE.AmbientLight(0xffffff,0.75));
+    // Hemisphere: warm sky, cool ground
+    this.scene.add(new THREE.HemisphereLight(0xffeedd,0x223344,0.9));
+    // Key directional
+    const sun=new THREE.DirectionalLight(0xffffff,1.0); sun.position.set(2,4,2); this.scene.add(sun);
+    // Soft fill from opposite
+    const fill=new THREE.DirectionalLight(0x8899bb,0.5); fill.position.set(-2,-1,-2); this.scene.add(fill);
+    // Dynamic lava glow
+    this.lavaLight=new THREE.PointLight(0xff4400,0,GRID*0.9); this.lavaLight.position.set(GRID/2,4,GRID/2); this.sceneGroup.add(this.lavaLight);
+    // Dynamic fire glow
+    this.fireLight=new THREE.PointLight(0xff8800,0,GRID*0.7); this.fireLight.position.set(GRID/2,6,GRID/2); this.sceneGroup.add(this.fireLight);
+
+    // Wireframe boundary box
+    const bGeo=new THREE.BoxGeometry(GRID,GRID,GRID);
+    const eGeo=new THREE.EdgesGeometry(bGeo);
+    const eMat=new THREE.LineBasicMaterial({color:0x1a3a5a,transparent:true,opacity:0.45});
+    const wireBox=new THREE.LineSegments(eGeo,eMat);
+    wireBox.position.set(GRID/2,GRID/2,GRID/2);
+    this.sceneGroup.add(wireBox);
+
+    // Floor grid
+    const floorGrid=new THREE.GridHelper(GRID,GRID,0x0d1f2d,0x091522);
+    floorGrid.position.set(GRID/2,0.02,GRID/2);
+    this.sceneGroup.add(floorGrid);
+
+    // Voxel instanced meshes
+    const cubeGeo=new THREE.BoxGeometry(1,1,1);
+    this.meshes={};
+    const maxI=GRID*GRID*GRID;
+    for(const[midStr,cols]of Object.entries(COLORS)) {
+      const mid=parseInt(midStr);
+      const mat=new THREE.MeshLambertMaterial({color:cols[0]});
+      if(mid===MAT.WATER){mat.transparent=true;mat.opacity=0.72;}
+      if(mid===MAT.OIL)  {mat.transparent=true;mat.opacity=0.88;}
+      if(mid===MAT.STEAM){mat.transparent=true;mat.opacity=0.30;}
+      if(mid===MAT.SMOKE){mat.transparent=true;mat.opacity=0.42;}
+      if(mid===MAT.FIRE) {mat.transparent=true;mat.opacity=0.88;mat.emissive=new THREE.Color(0xff3300);mat.emissiveIntensity=0.5;}
+      const mesh=new THREE.InstancedMesh(cubeGeo,mat,maxI);
+      mesh.count=0; mesh.frustumCulled=false;
+      if([MAT.WATER,MAT.OIL,MAT.STEAM,MAT.SMOKE,MAT.FIRE].includes(mid)) mesh.renderOrder=1;
+      this.sceneGroup.add(mesh);
+      this.meshes[midStr]=mesh;
+    }
+    // Spout base cube (grey with slight emissive)
+    const spoutMat=new THREE.MeshLambertMaterial({color:0x334455,emissive:new THREE.Color(0x112233),emissiveIntensity:0.4});
+    this.spoutMesh=new THREE.InstancedMesh(cubeGeo,spoutMat,2048);
+    this.spoutMesh.count=0; this.spoutMesh.frustumCulled=false;
+    this.sceneGroup.add(this.spoutMesh);
+
+    this.colorObjs={};
+    for(const[midStr,cols]of Object.entries(COLORS)) this.colorObjs[midStr]=cols.map(c=>new THREE.Color(c));
+    this.dummy=new THREE.Object3D();
+
+    // Spout visuals (cones + rings)
+    this.spoutVis=new SpoutVisuals(this.sceneGroup);
+
+    // VR controller meshes (built lazily)
+    this.controllers=[];
+    this.controllerGrips=[];
+    this._vrSetup=false;
+  }
+
+  setupVR() {
+    if(this._vrSetup) return; this._vrSetup=true;
+    for(let i=0;i<2;i++) {
+      const ctrl=this.renderer.xr.getController(i);
+      this.scene.add(ctrl); this.controllers.push(ctrl);
+      // Controller grip model placeholder — simple hand shape
+      const grip=this.renderer.xr.getControllerGrip(i);
+      this.scene.add(grip); this.controllerGrips.push(grip);
+      // Visual: small glowing sphere at controller tip
+      const tipGeo=new THREE.SphereGeometry(0.018,10,10);
+      const tipMat=new THREE.MeshLambertMaterial({color:0x88ddff,emissive:new THREE.Color(0x44aaff),emissiveIntensity:0.8,transparent:true,opacity:0.9});
+      const tipMesh=new THREE.Mesh(tipGeo,tipMat);
+      tipMesh.name='tip'; tipMesh.position.set(0,0,-0.05); // offset slightly forward from grip
+      ctrl.add(tipMesh);
+      // Particle stream visual (line from grip downward)
+      const streamGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,-0.12,0)]);
+      const streamMat=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.4});
+      const stream=new THREE.Line(streamGeo,streamMat);
+      stream.name='stream'; stream.visible=false;
+      ctrl.add(stream);
+    }
+  }
+
+  // World-space position of controller tip
+  getControllerTipWorld(ctrlIdx) {
+    const ctrl=this.controllers[ctrlIdx];
+    if(!ctrl) return null;
+    const tip=ctrl.getObjectByName('tip');
+    if(!tip) return null;
+    const pos=new THREE.Vector3();
+    tip.getWorldPosition(pos);
+    return pos;
+  }
+
+  // Convert world-space pos to voxel grid coords (accounting for sceneGroup transform)
+  worldToVoxel(worldPos) {
+    const local=this.sceneGroup.worldToLocal(worldPos.clone());
+    return{ x:Math.floor(local.x), y:Math.floor(local.y), z:Math.floor(local.z) };
+  }
+
+  setControllerStreamColor(ctrlIdx,hexColor,visible) {
+    const ctrl=this.controllers[ctrlIdx];
+    if(!ctrl) return;
+    const stream=ctrl.getObjectByName('stream');
+    const tip=ctrl.getObjectByName('tip');
+    if(stream){stream.visible=visible;if(visible)stream.material.color.set(hexColor);}
+    if(tip)tip.material.color.set(hexColor);
+  }
+
+  rebuild() {
+    const counts={};
+    for(const k of Object.keys(this.meshes)) counts[k]=0;
+    let lavaCount=0,lavaSumX=0,lavaSumY=0,lavaSumZ=0;
+    let fireCount=0,fireSumX=0,fireSumY=0,fireSumZ=0;
+    let spoutCount=0;
+    const dummy=this.dummy;
+
+    for(let z=0;z<GRID;z++) for(let y=0;y<GRID;y++) for(let x=0;x<GRID;x++) {
+      const cell=this.world.get(x,y,z); if(cell===MAT.EMPTY) continue;
+      if(cell===MAT.SPOUT) {
+        dummy.position.set(x+0.5,y+0.5,z+0.5); dummy.rotation.set(0,0,0); dummy.scale.setScalar(1);
+        dummy.updateMatrix();
+        this.spoutMesh.setMatrixAt(spoutCount,dummy.matrix);
+        spoutCount++;
+        continue;
+      }
+      const k=String(cell); const mesh=this.meshes[k]; if(!mesh) continue;
+      const n=counts[k];
+      dummy.position.set(x+0.5,y+0.5,z+0.5); dummy.rotation.set(0,0,0); dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(n,dummy.matrix);
+      const v=this.world.variant[this.world.idx(x,y,z)];
+      mesh.setColorAt(n,this.colorObjs[k][v]||this.colorObjs[k][0]);
+      counts[k]++;
+      if(cell===MAT.LAVA){lavaCount++;lavaSumX+=x;lavaSumY+=y;lavaSumZ+=z;}
+      if(cell===MAT.FIRE){fireCount++;fireSumX+=x;fireSumY+=y;fireSumZ+=z;}
+    }
+
+    for(const[k,mesh]of Object.entries(this.meshes)){mesh.count=counts[k]||0;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
+    this.spoutMesh.count=spoutCount; this.spoutMesh.instanceMatrix.needsUpdate=true;
+
+    // Dynamic lights
+    this.lavaLight.intensity=lavaCount>0?Math.min(lavaCount*0.05,4):0;
+    if(lavaCount>0) this.lavaLight.position.set(lavaSumX/lavaCount+0.5,lavaSumY/lavaCount+0.5,lavaSumZ/lavaCount+0.5);
+    this.fireLight.intensity=fireCount>0?Math.min(fireCount*0.09,3):0;
+    if(fireCount>0) this.fireLight.position.set(fireSumX/fireCount+0.5,fireSumY/fireCount+1,fireSumZ/fireCount+0.5);
+  }
+
+  render(dt) { this.rebuild(); this.spoutVis.update(this.world,dt); this.renderer.render(this.scene,this.camera); }
+  resize()   { this.camera.aspect=innerWidth/innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth,innerHeight); }
+}
+
+// ─── FLY CAMERA (desktop) ────────────────────────────────────────────────────
+class FlyCamera {
+  constructor(camera,canvas) {
+    this.camera=camera; this.canvas=canvas;
+    this.locked=false; this.yaw=0; this.pitch=0; this.keys={};
+    this.speed=10; this.reach=22;
+    const e=new THREE.Euler().setFromQuaternion(camera.quaternion,'YXZ');
+    this.yaw=e.y; this.pitch=e.x;
+    canvas.addEventListener('click',()=>this.lock());
+    document.addEventListener('pointerlockchange',()=>{
+      this.locked=document.pointerLockElement===canvas;
+      document.getElementById('prompt').classList.toggle('h',this.locked);
+      document.getElementById('xhair').classList.toggle('h',!this.locked);
+    });
+    document.addEventListener('mousemove',e=>{
+      if(!this.locked)return;
+      this.yaw-=e.movementX*0.002; this.pitch-=e.movementY*0.002;
+      this.pitch=Math.max(-Math.PI/2+0.05,Math.min(Math.PI/2-0.05,this.pitch));
+    });
+    document.addEventListener('keydown',e=>{this.keys[e.code]=true;if(e.code==='Space')e.preventDefault();});
+    document.addEventListener('keyup',e=>{this.keys[e.code]=false;});
+    document.addEventListener('wheel',e=>{if(!this.locked)return;this.reach=Math.max(1,Math.min(GRID*2,this.reach+e.deltaY*0.03));},{passive:true});
+  }
+  lock(){this.canvas.requestPointerLock();}
+  lookDir(){return new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(this.pitch,this.yaw,0,'YXZ')).normalize();}
+  update(dt) {
+    if(!this.locked)return;
+    const fwd=this.lookDir();
+    const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
+    const up=new THREE.Vector3(0,1,0);
+    const spd=this.speed*dt*((this.keys['ShiftLeft']||this.keys['ShiftRight'])?2.8:1);
+    if(this.keys['KeyW'])this.camera.position.addScaledVector(fwd,spd);
+    if(this.keys['KeyS'])this.camera.position.addScaledVector(fwd,-spd);
+    if(this.keys['KeyA'])this.camera.position.addScaledVector(right,-spd);
+    if(this.keys['KeyD'])this.camera.position.addScaledVector(right,spd);
+    if(this.keys['Space'])this.camera.position.addScaledVector(up,spd);
+    if(this.keys['KeyQ'])this.camera.position.addScaledVector(up,-spd);
+    this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch,this.yaw,0,'YXZ'));
+  }
+}
+
+// ─── PLACER STATE ────────────────────────────────────────────────────────────
+// Shared state used by both desktop and VR placers
+class PlacerState {
+  constructor() {
+    this.matIndex  = 0;                        // index into PLACE_MATS
+    this.modeIndex = 0;                        // 0=POUR 1=SPOUT 2=ERASE
+    this.brushSize = 1;
+    this.pendingRate = 4;                      // spout rate to lock in (1-8)
+  }
+  get mat()  { return PLACE_MATS[this.matIndex]; }
+  get mode() { return MODES[this.modeIndex]; }
+  cycleMat(dir=1) { this.matIndex=(this.matIndex+PLACE_MATS.length+dir)%PLACE_MATS.length; }
+  cycleMode()     { this.modeIndex=(this.modeIndex+1)%MODES.length; }
+}
+
+// ─── DESKTOP PLACER ──────────────────────────────────────────────────────────
+class DesktopPlacer {
+  constructor(world,fly,state) {
+    this.world=world; this.fly=fly; this.state=state;
+    this.placing=false; this.erasing=false;
+    this.lastHit=null;
+
+    document.addEventListener('mousedown',e=>{
+      if(!this.fly.locked)return;
+      if(e.button===0)this.placing=true;
+      if(e.button===2)this.erasing=true;
+      if(e.button===1){e.preventDefault();this._confirmSpout();} // middle click = confirm spout
+    });
+    document.addEventListener('mouseup',e=>{if(e.button===0)this.placing=false;if(e.button===2)this.erasing=false;});
+    document.addEventListener('contextmenu',e=>e.preventDefault());
+    document.addEventListener('keydown',e=>{
+      if(!this.fly.locked)return;
+      if(e.code==='KeyE'){this.state.cycleMode();this._updateModeUI();}
+      const n=parseInt(e.key); if(n>=1&&n<=6){this.state.matIndex=n-1;this._updateMatUI();}
+    });
+    document.addEventListener('wheel',e=>{
+      if(!this.fly.locked)return;
+      if(this.state.mode==='SPOUT'){
+        this.state.pendingRate=Math.max(1,Math.min(8,this.state.pendingRate+(e.deltaY>0?-1:1)));
+        this._updateModeUI();
+      } else {
+        this.fly.reach=Math.max(1,Math.min(GRID*2,this.fly.reach+e.deltaY*0.03));
+      }
+    },{passive:true});
+  }
+
+  _confirmSpout() {
+    if(!this.lastHit||this.state.mode!=='SPOUT')return;
+    const hit=this.lastHit;
+    let cx=hit.x,cy=hit.y,cz=hit.z;
+    if(hit.face==='x')cx-=Math.sign(this.fly.lookDir().x);
+    else if(hit.face==='y')cy-=Math.sign(this.fly.lookDir().y);
+    else cz-=Math.sign(this.fly.lookDir().z);
+    const r=this.state.brushSize-1;
+    for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++) {
+      if(dx*dx+dz*dz>r*r+0.5)continue;
+      this.world.setSpout(cx+dx,cy,cz+dz,this.state.mat,this.state.pendingRate);
+    }
+  }
+
+  _updateModeUI() {
+    const mode=this.state.mode;
+    document.getElementById('mode-label').textContent=mode;
+    document.getElementById('mode-dot').style.background=MODE_COLORS[mode];
+    const rateWrap=document.getElementById('rate-bar-wrap');
+    rateWrap.style.display=mode==='SPOUT'?'flex':'none';
+    document.getElementById('rate-fill').style.width=(this.state.pendingRate/8*100)+'%';
+    document.getElementById('rate-val').textContent=this.state.pendingRate;
+    const hitEl=document.getElementById('hit-info');
+    if(mode==='SPOUT') hitEl.textContent='SCROLL=rate  MMB=confirm spout';
+    else hitEl.textContent='';
+  }
+
+  _updateMatUI() {
+    const name=PLACE_NAMES[this.state.matIndex];
+    document.querySelectorAll('.mat-btn').forEach(b=>b.classList.toggle('active',b.dataset.mat===name));
+  }
+
+  update() {
+    if(!this.fly.locked){this.lastHit=null;return;}
+    const origin=this.fly.camera.position.clone();
+    const dir=this.fly.lookDir();
+    const hit=ddaRaycast(this.world,origin,dir,this.fly.reach);
+    this.lastHit=hit;
+
+    const mode=this.state.mode;
+    const mat=this.state.mat;
+    const r=this.state.brushSize-1;
+
+    if(mode==='POUR'&&this.placing&&hit) {
+      let cx=hit.x,cy=hit.y,cz=hit.z;
+      if(hit.face==='x')cx-=Math.sign(dir.x);
+      else if(hit.face==='y')cy-=Math.sign(dir.y);
+      else cz-=Math.sign(dir.z);
+      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
+        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+        const nx=cx+dx,ny=cy+dy,nz=cz+dz;
+        if(this.world.inBounds(nx,ny,nz)&&ny>0&&this.world.get(nx,ny,nz)===MAT.EMPTY) this.world.set(nx,ny,nz,mat);
+      }
+    }
+
+    if(mode==='ERASE'&&this.erasing&&hit) {
+      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
+        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+        const nx=hit.x+dx,ny=hit.y+dy,nz=hit.z+dz;
+        if(this.world.inBounds(nx,ny,nz)&&ny>0) this.world.set(nx,ny,nz,MAT.EMPTY);
+      }
+    }
+
+    if((mode==='POUR')&&this.erasing&&hit) {
+      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
+        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+        const nx=hit.x+dx,ny=hit.y+dy,nz=hit.z+dz;
+        if(this.world.inBounds(nx,ny,nz)&&ny>0) this.world.set(nx,ny,nz,MAT.EMPTY);
+      }
+    }
+  }
+}
+
+// ─── VR PLACER ───────────────────────────────────────────────────────────────
+class VRPlacer {
+  constructor(world,voxelRenderer,state) {
+    this.world=world; this.vr=voxelRenderer; this.state=state;
+    // Per-controller state
+    this.triggerVal=[0,0];      // analog trigger 0-1 for each controller
+    this.squeezeHeld=[false,false];
+    this.lastPlaceTime=[0,0];
+    // Pinch-to-scale
+    this.bothGripped=false;
+    this.lastPinchDist=0;
+    // Thumbstick state for rate dialing on right controller
+    this.thumbR=[0,0];
+    // Wrist UI (attached to left controller)
+    this._wristUI=null;
+    this._wristMatLabel=null;
+    this._wristModeLabel=null;
+    this._wristRateFill=null;
+    this._wristRateLabel=null;
+    this._pendingConfirm=false; // shows confirm prompt before spout place
+    // Spout confirm: left squeeze while right trigger = confirm
+    this.spoutPendingPos=null; // {x,y,z} in voxel coords
+    this._setupControllerEvents();
+  }
+
+  _setupControllerEvents() {
+    const session=()=>this.vr.renderer.xr.getSession();
+    // Poll gamepad each frame in update()
+  }
+
+  _buildWristUI() {
+    // Build a simple floating panel in 3D attached to left controller
+    const g=new THREE.Group();
+
+    // Background panel
+    const panelGeo=new THREE.PlaneGeometry(0.22,0.14);
+    const canvas=document.createElement('canvas');
+    canvas.width=440;canvas.height=280;
+    this._wristCanvas=canvas;
+    this._wristCtx=canvas.getContext('2d');
+    const tex=new THREE.CanvasTexture(canvas);
+    this._wristTex=tex;
+    const panelMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide});
+    const panel=new THREE.Mesh(panelGeo,panelMat);
+    g.add(panel);
+
+    // Position: above the left controller, facing user
+    g.position.set(0,0.08,0.02);
+    g.rotation.set(-0.6,0,0);
+    return g;
+  }
+
+  _drawWristUI() {
+    const ctx=this._wristCtx;
+    const cw=440,ch=280;
+    ctx.clearRect(0,0,cw,ch);
+    // Background
+    ctx.fillStyle='rgba(8,14,22,0.92)';
+    this._roundRect(ctx,0,0,cw,ch,18);
+    ctx.fill();
+    ctx.strokeStyle='rgba(80,160,255,0.35)';ctx.lineWidth=2;
+    this._roundRect(ctx,0,0,cw,ch,18);ctx.stroke();
+
+    // Mode
+    const mode=this.state.mode;
+    const modeColor=MODE_COLORS[mode];
+    ctx.fillStyle=modeColor;ctx.font='bold 28px monospace';ctx.textAlign='center';
+    ctx.fillText(mode,cw/2,48);
+
+    // Material color swatch + name
+    const matHex=MAT_HEX[this.state.mat]||'#ffffff';
+    ctx.fillStyle=matHex;
+    ctx.beginPath();ctx.arc(cw/2-60,100,18,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#a0c8ff';ctx.font='22px monospace';ctx.textAlign='left';
+    ctx.fillText(PLACE_NAMES[this.state.matIndex],cw/2-34,108);
+
+    // Rate bar (spout mode)
+    if(mode==='SPOUT') {
+      ctx.fillStyle='rgba(255,255,255,0.15)';
+      this._roundRect(ctx,30,132,cw-60,22,6);ctx.fill();
+      ctx.fillStyle=modeColor;
+      this._roundRect(ctx,30,132,(cw-60)*(this.state.pendingRate/8),22,6);ctx.fill();
+      ctx.fillStyle='#a0c8ff';ctx.font='18px monospace';ctx.textAlign='center';
+      ctx.fillText('RATE '+this.state.pendingRate+'/8',cw/2,150);
+      ctx.fillStyle='rgba(255,180,0,0.8)';ctx.font='16px monospace';
+      ctx.fillText('R-STICK=rate  GRIP=place',cw/2,180);
+    } else {
+      // Brush size
+      ctx.fillStyle='#a0c8ff';ctx.font='18px monospace';ctx.textAlign='center';
+      ctx.fillText('BRUSH '+this.state.brushSize,cw/2,148);
+      ctx.fillStyle='rgba(160,200,255,0.5)';ctx.font='15px monospace';
+      ctx.fillText('L-STICK=fly  L-TRIG=material',cw/2,178);
+      ctx.fillText('R-STICK=brush  L-CLICK=mode',cw/2,200);
+      ctx.fillText('R-TRIG=pour  R-GRIP=erase',cw/2,220);
+      ctx.fillText('BOTH-GRIP=scale',cw/2,240);
+    }
+
+    // Brush visualizer dots
+    const bCx=cw/2,bCy=238,bR=10,bs=this.state.brushSize;
+    for(let i=0;i<5;i++){
+      ctx.beginPath();ctx.arc(bCx+(i-2)*26,bCy,bR*(i<bs?1:0.35),0,Math.PI*2);
+      ctx.fillStyle=i<bs?matHex:'rgba(255,255,255,0.15)';ctx.fill();
+    }
+
+    this._wristTex.needsUpdate=true;
+  }
+
+  _roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+
+  update(dt) {
+    const xr=this.vr.renderer.xr;
+    if(!xr.isPresenting) return;
+    this.vr.setupVR();
+
+    // Attach wrist UI on first VR frame
+    const leftCtrl=this.vr.controllers[0];
+    if(leftCtrl&&!this._wristUI) {
+      this._wristUI=this._buildWristUI();
+      leftCtrl.add(this._wristUI);
+    }
+    this._drawWristUI();
+
+    // Read gamepads
+    const session=xr.getSession();
+    if(!session) return;
+    const sources=Array.from(session.inputSources||[]);
+
+    let lGP=null,rGP=null;
+    for(const src of sources) {
+      if(!src.gamepad) continue;
+      if(src.handedness==='left')  lGP=src.gamepad;
+      if(src.handedness==='right') rGP=src.gamepad;
+    }
+
+    // ── Left controller: thumbstick=locomotion, trigger tap=cycle mat, click=cycle mode ──
+    if(lGP) {
+      const lx=lGP.axes[2]||0; // thumbstick X → strafe
+      const ly=lGP.axes[3]||0; // thumbstick Y → forward/back
+      const LOCO_SPEED=0.04;
+      const deadzone=0.15;
+      if(Math.abs(lx)>deadzone||Math.abs(ly)>deadzone) {
+        const xrCam=xr.getCamera(this.vr.camera);
+        // Head-relative flat direction (Y ignored for comfort)
+        const headFwd=new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion);
+        headFwd.y=0; headFwd.normalize();
+        const headRight=new THREE.Vector3(1,0,0).applyQuaternion(xrCam.quaternion);
+        headRight.y=0; headRight.normalize();
+        // Move the sceneGroup (world moves, player stays) scaled to current world scale
+        const sg=this.vr.sceneGroup;
+        const sc=sg.scale.x||1;
+        if(Math.abs(ly)>deadzone) sg.position.addScaledVector(headFwd, ly*LOCO_SPEED*sc);
+        if(Math.abs(lx)>deadzone) sg.position.addScaledVector(headRight, -lx*LOCO_SPEED*sc);
+      }
+      // Left trigger tap → cycle material forward
+      const lTrig=lGP.buttons[0]?.value||0;
+      if(lTrig>0.5&&!this._lTrigUsed) { this.state.cycleMat(1); this._lTrigUsed=true; }
+      if(lTrig<0.25) this._lTrigUsed=false;
+      // Thumbstick click → cycle mode
+      if(lGP.buttons[3]?.pressed&&!this._lClickUsed) { this.state.cycleMode(); this._lClickUsed=true; }
+      if(!lGP.buttons[3]?.pressed) this._lClickUsed=false;
+      this.squeezeHeld[0]=lGP.buttons[1]?.pressed||false;
+    }
+
+    // ── Right controller: brush size via thumbstick, rate dial in spout mode ──
+    if(rGP) {
+      const ry=rGP.axes[3]||0; // thumbstick Y
+      if(Math.abs(ry)>0.7&&!this._rStickUsed) {
+        if(this.state.mode==='SPOUT') {
+          this.state.pendingRate=Math.max(1,Math.min(8,this.state.pendingRate+(ry<0?1:-1)));
+        } else {
+          this.state.brushSize=Math.max(1,Math.min(5,this.state.brushSize+(ry<0?1:-1)));
+        }
+        this._rStickUsed=true;
+      }
+      if(Math.abs(ry)<0.3) this._rStickUsed=false;
+      this.triggerVal[1]=rGP.buttons[0]?.value||0; // analog trigger
+      this.squeezeHeld[1]=rGP.buttons[1]?.pressed||false;
+    }
+
+    // ── Pinch-to-scale: both grips held ──
+    const bothGrip=this.squeezeHeld[0]&&this.squeezeHeld[1];
+    const p0=this.vr.getControllerTipWorld(0);
+    const p1=this.vr.getControllerTipWorld(1);
+    if(bothGrip&&p0&&p1) {
+      const dist=p0.distanceTo(p1);
+      if(this.bothGripped) {
+        const ratio=dist/this.lastPinchDist;
+        const sg=this.vr.sceneGroup;
+        const newScale=Math.max(0.05,Math.min(4,sg.scale.x*ratio));
+        sg.scale.setScalar(newScale);
+      }
+      this.lastPinchDist=dist; this.bothGripped=true;
+    } else { this.bothGripped=false; }
+
+    // ── Right trigger: place / pour from controller position ──
+    const triggerPressure=this.triggerVal[1];
+    if(triggerPressure>0.1&&!bothGrip&&p1) {
+      const vox=this.vr.worldToVoxel(p1);
+      if(this.world.inBounds(vox.x,vox.y,vox.z)&&vox.y>0) {
+        const mode=this.state.mode;
+        if(mode==='POUR') {
+          // Pressure-sensitive trickle: place cells at rate proportional to trigger
+          const tickRate=Math.ceil(triggerPressure*6); // 1-6 cells per frame
+          const now=performance.now();
+          if(now-this.lastPlaceTime[1]>16) { // throttle to 60fps max
+            const r=this.state.brushSize-1;
+            let placed=0;
+            for(let dx=-r;dx<=r&&placed<tickRate;dx++) for(let dy=-r;dy<=r&&placed<tickRate;dy++) for(let dz=-r;dz<=r&&placed<tickRate;dz++) {
+              if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+              const nx=vox.x+dx,ny=vox.y+dy,nz=vox.z+dz;
+              if(this.world.inBounds(nx,ny,nz)&&ny>0&&this.world.get(nx,ny,nz)===MAT.EMPTY) {
+                this.world.set(nx,ny,nz,this.state.mat); placed++;
+              }
+            }
+            this.lastPlaceTime[1]=now;
+          }
+        } else if(mode==='SPOUT') {
+          // Full squeeze = confirm spout placement
+          if(triggerPressure>0.85&&!this._spoutConfirmed) {
+            const r=this.state.brushSize-1;
+            for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++) {
+              if(dx*dx+dz*dz>r*r+0.5)continue;
+              this.world.setSpout(vox.x+dx,vox.y,vox.z+dz,this.state.mat,this.state.pendingRate);
+            }
+            this._spoutConfirmed=true;
+          }
+          if(triggerPressure<0.5) this._spoutConfirmed=false;
+        }
+      }
+      // Update stream visual color
+      const hexCol=MAT_HEX[this.state.mat]||'#ffffff';
+      this.vr.setControllerStreamColor(1,hexCol,triggerPressure>0.1);
+    } else {
+      this.vr.setControllerStreamColor(1,'#ffffff',false);
+    }
+
+    // ── Right grip: erase sphere around controller ──
+    if(this.squeezeHeld[1]&&!bothGrip&&p1) {
+      const vox=this.vr.worldToVoxel(p1);
+      const r=this.state.brushSize-1;
+      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
+        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+        const nx=vox.x+dx,ny=vox.y+dy,nz=vox.z+dz;
+        if(this.world.inBounds(nx,ny,nz)&&ny>0) this.world.set(nx,ny,nz,MAT.EMPTY);
+      }
+    }
+  }
+}
+
+// ─── RAIN ────────────────────────────────────────────────────────────────────
+class Rain {
+  constructor(world,state){this.world=world;this.state=state;this.active=false;this._iv=null;}
+  toggle(){
+    this.active=!this.active;
+    if(this.active)this._iv=setInterval(()=>this._drop(),60);
+    else clearInterval(this._iv);
+    return this.active;
+  }
+  _drop(){
+    const mat=this.state.mat;
+    for(let i=0;i<6;i++){
+      const x=1+(Math.random()*(GRID-2)|0),z=1+(Math.random()*(GRID-2)|0),y=GRID-2;
+      if(this.world.get(x,y,z)===MAT.EMPTY)this.world.set(x,y,z,mat);
+    }
+  }
+}
+
+// ─── VR BUTTON ───────────────────────────────────────────────────────────────
+function initVRButton(renderer, loopFn) {
+  const btn=document.getElementById('vr-btn');
+  if(!navigator.xr){btn.textContent='WebXR not supported';return;}
+  navigator.xr.isSessionSupported('immersive-vr').then(supported=>{
+    if(!supported){btn.textContent='VR not available';return;}
+    btn.disabled=false; btn.textContent='Enter VR';
+    btn.addEventListener('click',()=>{
+      if(renderer.xr.isPresenting){
+        renderer.xr.getSession()?.end();
+      } else {
+        navigator.xr.requestSession('immersive-vr',{
+          optionalFeatures:['local-floor','bounded-floor','hand-tracking']
+        }).then(session=>{
+          // IMPORTANT: setAnimationLoop must stay active — WebXR drives frames through it
+          renderer.xr.setSession(session);
+          btn.textContent='Exit VR';
+          document.getElementById('s-mode').textContent='VR';
+          session.addEventListener('end',()=>{
+            btn.textContent='Enter VR';
+            document.getElementById('s-mode').textContent='DESKTOP';
+          });
+        }).catch(err=>{
+          console.error('VR session failed:',err);
+          btn.textContent='VR failed — check runtime';
+        });
+      }
+    });
+  }).catch(()=>{
+    btn.textContent='WebXR check failed';
+  });
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+class App {
+  constructor() {
+    this.canvas=document.getElementById('c');
+    this.world=new World();
+    this.voxelRenderer=new VoxelRenderer(this.world,this.canvas);
+    this.fly=new FlyCamera(this.voxelRenderer.camera,this.canvas);
+    this.state=new PlacerState();
+    this.desktopPlacer=new DesktopPlacer(this.world,this.fly,this.state);
+    this.vrPlacer=new VRPlacer(this.world,this.voxelRenderer,this.state);
+    this.rain=new Rain(this.world,this.state);
+
+    this._bindUI();
+    this.desktopPlacer._updateModeUI();
+    window.addEventListener('resize',()=>this.voxelRenderer.resize());
+    initVRButton(this.voxelRenderer.renderer, null);
+
+    this.t0=this.tf=this.tick0=performance.now();
+    this.frames=0;this.fps=0;this.tickMs=0;
+
+    // Use renderer animation loop (handles both XR and desktop)
+    this.voxelRenderer.renderer.setAnimationLoop((time,frame)=>this._loop(time,frame));
+  }
+
+  _bindUI() {
+    document.querySelectorAll('.mat-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.mat-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const name=btn.dataset.mat;
+        this.state.matIndex=PLACE_NAMES.indexOf(name);
+      });
+    });
+    document.getElementById('bsize').addEventListener('input',e=>{this.state.brushSize=+e.target.value;});
+    document.getElementById('rain-btn').addEventListener('click',()=>{
+      document.getElementById('rain-btn').classList.toggle('active',this.rain.toggle());
+    });
+    document.getElementById('clear-btn').addEventListener('click',()=>{
+      this.world.cells.fill(0);this.world.variant.fill(0);this.world.age.fill(0);
+      this.world.spoutMat.fill(0);this.world.spoutRate.fill(0);
+      this.world.active.clear();this.world.spouts.clear();
+      this.world._buildFloor();
+    });
+  }
+
+  _loop(time) {
+    const now=performance.now();
+    const dt=Math.min((now-this.t0)/1000,0.05); this.t0=now;
+    this.frames++;
+    if(now-this.tf>600){this.fps=Math.round(this.frames/((now-this.tf)/1000));this.frames=0;this.tf=now;}
+
+    if(now-this.tick0>TICK_MS){
+      const ts=performance.now();
+      this.world.step();this.world.step();this.world.step();
+      this.tickMs=Math.round(performance.now()-ts);
+      this.tick0=now;
+    }
+
+    const isVR=this.voxelRenderer.renderer.xr.isPresenting;
+    if(!isVR){this.fly.update(dt);this.desktopPlacer.update();}
+    this.vrPlacer.update(dt);
+    this.voxelRenderer.render(dt);
+
+    // Stats
+    let total=0; for(let i=0;i<this.world.cells.length;i++) if(this.world.cells[i])total++;
+    document.getElementById('s-cells').textContent=total.toLocaleString();
+    document.getElementById('s-active').textContent=this.world.active.size.toLocaleString();
+    document.getElementById('s-spouts').textContent=this.world.spouts.size;
+    document.getElementById('s-tick').textContent=this.tickMs+'ms';
+    document.getElementById('s-fps').textContent=this.fps;
+    if(!isVR) document.getElementById('reach-val').textContent=Math.round(this.fly.reach);
+  }
+}
+
+window.addEventListener('load',()=>new App());
+</script>
+</body>
+</html>

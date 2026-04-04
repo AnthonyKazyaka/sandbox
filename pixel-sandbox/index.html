@@ -67,7 +67,7 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 <canvas id="c"></canvas>
 <div id="hud">
   <div id="title">SANDBOX³</div>
-  <div id="version">v0.2.0</div>
+  <div id="version">v0.2.1</div>
   <div id="xhair" class="h"></div>
   <div id="prompt"><span class="big">SANDBOX³</span><span class="sub">Click to enter · ESC to exit</span></div>
   <div id="hints">
@@ -935,8 +935,8 @@ class VRPlacer {
         const invRot=new THREE.Quaternion().copy(sg.quaternion).invert();
         const adjFwd=ctrlFwd.clone().applyQuaternion(invRot);
         const adjRight=ctrlRight.clone().applyQuaternion(invRot);
-        if(Math.abs(ly)>deadzone) sg.position.addScaledVector(adjFwd, ly*LOCO_SPEED*sc);
-        if(Math.abs(lx)>deadzone) sg.position.addScaledVector(adjRight, -lx*LOCO_SPEED*sc);
+        if(Math.abs(ly)>deadzone) sg.position.addScaledVector(adjFwd, -ly*LOCO_SPEED*sc);
+        if(Math.abs(lx)>deadzone) sg.position.addScaledVector(adjRight, lx*LOCO_SPEED*sc);
       }
       // Left trigger tap → cycle material forward
       const lTrig=lGP.buttons[0]?.value||0;
@@ -975,7 +975,7 @@ class VRPlacer {
       if(this.state.vrTurnMode==='snap') {
         // Snap turn: rotate by snapAngle degrees when thumbstick exceeds threshold
         if(Math.abs(rx)>0.6&&!this._snapTurnUsed) {
-          const angle=(rx>0?-1:1)*this.state.vrSnapAngle*Math.PI/180;
+          const angle=(rx>0?1:-1)*this.state.vrSnapAngle*Math.PI/180;
           // Rotate sceneGroup around world Y axis (player stays at origin)
           const pivot=new THREE.Vector3(0,0,0); // player is at world origin
           const pos=sg.position.clone().sub(pivot);
@@ -991,7 +991,7 @@ class VRPlacer {
       } else {
         // Smooth turn: continuous rotation based on thumbstick deflection
         if(Math.abs(rx)>0.15) {
-          const angle=-rx*this.state.vrSmoothTurnSpeed*frameDt*Math.PI/180;
+          const angle=rx*this.state.vrSmoothTurnSpeed*frameDt*Math.PI/180;
           const pivot=new THREE.Vector3(0,0,0);
           const pos=sg.position.clone().sub(pivot);
           const rotQ=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle);

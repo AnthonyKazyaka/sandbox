@@ -67,7 +67,7 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 <canvas id="c"></canvas>
 <div id="hud">
   <div id="title">SANDBOX³</div>
-  <div id="version">v0.2.1</div>
+  <div id="version">v0.3.0</div>
   <div id="xhair" class="h"></div>
   <div id="prompt"><span class="big">SANDBOX³</span><span class="sub">Click to enter · ESC to exit</span></div>
   <div id="hints">
@@ -161,6 +161,7 @@ class World {
     this.spoutRate = new Uint8Array(N);   // cells per tick per spout (1-8)
     this.active    = new Set();
     this.spouts    = new Set();           // indices of all spout cells
+    this.dirty     = true;                // rebuild needed flag
     this._buildFloor();
   }
 
@@ -175,6 +176,7 @@ class World {
     if(prev===MAT.SPOUT) this.spouts.delete(i);
     this.cells[i]=mat; this.variant[i]=Math.random()*3|0; this.age[i]=0;
     if(mat!==MAT.EMPTY) this.active.add(i);
+    this.dirty=true;
     this._wake(x,y,z);
   }
 
@@ -196,6 +198,7 @@ class World {
     t=this.variant[ia];this.variant[ia]=this.variant[ib];this.variant[ib]=t;
     t=this.age[ia];    this.age[ia]=this.age[ib];        this.age[ib]=t;
     this.active.add(ia); this.active.add(ib);
+    this.dirty=true;
     this._wake(ax,ay,az); this._wake(bx,by,bz);
   }
 
@@ -217,6 +220,7 @@ class World {
   }
 
   step() {
+    this.dirty=true;
     // ── Spout emission ──
     for(const si of this.spouts) {
       if(this.cells[si]!==MAT.SPOUT) { this.spouts.delete(si); continue; }
@@ -483,6 +487,7 @@ class VoxelRenderer {
 
     // Spout visuals (cones + rings)
     this.spoutVis=new SpoutVisuals(this.sceneGroup);
+    this._prevSpoutCount=0;
 
     // VR controller meshes (built lazily)
     this.controllers=[];
@@ -557,15 +562,32 @@ class VoxelRenderer {
   }
 
   rebuild() {
+    if(!this.world.dirty) return;
+    this.world.dirty=false;
+
     const counts={};
     for(const k of Object.keys(this.meshes)) counts[k]=0;
     let lavaCount=0,lavaSumX=0,lavaSumY=0,lavaSumZ=0;
     let fireCount=0,fireSumX=0,fireSumY=0,fireSumZ=0;
     let spoutCount=0;
     const dummy=this.dummy;
+    const cells=this.world.cells;
+    const variant=this.world.variant;
+    const G=GRID, G2=GRID*GRID;
 
-    for(let z=0;z<GRID;z++) for(let y=0;y<GRID;y++) for(let x=0;x<GRID;x++) {
-      const cell=this.world.get(x,y,z); if(cell===MAT.EMPTY) continue;
+    for(let z=0;z<G;z++) for(let y=0;y<G;y++) for(let x=0;x<G;x++) {
+      const ci=x+G*(y+G*z);
+      const cell=cells[ci]; if(cell===MAT.EMPTY) continue;
+
+      // Skip fully occluded voxels (surrounded on all 6 sides by non-empty cells)
+      if(x>0&&x<G-1&&y>0&&y<G-1&&z>0&&z<G-1&&
+         cells[ci-1]&&cells[ci+1]&&cells[ci-G]&&cells[ci+G]&&cells[ci-G2]&&cells[ci+G2]) {
+        // Still track for dynamic lights
+        if(cell===MAT.LAVA){lavaCount++;lavaSumX+=x;lavaSumY+=y;lavaSumZ+=z;}
+        if(cell===MAT.FIRE){fireCount++;fireSumX+=x;fireSumY+=y;fireSumZ+=z;}
+        continue;
+      }
+
       if(cell===MAT.SPOUT) {
         dummy.position.set(x+0.5,y+0.5,z+0.5); dummy.rotation.set(0,0,0); dummy.scale.setScalar(1);
         dummy.updateMatrix();
@@ -578,15 +600,20 @@ class VoxelRenderer {
       dummy.position.set(x+0.5,y+0.5,z+0.5); dummy.rotation.set(0,0,0); dummy.scale.setScalar(1);
       dummy.updateMatrix();
       mesh.setMatrixAt(n,dummy.matrix);
-      const v=this.world.variant[this.world.idx(x,y,z)];
-      mesh.setColorAt(n,this.colorObjs[k][v]||this.colorObjs[k][0]);
+      mesh.setColorAt(n,this.colorObjs[k][variant[ci]]||this.colorObjs[k][0]);
       counts[k]++;
       if(cell===MAT.LAVA){lavaCount++;lavaSumX+=x;lavaSumY+=y;lavaSumZ+=z;}
       if(cell===MAT.FIRE){fireCount++;fireSumX+=x;fireSumY+=y;fireSumZ+=z;}
     }
 
-    for(const[k,mesh]of Object.entries(this.meshes)){mesh.count=counts[k]||0;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
-    this.spoutMesh.count=spoutCount; this.spoutMesh.instanceMatrix.needsUpdate=true;
+    for(const[k,mesh]of Object.entries(this.meshes)){
+      const nc=counts[k]||0; const had=mesh.count>0;
+      mesh.count=nc;
+      if(nc>0||had){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
+    }
+    this.spoutMesh.count=spoutCount;
+    if(spoutCount>0||this._prevSpoutCount>0) this.spoutMesh.instanceMatrix.needsUpdate=true;
+    this._prevSpoutCount=spoutCount;
 
     // Dynamic lights
     this.lavaLight.intensity=lavaCount>0?Math.min(lavaCount*0.05,4):0;
@@ -1027,7 +1054,7 @@ class VRPlacer {
       if(this.bothGripped) {
         const ratio=dist/this.lastPinchDist;
         const sg=this.vr.sceneGroup;
-        const newScale=Math.max(0.05,Math.min(4,sg.scale.x*ratio));
+        const newScale=Math.max(0.05,Math.min(20,sg.scale.x*ratio));
         sg.scale.setScalar(newScale);
       }
       this.lastPinchDist=dist; this.bothGripped=true;

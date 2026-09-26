@@ -1,0 +1,1143 @@
+
+> test
+> node --test --test-concurrency=1 "tests/**/*.test.js"
+
+TAP version 13
+# Subtest: app boots: no uncaught errors and the empty backlog state is rendered
+not ok 1 - app boots: no uncaught errors and the empty backlog state is rendered
+  ---
+  duration_ms: 5205.341272
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:32:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#empty-backlog') to be visible[22m
+    [2m    15 × locator resolved to hidden <div id="empty-backlog" class="empty-state">…</div>[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:35:40)
+  ...
+# Subtest: search without an API key tells the user to add one in Settings
+not ok 2 - search without an API key tells the user to add one in Settings
+  ---
+  duration_ms: 30177.698556
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:40:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.fill: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#rawg-search')[22m
+    [2m    - locator resolved to <input type="text" id="rawg-search" class="form-input" placeholder="Search for a game..."/>[22m
+    [2m    - fill("hades")[22m
+    [2m  - attempting fill action[22m
+    [2m    2 × waiting for element to be visible, enabled and editable[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying fill action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and editable[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying fill action[22m
+    [2m      - waiting 100ms[22m
+    [2m    60 × waiting for element to be visible, enabled and editable[22m
+    [2m       - element is not visible[22m
+    [2m     - retrying fill action[22m
+    [2m       - waiting 500ms[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:44:14)
+  ...
+# Subtest: API key saved in Settings is used for RAWG searches
+not ok 3 - API key saved in Settings is used for RAWG searches
+  ---
+  duration_ms: 30140.866755
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:50:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.fill: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#setting-rawg-key')[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/user/sandbox/tests/e2e/game-backlog-tracker.test.js:59:14)
+  ...
+# Subtest: boots without errors
+ok 4 - boots without errors
+  ---
+  duration_ms: 898.911726
+  type: 'test'
+  ...
+# Subtest: entering and leaving VR updates the button and mode indicator without errors
+not ok 5 - entering and leaving VR updates the button and mode indicator without errors
+  ---
+  duration_ms: 1179.576255
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/pixel-sandbox.test.js:40:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'VR failed — check runtime'
+    - 'Exit VR'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Exit VR'
+  actual: 'VR failed — check runtime'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/pixel-sandbox.test.js:48:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: an idle world triggers no voxel rebuilds
+not ok 6 - an idle world triggers no voxel rebuilds
+  ---
+  duration_ms: 3140.246795
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/pixel-sandbox.test.js:57:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    13 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 13
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/pixel-sandbox.test.js:69:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CELLS stat matches the world after changes
+ok 7 - CELLS stat matches the world after changes
+  ---
+  duration_ms: 3028.786739
+  type: 'test'
+  ...
+# Subtest: editing a task persists across a reload
+not ok 8 - editing a task persists across a reload
+  ---
+  duration_ms: 3146.95656
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:29:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Original title'
+    - 'Renamed title'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Renamed title'
+  actual: 'Original title'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:37:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: "today" follows the user's local calendar (America/New_York at 2026-03-10T21:30:00-04:00)
+not ok 9 - "today" follows the user's local calendar (America/New_York at 2026-03-10T21:30:00-04:00)
+  ---
+  duration_ms: 1563.163971
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:51:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '2026-03-11'
+    - '2026-03-10'
+                ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-03-10'
+  actual: '2026-03-11'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:67:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: "today" follows the user's local calendar (Asia/Tokyo at 2026-03-11T08:30:00+09:00)
+not ok 10 - "today" follows the user's local calendar (Asia/Tokyo at 2026-03-11T08:30:00+09:00)
+  ---
+  duration_ms: 1515.376394
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:51:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '2026-03-10'
+    - '2026-03-11'
+                ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-03-11'
+  actual: '2026-03-10'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:67:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: completion date is kept when a completed task is edited later
+not ok 11 - completion date is kept when a completed task is edited later
+  ---
+  duration_ms: 1946.258776
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:80:1'
+  failureType: 'testCodeFailure'
+  error: 'Invalid time value'
+  code: 'ERR_TEST_FAILURE'
+  name: 'RangeError'
+  stack: |-
+    Date.toISOString (<anonymous>)
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:96:40)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: streak stays alive until the end of today
+not ok 12 - streak stays alive until the end of today
+  ---
+  duration_ms: 1519.617173
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:102:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    nothing done yet today, streak is still 2
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:108:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy completed tasks get completedAt migrated from updatedAt
+not ok 13 - legacy completed tasks get completedAt migrated from updatedAt
+  ---
+  duration_ms: 1089.464716
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:116:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '2026-03-05T12:00:00.000Z'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-03-05T12:00:00.000Z'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:125:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: completing a recurring task schedules the next occurrence (created via the form)
+not ok 14 - completing a recurring task schedules the next occurrence (created via the form)
+  ---
+  duration_ms: 31943.825626
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:129:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.selectOption: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#taskCategory')[22m
+    [2m    - locator resolved to <select name="category" id="taskCategory">…</select>[22m
+    [2m  - attempting select option action[22m
+    [2m    2 × waiting for element to be visible and enabled[22m
+    [2m      - did not find some options[22m
+    [2m    - retrying select option action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible and enabled[22m
+    [2m      - did not find some options[22m
+    [2m    - retrying select option action[22m
+    [2m      - waiting 100ms[22m
+    [2m    60 × waiting for element to be visible and enabled[22m
+    [2m       - did not find some options[22m
+    [2m     - retrying select option action[22m
+    [2m       - waiting 500ms[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/user/sandbox/tests/e2e/to-do-tracker.test.js:134:14)
+  ...
+# Subtest: recurrence intervals: daily, monthly (clamped to month end), and undated tasks
+not ok 15 - recurrence intervals: daily, monthly (clamped to month end), and undated tasks
+  ---
+  duration_ms: 1539.438551
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:158:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + null
+    - '2026-03-11'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-03-11'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:174:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: service worker installs and activates under the GitHub Pages sub-path
+not ok 16 - service worker installs and activates under the GitHub Pages sub-path
+  ---
+  duration_ms: 6487.810226
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'timeout: service worker never became ready'
+    - 'activated'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'activated'
+  actual: 'timeout: service worker never became ready'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:188:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: app shell loads offline after the first visit
+not ok 17 - app shell loads offline after the first visit
+  ---
+  duration_ms: 6528.383743
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:192:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.evaluate: Error: no SW
+        at eval (eval at evaluate (:290:30), <anonymous>:1:93)
+        at ClockController._callFirstTimer (<anonymous>:252:20)
+        at ClockController._runTo (<anonymous>:110:33)
+        at <anonymous>:159:19
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    eval (eval at evaluate (:290:30), <anonymous>:1:93)
+    ClockController._callFirstTimer (<anonymous>:252:20)
+    ClockController._runTo (<anonymous>:110:33)
+    <anonymous>:159:19
+    TestContext.<anonymous> (/home/user/sandbox/tests/e2e/to-do-tracker.test.js:194:14)
+  ...
+# Subtest: manifest as parsed by Chromium is scoped to the app and all icons load
+not ok 18 - manifest as parsed by Chromium is scoped to the app and all icons load
+  ---
+  duration_ms: 1585.422277
+  type: 'test'
+  location: '/home/user/sandbox/tests/e2e/to-do-tracker.test.js:207:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    scope is the app directory
+    + actual - expected
+    
+    + 'http://localhost:36949/'
+    - 'http://localhost:36949/sandbox/to-do-tracker/'
+                              ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'http://localhost:36949/sandbox/to-do-tracker/'
+  actual: 'http://localhost:36949/'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/e2e/to-do-tracker.test.js:214:10)
+    runNextTicks (node:internal/process/task_queues:64:5)
+    process.processImmediate (node:internal/timers:452:9)
+    process.callbackTrampoline (node:internal/async_hooks:130:17)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: first frame does not teleport the player (no huge initial delta time)
+not ok 19 - first frame does not teleport the player (no huge initial delta time)
+  ---
+  duration_ms: 5.028376
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:31:1'
+  failureType: 'testCodeFailure'
+  error: 'player at 1185.0,784.9; expected near centre'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:36:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: a bullet can reach the player's firing range before it expires
+not ok 20 - a bullet can reach the player's firing range before it expires
+  ---
+  duration_ms: 1.396245
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:39:1'
+  failureType: 'testCodeFailure'
+  error: 'bullet travelled 16.1px, range is 200px'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:43:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: movement speed is independent of frame rate
+not ok 21 - movement speed is independent of frame rate
+  ---
+  duration_ms: 2.803278
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:46:1'
+  failureType: 'testCodeFailure'
+  error: 'a basic enemy should cover a visible distance per second (moved 1.50px)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:57:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: returning from a background tab does not make enemies jump
+not ok 22 - returning from a background tab does not make enemies jump
+  ---
+  duration_ms: 9.58396
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:60:1'
+  failureType: 'testCodeFailure'
+  error: 'enemy moved 7.5px in one frame'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:70:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: the game is winnable: the auto-player clears waves
+not ok 23 - the game is winnable: the auto-player clears waves
+  ---
+  duration_ms: 145.153498
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:74:1'
+  failureType: 'testCodeFailure'
+  error: 'reached wave 1 after 90 s'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:77:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: the world pauses while the upgrade panel is open
+not ok 24 - the world pauses while the upgrade panel is open
+  ---
+  duration_ms: 14.031124
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:81:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        [
+    +     919.6581916389604,
+    +     -41.43049162742283
+    -     918.7417097853701,
+    -     -44.28708904615636
+        ],
+        [
+    +     667.507104204491,
+    +     848.9946208571847
+    -     664.5298465080758,
+    -     849.3634355494229
+        ],
+        [
+    +     1249.343127387282,
+    +     474.6024679977546
+    -     1249.6690647619873,
+    -     473.0360103324151
+        ],
+        [
+    +     -44.40651796258395,
+    +     516.7050798085406
+    -     -47.337566259979845,
+    -     516.065514539699
+        ],
+        [
+    +     -47.23817120621189,
+    +     619.2263791220754
+    -     -48.823902771874316,
+    -     619.0131178008952
+        ],
+        [
+    +     843.5111176069222,
+    +     -45.69891478704081
+    -     842.3710174892042,
+    -     -48.473848935803936
+        ],
+        [
+    +     921.7274095481097,
+    +     849.0932455677116
+    -     918.8128818549371,
+    -     849.804311928076
+        ],
+        [
+    +     864.4273287802694,
+    +     849.6408555754651
+    -     862.8590112399603,
+    -     849.9577229427074
+        ]
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      0: 918.7417097853701
+      1: -44.28708904615636
+    1:
+      0: 664.5298465080758
+      1: 849.3634355494229
+    2:
+      0: 1249.6690647619873
+      1: 473.0360103324151
+    3:
+      0: -47.337566259979845
+      1: 516.065514539699
+    4:
+      0: -48.823902771874316
+      1: 619.0131178008952
+    5:
+      0: 842.3710174892042
+      1: -48.473848935803936
+    6:
+      0: 918.8128818549371
+      1: 849.804311928076
+    7:
+      0: 862.8590112399603
+      1: 849.9577229427074
+  actual:
+    0:
+      0: 919.6581916389604
+      1: -41.43049162742283
+    1:
+      0: 667.507104204491
+      1: 848.9946208571847
+    2:
+      0: 1249.343127387282
+      1: 474.6024679977546
+    3:
+      0: -44.40651796258395
+      1: 516.7050798085406
+    4:
+      0: -47.23817120621189
+      1: 619.2263791220754
+    5:
+      0: 843.5111176069222
+      1: -45.69891478704081
+    6:
+      0: 921.7274095481097
+      1: 849.0932455677116
+    7:
+      0: 864.4273287802694
+      1: 849.6408555754651
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:89:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: HUD shows the real max health after a Health Boost
+not ok 25 - HUD shows the real max health after a Health Boost
+  ---
+  duration_ms: 1.881231
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:93:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '' !== '125'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '125'
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:101:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: after game over the player can restart without reloading
+not ok 26 - after game over the player can restart without reloading
+  ---
+  duration_ms: 3.2414
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/auto-shooter.test.js:105:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/auto-shooter.test.js:112:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: js/config.js is not in the repo (it is gitignored), so it must not be required
+ok 27 - js/config.js is not in the repo (it is gitignored), so it must not be required
+  ---
+  duration_ms: 1.150488
+  type: 'test'
+  ...
+# Subtest: core/rawg-api.js loads when js/config.js does not exist
+not ok 28 - core/rawg-api.js loads when js/config.js does not exist
+  ---
+  duration_ms: 2.378474
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-backlog-config.test.js:16:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot find module '/home/user/sandbox/game-backlog-tracker/js/config.js' imported from /home/user/sandbox/game-backlog-tracker/core/rawg-api.js"
+  code: 'ERR_MODULE_NOT_FOUND'
+  stack: |-
+    finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    moduleResolve (node:internal/modules/esm/resolve:861:10)
+    defaultResolve (node:internal/modules/esm/resolve:985:11)
+    #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    ModuleJob._link (node:internal/modules/esm/module_job:182:49)
+  ...
+# Subtest: API key comes from user settings and is used in request URLs
+not ok 29 - API key comes from user settings and is used in request URLs
+  ---
+  duration_ms: 0.276815
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-backlog-config.test.js:21:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot find module '/home/user/sandbox/game-backlog-tracker/js/config.js' imported from /home/user/sandbox/game-backlog-tracker/core/rawg-api.js"
+  code: 'ERR_MODULE_NOT_FOUND'
+  stack: |-
+    finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    moduleResolve (node:internal/modules/esm/resolve:861:10)
+    defaultResolve (node:internal/modules/esm/resolve:985:11)
+    #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    ModuleJob._link (node:internal/modules/esm/module_job:182:49)
+  ...
+# Subtest: searching without a key fails fast with an actionable message (no network call)
+not ok 30 - searching without a key fails fast with an actionable message (no network call)
+  ---
+  duration_ms: 0.213952
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-backlog-config.test.js:33:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot find module '/home/user/sandbox/game-backlog-tracker/js/config.js' imported from /home/user/sandbox/game-backlog-tracker/core/rawg-api.js"
+  code: 'ERR_MODULE_NOT_FOUND'
+  stack: |-
+    finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    moduleResolve (node:internal/modules/esm/resolve:861:10)
+    defaultResolve (node:internal/modules/esm/resolve:985:11)
+    #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    ModuleJob._link (node:internal/modules/esm/module_job:182:49)
+  ...
+# Subtest: MCP get_priority_list order and scores match the web calculator (backlog only)
+not ok 31 - MCP get_priority_list order and scores match the web calculator (backlog only)
+  ---
+  duration_ms: 8.313083
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:38:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'b',
+        'a',
+    +   'd',
+        'c',
+    -   'd'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'b'
+    1: 'a'
+    2: 'c'
+    3: 'd'
+  actual:
+    0: 'b'
+    1: 'a'
+    2: 'd'
+    3: 'c'
+  operator: 'deepStrictEqual'
+  stack: |-
+    file:///home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:44:12
+    withFixedNow (file:///home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:35:16)
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:39:3)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: MCP maxHours and limit filters still apply
+ok 32 - MCP maxHours and limit filters still apply
+  ---
+  duration_ms: 0.56449
+  type: 'test'
+  ...
+# Subtest: PriorityCalculator accepts explicit weights without touching storage
+not ok 33 - PriorityCalculator accepts explicit weights without touching storage
+  ---
+  duration_ms: 0.574607
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:58:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    30 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 30
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/game-backlog-priority-parity.test.js:60:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Stop then Start within one tick does not create a second update loop
+not ok 34 - Stop then Start within one tick does not create a second update loop
+  ---
+  duration_ms: 20.997155
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-of-life.test.js:16:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    exactly one pending tick
+    
+    2 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/game-of-life.test.js:23:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: Stop halts the simulation completely
+ok 35 - Stop halts the simulation completely
+  ---
+  duration_ms: 10.58166
+  type: 'test'
+  ...
+# Subtest: clicks map to the right cell when the canvas is scaled by CSS
+not ok 36 - clicks map to the right cell when the canvas is scaled by CSS
+  ---
+  duration_ms: 3.785221
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-of-life.test.js:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    intrinsic (310,210) is cell (31,21)
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/game-of-life.test.js:44:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: generation counter is shown and speed can be changed
+not ok 37 - generation counter is shown and speed can be changed
+  ---
+  duration_ms: 12.625149
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/game-of-life.test.js:47:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    6 !== 11
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 11
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/game-of-life.test.js:54:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: dirty is set exactly when a step changes what is rendered
+not ok 38 - dirty is set exactly when a step changes what is rendered
+  ---
+  duration_ms: 100.091188
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:23:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    step 215: dirty=true but changed=false
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:39:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: a settled world costs nothing to step: active set drains to empty
+not ok 39 - a settled world costs nothing to step: active set drains to empty
+  ---
+  duration_ms: 16.082609
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    no cells (including the stone floor) are re-simulated when nothing can move
+    
+    1024 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1024
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:48:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: occlusion culling only hides voxels that are really invisible
+not ok 40 - occlusion culling only hides voxels that are really invisible
+  ---
+  duration_ms: 1.194446
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:51:1'
+  failureType: 'testCodeFailure'
+  error: 'isOccluded is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    at (file:///home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:52:30)
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:57:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: _shuf is an unbiased Fisher–Yates shuffle
+not ok 41 - _shuf is an unbiased Fisher–Yates shuffle
+  ---
+  duration_ms: 9.708488
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:68:1'
+  failureType: 'testCodeFailure'
+  error: 'P(value 0 at position 0) = 0.000, expected 0.25'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/pixel-sandbox-world.test.js:74:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: GRID sanity
+ok 42 - GRID sanity
+  ---
+  duration_ms: 0.228729
+  type: 'test'
+  ...
+# Subtest: manifest start_url and scope stay inside the app directory
+not ok 43 - manifest start_url and scope stay inside the app directory
+  ---
+  duration_ms: 1.260266
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:17:1'
+  failureType: 'testCodeFailure'
+  error: 'start_url "/" must be relative'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:20:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: every manifest icon (including shortcut icons) exists
+not ok 44 - every manifest icon (including shortcut icons) exists
+  ---
+  duration_ms: 2.181059
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:24:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'icons/icon-72x72.png',
+    +   'icons/icon-96x96.png',
+    +   'icons/icon-128x128.png',
+    +   'icons/icon-144x144.png',
+    +   'icons/icon-152x152.png',
+    +   'icons/icon-192x192.png',
+    +   'icons/icon-384x384.png',
+    +   'icons/icon-512x512.png',
+    +   'icons/shortcut-add.png',
+    +   'icons/shortcut-tasks.png'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'icons/icon-72x72.png'
+    1: 'icons/icon-96x96.png'
+    2: 'icons/icon-128x128.png'
+    3: 'icons/icon-144x144.png'
+    4: 'icons/icon-152x152.png'
+    5: 'icons/icon-192x192.png'
+    6: 'icons/icon-384x384.png'
+    7: 'icons/icon-512x512.png'
+    8: 'icons/shortcut-add.png'
+    9: 'icons/shortcut-tasks.png'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:28:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: shortcut URLs are relative
+not ok 45 - shortcut URLs are relative
+  ---
+  duration_ms: 0.167044
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:31:1'
+  failureType: 'testCodeFailure'
+  error: '/?action=add-task'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:32:52)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: icons linked from index.html exist
+not ok 46 - icons linked from index.html exist
+  ---
+  duration_ms: 0.490236
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:35:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'favicon.ico'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'favicon.ico'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:38:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: service worker precache list is relative and complete
+not ok 47 - service worker precache list is relative and complete
+  ---
+  duration_ms: 0.310599
+  type: 'test'
+  location: '/home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:41:1'
+  failureType: 'testCodeFailure'
+  error: 'APP_SHELL array is declared'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: ~
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/sandbox/tests/unit/to-do-pwa-assets.test.js:43:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 6
+# fail 41
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 135068.568742

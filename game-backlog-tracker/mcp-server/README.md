@@ -199,7 +199,7 @@ This file is automatically created on first use and contains:
 
 ## 🎯 Priority Algorithm
 
-The server uses a smart priority algorithm to recommend games you'll actually enjoy playing:
+The server uses the same priority algorithm as the web app's "Play Next" view (`core/priority.js`), so both rank your backlog identically:
 
 ### Scoring Factors
 

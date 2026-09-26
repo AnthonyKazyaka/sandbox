@@ -32,8 +32,12 @@ const DEFAULT_WEIGHTS = {
  * Priority Calculator Class
  */
 class PriorityCalculator {
-  constructor() {
-    this.weights = null;
+  /**
+   * @param {Object|null} weights - Explicit weights (e.g. from the MCP data
+   *   file). When omitted, weights are read lazily from browser storage.
+   */
+  constructor(weights = null) {
+    this.weights = weights ? { ...DEFAULT_WEIGHTS, ...weights } : null;
   }
 
   /**

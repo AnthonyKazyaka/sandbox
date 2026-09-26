@@ -14,6 +14,8 @@ export const DENSITY  = [    0, 999, 180, 100, 320, 55,  2,  3,  1, 999];
 export const IS_LIQ   = [    0,   0,   0,   1,   1,  1,  0,  0,  0,   0];
 export const IS_GAS   = [    0,   0,   0,   0,   0,  0,  1,  1,  1,   0];
 export const LIFETIME = [    0,   0,   0,   0,   0,  0, 55, 22, 80,   0];
+// Rendered see-through (water, oil, steam, fire, smoke): they do not hide what is behind them
+export const IS_TRANSLUCENT = [0,   0,   0,   1,   0,  1,  1,  1,  1,   0];
 
 export const COLORS = {
   [MAT.STONE]:[0x7a7a8a,0x8c8c9c,0x666678],
@@ -103,8 +105,9 @@ export class World {
     return DENSITY[t]<DENSITY[mover];
   }
 
+  // Only marks the world dirty when a cell's material or colour changes, so an
+  // idle world skips the renderer rebuild entirely.
   step() {
-    this.dirty=true;
     // ── Spout emission ──
     for(const si of this.spouts) {
       if(this.cells[si]!==MAT.SPOUT) { this.spouts.delete(si); continue; }
@@ -130,7 +133,7 @@ export class World {
 
     // ── Cell simulation ──
     const list=Array.from(this.active);
-    for(let i=list.length-1;i>0;i--) { const j=Math.random()*i|0; const t=list[i];list[i]=list[j];list[j]=t; }
+    for(let i=list.length-1;i>0;i--) { const j=Math.random()*(i+1)|0; const t=list[i];list[i]=list[j];list[j]=t; }
     const next=new Set();
 
     for(const ci of list) {
@@ -145,9 +148,11 @@ export class World {
       if(life>0 && this.age[ci]>life+(Math.random()*20|0)) {
         if(mat===MAT.FIRE) { this.cells[ci]=MAT.SMOKE; this.variant[ci]=Math.random()*3|0; this.age[ci]=0; next.add(ci); }
         else this.cells[ci]=MAT.EMPTY;
+        this.dirty=true;
         this._wake(x,y,z); continue;
       }
-      if(mat===MAT.STONE) { next.add(ci); continue; }
+      // Stone never moves; it is re-woken by _wake when a neighbour changes
+      if(mat===MAT.STONE) continue;
 
       let moved=false;
       if(mat===MAT.SAND)       moved=this._sand(x,y,z,next);
@@ -205,7 +210,18 @@ export class World {
   }
 }
 
-export function _shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.random()*i|0;const t=r[i];r[i]=r[j];r[j]=t;}return r;}
+// Fisher–Yates shuffle (j ranges over 0..i inclusive, so every order is equally likely)
+export function _shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.random()*(i+1)|0;const t=r[i];r[i]=r[j];r[j]=t;}return r;}
+
+// A voxel can be skipped when rendering only if all 6 neighbours hide it:
+// opaque neighbours always do; translucent ones only when they are the same
+// material (interior of a body of water). Edge voxels are never culled.
+export function isOccluded(cells,x,y,z) {
+  if(x<=0||x>=GRID-1||y<=0||y>=GRID-1||z<=0||z>=GRID-1) return false;
+  const G=GRID, G2=GRID*GRID, ci=x+G*(y+G*z), mat=cells[ci];
+  const hides=n=>n!==MAT.EMPTY&&(!IS_TRANSLUCENT[n]||n===mat);
+  return hides(cells[ci-1])&&hides(cells[ci+1])&&hides(cells[ci-G])&&hides(cells[ci+G])&&hides(cells[ci-G2])&&hides(cells[ci+G2]);
+}
 
 // ─── DDA RAYCAST ─────────────────────────────────────────────────────────────
 export function ddaRaycast(world,origin,dir,maxDist) {

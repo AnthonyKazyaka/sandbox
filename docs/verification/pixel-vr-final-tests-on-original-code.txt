@@ -1,0 +1,50 @@
+# Final pixel-sandbox tests on the ORIGINAL code (main @ 3021be1)
+# vr-math.js does not exist there, so its unit-test file fails to load (counted as one failure)
+# Command: node --test tests/unit/pixel-sandbox-world.test.js tests/unit/pixel-sandbox-vr-math.test.js tests/e2e/pixel-sandbox.test.js
+
+ok - boots without errors
+ok - entering and leaving VR updates the button and mode indicator without errors
+ok - an idle world triggers no voxel rebuilds
+ok - CELLS stat matches the world after changes
+not ok - VR: entering VR puts a tabletop-sized world in front of the player
+  error: 'world centre is -15.80 m ahead'
+not ok - VR: pushing the stick forward moves toward where the left controller points (after 0 snap turn(s))
+  error: 'moved along the aim direction (cos = -1.000)'
+not ok - VR: pushing the stick forward moves toward where the left controller points (after 1 snap turn(s))
+  error: 'moved along the aim direction (cos = -0.707)'
+not ok - VR: pushing the stick forward moves toward where the left controller points (after 2 snap turn(s))
+  error: 'moved along the aim direction (cos = 0.000)'
+not ok - VR: pushing the stick forward moves toward where the left controller points (after 4 snap turn(s))
+  error: 'moved 2.88 voxels in 1 s'
+not ok - VR: movement speed does not depend on the headset refresh rate
+  error: '72 Hz: 2.88, 120 Hz: 4.80 voxels'
+not ok - VR: turning pivots around the player's head
+  error: 'head drifted 0.828 voxels'
+not ok - VR: two-hand scaling scales around the point between the hands
+  error: 'point between the hands drifted 0.625 voxels'
+not ok - VR: pouring and the wrist panel follow handedness, not connection order
+  error: 'material placed where the RIGHT hand aims'
+not ok - VR: leaving VR restores the desktop view of the world
+not ok - VR: pour rate does not depend on the headset refresh rate
+  error: '~30 pours per second while the trigger is held (got 0)'
+not ok - desktop: pouring works from the starting viewpoint
+  error: 'a voxel was placed on the floor that the crosshair points at'
+not ok - desktop: one scroll step changes reach once, and in SPOUT mode changes only the rate
+not ok - desktop: pour rate does not depend on the monitor refresh rate
+  error: '~30 pours per second while the button is held (got 0)'
+not ok - tests/unit/pixel-sandbox-vr-math.test.js
+  error: 'test failed'
+ok - dirty is set exactly when a step changes what is rendered
+ok - a settled world costs nothing to step: active set drains to empty
+ok - occlusion culling only hides voxels that are really invisible
+ok - _shuf is an unbiased Fisher–Yates shuffle
+ok - GRID sanity
+not ok - raycast from the start camera (outside the grid) hits the floor it is aimed at
+  error: 'ray entering the grid from outside finds the floor'
+ok - raycast from outside respects max distance and misses when the ray never enters the grid
+not ok - raycast entering through a side wall reports the voxel on the boundary
+ok - raycast from inside the grid is unchanged
+not ok - placing a spout marks the world for re-render
+# tests 29
+# pass 11
+# fail 18

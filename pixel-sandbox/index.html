@@ -67,7 +67,7 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 <canvas id="c"></canvas>
 <div id="hud">
   <div id="title">SANDBOX³</div>
-  <div id="version">v0.3.1</div>
+  <div id="version">v0.4.0</div>
   <div id="xhair" class="h"></div>
   <div id="prompt"><span class="big">SANDBOX³</span><span class="sub">Click to enter · ESC to exit</span></div>
   <div id="hints">
@@ -119,6 +119,7 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 import * as THREE from 'three';
 
 import { GRID, MAT, PLACE_MATS, PLACE_NAMES, MODES, MODE_COLORS, COLORS, MAT_HEX, TICK_MS, World, ddaRaycast, isOccluded } from './world.js';
+import { computeSpawnTransform, applyTransform, resetTransform, locomotionOffset, rotateAboutPivot, scaleAboutPivot, resolveHands, createPacer } from './vr-math.js';
 
 // ─── SPOUT VISUALS ───────────────────────────────────────────────────────────
 class SpoutVisuals {
@@ -408,7 +409,7 @@ class FlyCamera {
   constructor(camera,canvas) {
     this.camera=camera; this.canvas=canvas;
     this.locked=false; this.yaw=0; this.pitch=0; this.keys={};
-    this.speed=10; this.reach=22;
+    this.speed=10; this.reach=GRID*2; // start camera is ~37 voxels from the floor centre
     const e=new THREE.Euler().setFromQuaternion(camera.quaternion,'YXZ');
     this.yaw=e.y; this.pitch=e.x;
     canvas.addEventListener('click',()=>this.lock());
@@ -424,7 +425,6 @@ class FlyCamera {
     });
     document.addEventListener('keydown',e=>{this.keys[e.code]=true;if(e.code==='Space')e.preventDefault();});
     document.addEventListener('keyup',e=>{this.keys[e.code]=false;});
-    document.addEventListener('wheel',e=>{if(!this.locked)return;this.reach=Math.max(1,Math.min(GRID*2,this.reach+e.deltaY*0.03));},{passive:true});
   }
   lock(){this.canvas.requestPointerLock();}
   lookDir(){return new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(this.pitch,this.yaw,0,'YXZ')).normalize();}
@@ -470,6 +470,8 @@ class DesktopPlacer {
     this.world=world; this.fly=fly; this.state=state;
     this.placing=false; this.erasing=false;
     this.lastHit=null;
+    this.pourPacer=createPacer();
+    this._hint=null;
 
     document.addEventListener('mousedown',e=>{
       if(!this.fly.locked)return;
@@ -520,6 +522,13 @@ class DesktopPlacer {
     const hitEl=document.getElementById('hit-info');
     if(mode==='SPOUT') hitEl.textContent='SCROLL=rate  MMB=confirm spout';
     else hitEl.textContent='';
+    this._hint=null;
+  }
+
+  _setHint(text) {
+    if(text===this._hint) return;
+    this._hint=text;
+    document.getElementById('hit-info').textContent=text;
   }
 
   _updateMatUI() {
@@ -527,7 +536,7 @@ class DesktopPlacer {
     document.querySelectorAll('.mat-btn').forEach(b=>b.classList.toggle('active',b.dataset.mat===name));
   }
 
-  update() {
+  update(dt=0) {
     if(!this.fly.locked){this.lastHit=null;return;}
     const origin=this.fly.camera.position.clone();
     const dir=this.fly.lookDir();
@@ -538,7 +547,11 @@ class DesktopPlacer {
     const mat=this.state.mat;
     const r=this.state.brushSize-1;
 
-    if(mode==='POUR'&&this.placing&&hit) {
+    if(mode!=='SPOUT') this._setHint(hit?'':'aim at the world to place');
+
+    // Pour at a fixed rate while the button is held, whatever the refresh rate
+    if(!this.placing) this.pourPacer.reset();
+    if(mode==='POUR'&&this.placing&&hit&&this.pourPacer.tick(dt)) {
       let cx=hit.x,cy=hit.y,cz=hit.z;
       if(hit.face==='x')cx-=Math.sign(dir.x);
       else if(hit.face==='y')cy-=Math.sign(dir.y);
@@ -592,10 +605,13 @@ class VRPlacer {
     this.spoutPendingPos=null; // {x,y,z} in voxel coords
     // Snap/smooth turn debounce
     this._snapTurnUsed=false;
-    this._lastFrameTime=performance.now();
     // Face button debounce (X/Y on left, A/B on right)
     this._lXUsed=false; this._lYUsed=false;
     this._rAUsed=false; this._rBUsed=false;
+    // Session lifecycle and pacing
+    this._presentFrames=0;
+    this._spawned=false;
+    this.pourPacer=createPacer();
     this._setupControllerEvents();
   }
 
@@ -687,60 +703,70 @@ class VRPlacer {
 
   _roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
 
+  // Head pose from the XR camera: three.js sets it from this frame's viewer
+  // pose (first eye); the position is the midpoint between the eyes
+  _headPose(xr) {
+    const cam=xr.getCamera(this.vr.camera);
+    const position=new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
+    if(cam.cameras?.length===2) {
+      position.setFromMatrixPosition(cam.cameras[0].matrixWorld)
+        .add(new THREE.Vector3().setFromMatrixPosition(cam.cameras[1].matrixWorld)).multiplyScalar(0.5);
+    }
+    return { position, quaternion:new THREE.Quaternion().setFromRotationMatrix(cam.matrixWorld) };
+  }
+
+  // Back to the desktop layout after a VR session
+  _leaveVR() {
+    resetTransform(this.vr.sceneGroup);
+    this._presentFrames=0;
+    this._spawned=false;
+    this.bothGripped=false;
+    this.pourPacer.reset();
+  }
+
   update(dt) {
     const xr=this.vr.renderer.xr;
-    if(!xr.isPresenting) return;
-    this.vr.setupVR();
-
-    // Attach wrist UI on first VR frame
-    const leftCtrl=this.vr.controllers[0];
-    if(leftCtrl&&!this._wristUI) {
-      this._wristUI=this._buildWristUI();
-      leftCtrl.add(this._wristUI);
+    if(!xr.isPresenting) {
+      if(this._presentFrames>0) this._leaveVR();
+      return;
     }
-    this._drawWristUI();
+    this.vr.setupVR();
+    this._presentFrames++;
 
-    // Read gamepads
     const session=xr.getSession();
     if(!session) return;
     const sources=Array.from(session.inputSources||[]);
+    const sg=this.vr.sceneGroup;
+    const head=this._headPose(xr);
 
-    let lGP=null,rGP=null;
-    for(const src of sources) {
-      if(!src.gamepad) continue;
-      if(src.handedness==='left')  lGP=src.gamepad;
-      if(src.handedness==='right') rGP=src.gamepad;
+    // Put the world on a table in front of the player once the headset pose is
+    // known (the first frames still report the origin)
+    if(!this._spawned) {
+      if(this._presentFrames<3) return;
+      applyTransform(sg,computeSpawnTransform(head.position,head.quaternion,GRID));
+      this._spawned=true;
     }
 
-    // ── Frame timing for smooth turn ──
-    const now=performance.now();
-    const frameDt=(now-this._lastFrameTime)/1000; // seconds
-    this._lastFrameTime=now;
+    // three.js pairs controllers[i] with session.inputSources[i]; map hands by
+    // their reported handedness, not by that order
+    const hands=resolveHands(sources.map(src=>src.handedness));
+    const leftCtrl=this.vr.controllers[hands.left];
+    const lGP=sources[hands.left]?.gamepad||null;
+    const rGP=sources[hands.right]?.gamepad||null;
+
+    // Wrist UI rides on the left hand (moved if the hands are re-mapped)
+    if(leftCtrl&&this._wristUI?.parent!==leftCtrl) {
+      if(!this._wristUI) this._wristUI=this._buildWristUI();
+      leftCtrl.add(this._wristUI);
+    }
+    if(this._wristUI) this._drawWristUI();
 
     // ── Left controller: thumbstick=locomotion, trigger=cycle mat, click=cycle mode, X/Y=brush/rate ──
     if(lGP) {
-      const lx=lGP.axes[2]||0; // thumbstick X → strafe
-      const ly=lGP.axes[3]||0; // thumbstick Y → forward/back
-      const LOCO_SPEED=0.04;
-      const deadzone=0.15;
-      if(Math.abs(lx)>deadzone||Math.abs(ly)>deadzone) {
-        // Controller-oriented movement: direction follows left hand orientation
-        const leftCtrl=this.vr.controllers[0];
-        const ctrlQuat=leftCtrl?leftCtrl.quaternion:xr.getCamera(this.vr.camera).quaternion;
-        // Forward follows full controller orientation (point up = fly up)
-        const ctrlFwd=new THREE.Vector3(0,0,-1).applyQuaternion(ctrlQuat).normalize();
-        // Strafe stays horizontal for comfort (project right vector to XZ plane)
-        const ctrlRight=new THREE.Vector3(1,0,0).applyQuaternion(ctrlQuat);
-        ctrlRight.y=0; ctrlRight.normalize();
-        // Move the sceneGroup (world moves around player) scaled to current world scale
-        const sg=this.vr.sceneGroup;
-        const sc=sg.scale.x||1;
-        // Account for sceneGroup rotation: transform movement vectors through inverse rotation
-        const invRot=new THREE.Quaternion().copy(sg.quaternion).invert();
-        const adjFwd=ctrlFwd.clone().applyQuaternion(invRot);
-        const adjRight=ctrlRight.clone().applyQuaternion(invRot);
-        if(Math.abs(ly)>deadzone) sg.position.addScaledVector(adjFwd, -ly*LOCO_SPEED*sc);
-        if(Math.abs(lx)>deadzone) sg.position.addScaledVector(adjRight, lx*LOCO_SPEED*sc);
+      // Fly where the left hand points; speed in voxels/s, independent of refresh rate
+      if(leftCtrl) {
+        const offset=locomotionOffset(leftCtrl.quaternion,lGP.axes[2]||0,lGP.axes[3]||0,sg.scale.x,dt);
+        if(offset.lengthSq()>0) { sg.position.add(offset); sg.updateMatrixWorld(true); }
       }
       // Left trigger tap → cycle material forward
       const lTrig=lGP.buttons[0]?.value||0;
@@ -770,39 +796,24 @@ class VRPlacer {
         this._lYUsed=true;
       }
       if(!lGP.buttons[5]?.pressed) this._lYUsed=false;
+    } else {
+      this.squeezeHeld[0]=false;
     }
 
     // ── Right controller: thumbstick=turning, trigger/grip state, A=toggle turn mode, B=cycle snap angle ──
     if(rGP) {
-      const rx=rGP.axes[2]||0; // thumbstick X → turn
-      const sg=this.vr.sceneGroup;
+      const rx=rGP.axes[2]||0; // thumbstick X → turn (positive = turn right)
       if(this.state.vrTurnMode==='snap') {
-        // Snap turn: rotate by snapAngle degrees when thumbstick exceeds threshold
         if(Math.abs(rx)>0.6&&!this._snapTurnUsed) {
-          const angle=(rx>0?1:-1)*this.state.vrSnapAngle*Math.PI/180;
-          // Rotate sceneGroup around world Y axis (player stays at origin)
-          const pivot=new THREE.Vector3(0,0,0); // player is at world origin
-          const pos=sg.position.clone().sub(pivot);
-          const rotQ=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle);
-          pos.applyQuaternion(rotQ);
-          sg.position.copy(pos.add(pivot));
-          sg.quaternion.premultiply(rotQ);
+          // Turn in place: rotate the world about the player's head
+          rotateAboutPivot(sg,head.position,(rx>0?1:-1)*this.state.vrSnapAngle*Math.PI/180);
           this._snapTurnUsed=true;
           // Haptic feedback
-          try{const src=Array.from(xr.getSession().inputSources||[]).find(s=>s.handedness==='right');src?.gamepad?.hapticActuators?.[0]?.pulse(0.3,50);}catch(e){}
+          try{sources[hands.right]?.gamepad?.hapticActuators?.[0]?.pulse(0.3,50);}catch(e){}
         }
         if(Math.abs(rx)<0.3) this._snapTurnUsed=false;
-      } else {
-        // Smooth turn: continuous rotation based on thumbstick deflection
-        if(Math.abs(rx)>0.15) {
-          const angle=rx*this.state.vrSmoothTurnSpeed*frameDt*Math.PI/180;
-          const pivot=new THREE.Vector3(0,0,0);
-          const pos=sg.position.clone().sub(pivot);
-          const rotQ=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle);
-          pos.applyQuaternion(rotQ);
-          sg.position.copy(pos.add(pivot));
-          sg.quaternion.premultiply(rotQ);
-        }
+      } else if(Math.abs(rx)>0.15) {
+        rotateAboutPivot(sg,head.position,rx*this.state.vrSmoothTurnSpeed*dt*Math.PI/180);
       }
       this.triggerVal[1]=rGP.buttons[0]?.value||0; // analog trigger
       this.squeezeHeld[1]=rGP.buttons[1]?.pressed||false;
@@ -820,35 +831,36 @@ class VRPlacer {
         this._rBUsed=true;
       }
       if(!rGP.buttons[5]?.pressed) this._rBUsed=false;
+    } else {
+      this.triggerVal[1]=0;
+      this.squeezeHeld[1]=false;
     }
 
-    // ── Pinch-to-scale: both grips held ──
+    // ── Pinch-to-scale: both grips held, scaled about the point between the hands ──
     const bothGrip=this.squeezeHeld[0]&&this.squeezeHeld[1];
-    const p0=this.vr.getControllerTipWorld(0);
-    const p1=this.vr.getControllerTipWorld(1);
-    if(bothGrip&&p0&&p1) {
-      const dist=p0.distanceTo(p1);
-      if(this.bothGripped) {
-        const ratio=dist/this.lastPinchDist;
-        const sg=this.vr.sceneGroup;
-        const newScale=Math.max(0.05,Math.min(20,sg.scale.x*ratio));
-        sg.scale.setScalar(newScale);
+    const pL=this.vr.getControllerTipWorld(hands.left);
+    const pR=this.vr.getControllerTipWorld(hands.right);
+    if(bothGrip&&pL&&pR) {
+      const dist=pL.distanceTo(pR);
+      if(this.bothGripped&&this.lastPinchDist>1e-4) {
+        const mid=pL.clone().add(pR).multiplyScalar(0.5);
+        scaleAboutPivot(sg,mid,dist/this.lastPinchDist);
       }
       this.lastPinchDist=dist; this.bothGripped=true;
     } else { this.bothGripped=false; }
 
-    // ── Right trigger: place / pour from aim point (forward of controller) ──
+    // ── Right trigger: place / pour from aim point (forward of the right hand) ──
     const triggerPressure=this.triggerVal[1];
-    const aimPt=this.vr.getControllerAimPoint(1, this.state.vrPlacementReach);
+    const aimPt=this.vr.getControllerAimPoint(hands.right, this.state.vrPlacementReach);
+    if(triggerPressure<=0.1) this.pourPacer.reset();
     if(triggerPressure>0.1&&!bothGrip&&aimPt) {
       const vox=this.vr.worldToVoxel(aimPt);
       if(this.world.inBounds(vox.x,vox.y,vox.z)&&vox.y>0) {
         const mode=this.state.mode;
         if(mode==='POUR') {
-          // Pressure-sensitive trickle: place cells at rate proportional to trigger
-          const tickRate=Math.ceil(triggerPressure*6); // 1-6 cells per frame
-          const now=performance.now();
-          if(now-this.lastPlaceTime[1]>16) { // throttle to 60fps max
+          // Pressure-sensitive trickle: 1-6 cells per pour, at a fixed pour rate
+          if(this.pourPacer.tick(dt)) {
+            const tickRate=Math.ceil(triggerPressure*6);
             const r=this.state.brushSize-1;
             let placed=0;
             for(let dx=-r;dx<=r&&placed<tickRate;dx++) for(let dy=-r;dy<=r&&placed<tickRate;dy++) for(let dz=-r;dz<=r&&placed<tickRate;dz++) {
@@ -858,7 +870,6 @@ class VRPlacer {
                 this.world.set(nx,ny,nz,this.state.mat); placed++;
               }
             }
-            this.lastPlaceTime[1]=now;
           }
         } else if(mode==='SPOUT') {
           // Full squeeze = confirm spout placement
@@ -875,15 +886,14 @@ class VRPlacer {
       }
       // Update stream visual color
       const hexCol=MAT_HEX[this.state.mat]||'#ffffff';
-      this.vr.setControllerStreamColor(1,hexCol,triggerPressure>0.1);
+      this.vr.setControllerStreamColor(hands.right,hexCol,triggerPressure>0.1);
     } else {
-      this.vr.setControllerStreamColor(1,'#ffffff',false);
+      this.vr.setControllerStreamColor(hands.right,'#ffffff',false);
     }
 
     // ── Right grip: erase sphere around aim point ──
-    const eraseAim=this.vr.getControllerAimPoint(1, this.state.vrPlacementReach);
-    if(this.squeezeHeld[1]&&!bothGrip&&eraseAim) {
-      const vox=this.vr.worldToVoxel(eraseAim);
+    if(this.squeezeHeld[1]&&!bothGrip&&aimPt) {
+      const vox=this.vr.worldToVoxel(aimPt);
       const r=this.state.brushSize-1;
       for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
         if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
@@ -1009,7 +1019,7 @@ class App {
     }
 
     const isVR=this.voxelRenderer.renderer.xr.isPresenting;
-    if(!isVR){this.fly.update(dt);this.desktopPlacer.update();}
+    if(!isVR){this.fly.update(dt);this.desktopPlacer.update(dt);}
     this.vrPlacer.update(dt);
     this.voxelRenderer.render(dt);
 

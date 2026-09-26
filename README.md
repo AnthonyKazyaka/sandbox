@@ -80,3 +80,17 @@ A 3D VR pixel sandbox game.
 
 **Location:** `/pixel-sandbox/`
 [Live version](https://anthonykazyaka.github.io/sandbox/pixel-sandbox/index.html)
+
+## Testing
+
+Each project's behaviour is covered by deterministic unit tests (Node's built-in
+test runner) and browser tests (Playwright/Chromium). The apps themselves stay
+dependency-free; the test tools are dev dependencies only.
+
+```bash
+npm ci
+npm test
+```
+
+See [VERIFICATION.md](./VERIFICATION.md) for what is checked and the before/after evidence.
+

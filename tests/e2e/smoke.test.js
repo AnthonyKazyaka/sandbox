@@ -17,7 +17,8 @@ const PAGES = [
   { path: 'game-of-life-ancestry/', ready: () => document.getElementById('generation').textContent === '0' },
   { path: 'pixel-sandbox/', ready: () => !!window.sandbox?.world },
   { path: 'to-do-tracker/', ready: () => document.getElementById('app').style.display === 'flex' },
-  { path: 'game-backlog-tracker/', ready: () => !!window.app },
+  // window.app alone would match <div id="app"> via named access, so check the instance
+  { path: 'game-backlog-tracker/', ready: () => typeof window.app?.switchView === 'function' },
 ];
 
 for (const { path, ready } of PAGES) {

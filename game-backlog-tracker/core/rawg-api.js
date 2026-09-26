@@ -4,7 +4,7 @@
  * https://rawg.io/apidocs
  */
 
-import { CONFIG } from '../js/config.js';
+import { CONFIG, getRawgApiKey } from './config.js';
 
 /**
  * API Response Cache
@@ -159,16 +159,26 @@ class RateLimiter {
  */
 class RAWGApi {
   constructor() {
-    this.apiKey = CONFIG.rawg.apiKey;
     this.baseUrl = CONFIG.rawg.baseUrl;
     this.cache = new ApiCache();
     this.rateLimiter = new RateLimiter();
   }
 
   /**
+   * API key is read on every request so a key saved in Settings applies immediately
+   */
+  get apiKey() {
+    return getRawgApiKey();
+  }
+
+  /**
    * Make API request with caching and rate limiting
    */
   async request(endpoint, params = {}) {
+    if (!this.apiKey) {
+      throw new Error('RAWG API key not set. Add your free key in Settings → RAWG API Key.');
+    }
+
     const url = this.buildUrl(endpoint, params);
     
     // Check cache first

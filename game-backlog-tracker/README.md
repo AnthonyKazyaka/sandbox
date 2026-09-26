@@ -68,12 +68,10 @@ Talk to your backlog using Claude Desktop or other MCP-compatible AI assistants:
 
 1. **Get a RAWG API key** (free at https://rawg.io/apidocs)
 
-2. **Configure the app:**
-   ```bash
-   cd game-backlog-tracker
-   cp js/config.example.js js/config.js
-   # Edit config.js and add your API key
-   ```
+2. **Add the key in the app:** open **Settings → RAWG API Key** and paste it.
+   The key is stored only in your browser. (Optional for local development:
+   `cp js/config.example.js js/config.js` to override defaults; that file is
+   gitignored and is not required.)
 
 3. **Start a local server:**
    ```bash
@@ -163,9 +161,10 @@ game-backlog-tracker/
 │   ├── package.json          # Dependencies
 │   ├── README.md             # Server docs
 │   └── SETUP.md              # Configuration guide
+├── core/config.js            # Defaults + API key from Settings
 ├── js/
-│   ├── config.js             # API key (gitignored)
-│   └── config.example.js     # Template
+│   ├── config.js             # Optional local override (gitignored)
+│   └── config.example.js     # Template for the optional override
 └── docs/
     ├── PROJECT_ROADMAP.md    # Development plan
     └── API_INTEGRATION.md    # RAWG research
@@ -239,7 +238,7 @@ open test-core.html
 
 ## 🔐 Security
 
-- ⚠️ **Never commit `js/config.js`** - API key is gitignored
+- ⚠️ **Never commit `js/config.js`** - the optional local override is gitignored; the key entered in Settings stays in your browser's localStorage
 - 🔒 **Local-first** - No cloud storage, data stays on your device
 - 📦 **Export/Import** - Backup your data anytime via JSON
 

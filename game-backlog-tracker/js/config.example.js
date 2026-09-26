@@ -1,6 +1,8 @@
 /**
- * Configuration file template for API keys and settings
- * Copy this file to config.js and add your actual API keys
+ * Optional local configuration override.
+ * The app works without this file: defaults live in core/config.js and the
+ * RAWG API key can be entered in Settings. Copy to js/config.js (gitignored)
+ * only if you want to override values for local development.
  */
 
 export const CONFIG = {

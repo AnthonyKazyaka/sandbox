@@ -133,7 +133,8 @@ test('completing a recurring task schedules the next occurrence (created via the
   await page.fill('#taskTitle', 'Water plants');
   await page.selectOption('#taskCategory', '1');
   await page.fill('#taskDueDate', '2026-03-10');
-  await page.check('#taskRecurring', { force: true });
+  await page.click('#taskModal .checkbox-label'); // the styled box users click
+  assert.equal(await page.isChecked('#taskRecurring'), true);
   await page.selectOption('#taskRecurrence', 'weekly');
   await page.click('#saveTaskBtn');
   const id = await page.evaluate(() => app.tasks.find(t => t.title === 'Water plants').id);

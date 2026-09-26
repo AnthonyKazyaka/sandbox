@@ -629,8 +629,62 @@ class FamilyTracker {
 
         document.getElementById('totalTasksCount').textContent = totalTasks;
         document.getElementById('completionRate').textContent = `${completionRate}%`;
-        document.getElementById('currentStreak').textContent = `${currentStreak} days`;
+        document.getElementById('currentStreak').textContent = `${currentStreak} day${currentStreak === 1 ? '' : 's'}`;
         document.getElementById('avgTasksPerDay').textContent = avgTasksPerDay.toFixed(1);
+    }
+
+    renderAchievements() {
+        // Unlocked first, then the ones closest to unlocking
+        const achievements = this.getAchievements()
+            .sort((a, b) => (b.unlocked - a.unlocked) || (b.progress - a.progress));
+        document.getElementById('achievementsList').innerHTML = achievements.map(a => `
+            <div class="achievement-item ${a.unlocked ? 'unlocked' : 'locked'}">
+                <div class="achievement-icon">${a.unlocked ? a.icon : '🔒'}</div>
+                <div class="achievement-content">
+                    <div class="achievement-title">${this.escapeHtml(a.name)}</div>
+                    <div class="achievement-description">
+                        ${this.escapeHtml(a.description)} · ${a.unlocked ? 'Unlocked' : `${a.current}/${a.target}`}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderInsights() {
+        const insights = this.generateInsights();
+        const list = document.getElementById('insightsList');
+        if (insights.length === 0) {
+            list.innerHTML = '<div class="chart-placeholder">Complete a few tasks to see insights.</div>';
+            return;
+        }
+        list.innerHTML = insights.map(insight => `
+            <div class="insight-item">
+                <div class="insight-icon">${insight.icon}</div>
+                <div class="insight-content">
+                    <div class="insight-text">${this.escapeHtml(insight.text)}</div>
+                    <div class="insight-detail">${this.escapeHtml(insight.detail)}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Chart containers are looked up once, because the canvas inside is
+    // replaced on every render (or swapped for a "no data" placeholder).
+    // Any chart previously drawn there is destroyed first.
+    getChartContainer(canvasId) {
+        this.charts = this.charts || {};
+        this.chartContainers = this.chartContainers || {};
+        this.charts[canvasId]?.destroy();
+        delete this.charts[canvasId];
+        if (!this.chartContainers[canvasId]) {
+            this.chartContainers[canvasId] = document.getElementById(canvasId).parentElement;
+        }
+        return this.chartContainers[canvasId];
+    }
+
+    resetChartCanvas(canvasId, container) {
+        container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+        return document.getElementById(canvasId).getContext('2d');
     }
 
     renderAnalyticsCharts() {
@@ -641,17 +695,15 @@ class FamilyTracker {
     }
 
     renderWeeklyProgressChart() {
-        const ctx = document.getElementById('weeklyProgressChart').getContext('2d');
-        const container = document.getElementById('weeklyProgressChart').parentElement;
+        const container = this.getChartContainer('weeklyProgressChart');
         const weeklyData = this.getWeeklyProgressData();
         // Show empty state if no data
         if (weeklyData.completed.every(v => v === 0) && weeklyData.created.every(v => v === 0)) {
             container.innerHTML = '<div class="chart-placeholder">No data to display for this period.</div>';
             return;
         }
-        container.innerHTML = '<canvas id="weeklyProgressChart"></canvas>';
-        const newCtx = document.getElementById('weeklyProgressChart').getContext('2d');
-        new Chart(newCtx, {
+        const newCtx = this.resetChartCanvas('weeklyProgressChart', container);
+        this.charts.weeklyProgressChart = new Chart(newCtx, {
             type: 'line',
             data: {
                 labels: weeklyData.labels,
@@ -699,16 +751,14 @@ class FamilyTracker {
     }
 
     renderCategoryChart() {
-        const ctx = document.getElementById('categoryChart').getContext('2d');
-        const container = document.getElementById('categoryChart').parentElement;
+        const container = this.getChartContainer('categoryChart');
         const categoryData = this.getCategoryDistribution();
         if (categoryData.data.every(v => v === 0)) {
             container.innerHTML = '<div class="chart-placeholder">No category data for this period.</div>';
             return;
         }
-        container.innerHTML = '<canvas id="categoryChart"></canvas>';
-        const newCtx = document.getElementById('categoryChart').getContext('2d');
-        new Chart(newCtx, {
+        const newCtx = this.resetChartCanvas('categoryChart', container);
+        this.charts.categoryChart = new Chart(newCtx, {
             type: 'doughnut',
             data: {
                 labels: categoryData.labels,
@@ -744,16 +794,14 @@ class FamilyTracker {
     }
 
     renderPriorityChart() {
-        const ctx = document.getElementById('priorityChart').getContext('2d');
-        const container = document.getElementById('priorityChart').parentElement;
+        const container = this.getChartContainer('priorityChart');
         const priorityData = this.getPriorityDistribution();
         if (priorityData.data.every(v => v === 0)) {
             container.innerHTML = '<div class="chart-placeholder">No priority data for this period.</div>';
             return;
         }
-        container.innerHTML = '<canvas id="priorityChart"></canvas>';
-        const newCtx = document.getElementById('priorityChart').getContext('2d');
-        new Chart(newCtx, {
+        const newCtx = this.resetChartCanvas('priorityChart', container);
+        this.charts.priorityChart = new Chart(newCtx, {
             type: 'bar',
             data: {
                 labels: priorityData.labels,
@@ -788,16 +836,19 @@ class FamilyTracker {
     }
 
     renderFamilyChart() {
-        const ctx = document.getElementById('familyChart').getContext('2d');
-        const container = document.getElementById('familyChart').parentElement;
-        const familyData = this.getFamilyPerformanceData();
-        if (familyData.data.every(v => v === 0)) {
+        const container = this.getChartContainer('familyChart');
+        const members = Object.values(this.getFamilyPerformanceData());
+        const familyData = {
+            labels: members.map(m => `${m.avatar} ${m.name}`),
+            data: members.map(m => Math.min(m.completionRate, 100)),
+            colors: members.map((m, i) => ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5])
+        };
+        if (members.every(m => m.total === 0 && m.completed === 0)) {
             container.innerHTML = '<div class="chart-placeholder">No family performance data for this period.</div>';
             return;
         }
-        container.innerHTML = '<canvas id="familyChart"></canvas>';
-        const newCtx = document.getElementById('familyChart').getContext('2d');
-        new Chart(newCtx, {
+        const newCtx = this.resetChartCanvas('familyChart', container);
+        this.charts.familyChart = new Chart(newCtx, {
             type: 'bar',
             data: {
                 labels: familyData.labels,

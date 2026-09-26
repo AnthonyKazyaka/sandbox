@@ -35,13 +35,13 @@ class Player {
     constructor(x, y) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
-        this.maxSpeed = 3;
+        this.maxSpeed = 180; // px/s
         this.radius = 15;
         this.health = 100;
         this.maxHealth = 100;
         this.fireRate = 0.3; // seconds between shots
-        this.lastShotTime = 0;
-        this.bulletSpeed = 8;
+        this.fireCooldown = 0; // seconds until the next shot (simulation time)
+        this.bulletSpeed = 480; // px/s
         this.bulletDamage = 20;
         this.bulletCount = 1;
         this.bulletPiercing = false;
@@ -109,8 +109,8 @@ class Player {
     }
     
     updateFiring(deltaTime, enemies, bullets, particles) {
-        const currentTime = Date.now() / 1000;
-        if (currentTime - this.lastShotTime < this.fireRate) return;
+        this.fireCooldown = Math.max(0, this.fireCooldown - deltaTime);
+        if (this.fireCooldown > 0) return;
         
         // Find nearest enemy in range
         let nearestEnemy = null;
@@ -147,7 +147,7 @@ class Player {
                 particles.push(new Particle(this.position.x, this.position.y, 'muzzleFlash'));
             }
             
-            this.lastShotTime = currentTime;
+            this.fireCooldown = this.fireRate;
         }
     }
     
@@ -188,7 +188,7 @@ class Enemy {
         
         switch(type) {
             case 'basic':
-                this.maxSpeed = 1.5;
+                this.maxSpeed = 90;
                 this.radius = 12;
                 this.health = 40;
                 this.maxHealth = 40;
@@ -197,7 +197,7 @@ class Enemy {
                 this.color = '#ff6b6b';
                 break;
             case 'fast':
-                this.maxSpeed = 3;
+                this.maxSpeed = 180;
                 this.radius = 8;
                 this.health = 20;
                 this.maxHealth = 20;
@@ -206,7 +206,7 @@ class Enemy {
                 this.color = '#ffeb3b';
                 break;
             case 'tank':
-                this.maxSpeed = 0.8;
+                this.maxSpeed = 48;
                 this.radius = 20;
                 this.health = 100;
                 this.maxHealth = 100;
@@ -215,7 +215,7 @@ class Enemy {
                 this.color = '#9c27b0';
                 break;
             case 'boss':
-                this.maxSpeed = 1;
+                this.maxSpeed = 60;
                 this.radius = 40;
                 this.health = 500;
                 this.maxHealth = 500;
@@ -429,33 +429,47 @@ class Particle {
     }
 }
 
+// Longest simulated step per frame. Keeps a stalled or backgrounded tab from
+// resuming with one huge step that teleports everything.
+const MAX_FRAME_TIME = 0.05;
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        
+        this.screenShakeDecay = 0.9;
+        this.lastTime = null;
+
+        document.getElementById('restartBtn').addEventListener('click', () => this.reset());
+
+        this.reset();
+        requestAnimationFrame(timestamp => this.gameLoop(timestamp));
+    }
+
+    reset() {
         this.player = new Player(this.canvas.width / 2, this.canvas.height / 2);
         this.enemies = [];
         this.bullets = [];
         this.xpOrbs = [];
         this.particles = [];
-        
+
+        // Timed events run on simulation time so they pause with the game
+        this.simTime = 0;
+        this.scheduled = [];
+
         this.wave = 1;
         this.waveEnemiesRemaining = 0;
-        this.waveStartTime = 0;
         this.betweenWaves = false;
-        
+
         this.level = 1;
         this.xp = 0;
         this.xpToNext = 10;
         this.upgradePoints = 0;
-        
-        this.lastTime = 0;
+
         this.running = true;
-        
+        this.upgradePanelOpen = false;
         this.screenShake = 0;
-        this.screenShakeDecay = 0.9;
-        
+
         this.upgrades = {
             bulletSpeed: 0,
             bulletDamage: 0,
@@ -468,35 +482,46 @@ class Game {
             explosive: false,
             screenClear: false
         };
-        
+
+        document.getElementById('upgradePanel').style.display = 'none';
+        document.getElementById('restartBtn').style.display = 'none';
+
         this.startWave();
-        this.gameLoop();
+        this.updateUI();
+    }
+
+    // Run fn after `delay` seconds of simulation time
+    schedule(delay, fn) {
+        this.scheduled.push({ at: this.simTime + delay, fn });
+    }
+
+    runScheduled() {
+        const due = this.scheduled.filter(event => event.at <= this.simTime);
+        if (due.length === 0) return;
+        this.scheduled = this.scheduled.filter(event => event.at > this.simTime);
+        due.sort((a, b) => a.at - b.at).forEach(event => event.fn());
+    }
+
+    static frameDelta(timestamp, lastTime) {
+        if (lastTime === null) return 0;
+        return Math.min(Math.max(0, (timestamp - lastTime) / 1000), MAX_FRAME_TIME);
     }
     
     startWave() {
         this.betweenWaves = false;
-        this.waveStartTime = Date.now();
         
         // Spawn enemies based on wave
         const enemyCount = Math.min(5 + this.wave * 3, 50);
         this.waveEnemiesRemaining = enemyCount;
         
         for (let i = 0; i < enemyCount; i++) {
-            setTimeout(() => {
-                if (this.running) {
-                    this.spawnRandomEnemy();
-                }
-            }, i * 500 + Math.random() * 1000);
+            this.schedule(i * 0.5 + Math.random(), () => this.spawnRandomEnemy());
         }
         
         // Spawn boss every 5 waves
         if (this.wave % 5 === 0) {
-            setTimeout(() => {
-                if (this.running) {
-                    this.spawnEnemy('boss');
-                    this.waveEnemiesRemaining++;
-                }
-            }, 2000);
+            this.waveEnemiesRemaining++;
+            this.schedule(2, () => this.spawnEnemy('boss'));
         }
     }
     
@@ -532,20 +557,24 @@ class Game {
         this.enemies.push(new Enemy(x, y, type));
     }
     
-    gameLoop() {
-        const currentTime = Date.now();
-        const deltaTime = (currentTime - this.lastTime) / 1000;
-        this.lastTime = currentTime;
+    gameLoop(timestamp) {
+        const deltaTime = Game.frameDelta(timestamp, this.lastTime);
+        this.lastTime = timestamp;
         
         if (this.running) {
-            this.update(deltaTime);
+            if (!this.upgradePanelOpen) {
+                this.update(deltaTime);
+            }
             this.draw();
         }
         
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame(nextTimestamp => this.gameLoop(nextTimestamp));
     }
     
     update(deltaTime) {
+        this.simTime += deltaTime;
+        this.runScheduled();
+        
         // Update screen shake
         this.screenShake *= this.screenShakeDecay;
         
@@ -702,13 +731,13 @@ class Game {
         // Heal player slightly
         this.player.health = Math.min(this.player.maxHealth, this.player.health + 20);
         
-        setTimeout(() => {
+        this.schedule(2, () => {
             if (this.upgradePoints > 0) {
                 this.showUpgradePanel();
             } else {
                 this.startWave();
             }
-        }, 2000);
+        });
     }
     
     showUpgradePanel() {
@@ -731,6 +760,8 @@ class Game {
             optionsContainer.appendChild(div);
         });
         
+        // The world pauses while the player chooses
+        this.upgradePanelOpen = true;
         panel.style.display = 'block';
     }
     
@@ -864,11 +895,12 @@ class Game {
             option.apply();
             
             document.getElementById('upgradePanel').style.display = 'none';
+            this.upgradePanelOpen = false;
             
             if (this.upgradePoints > 0) {
-                setTimeout(() => this.showUpgradePanel(), 500);
+                this.schedule(0.5, () => this.showUpgradePanel());
             } else if (this.betweenWaves) {
-                setTimeout(() => this.startWave(), 1000);
+                this.schedule(1, () => this.startWave());
             }
         }
     }
@@ -879,6 +911,7 @@ class Game {
         document.getElementById('xp').textContent = this.xp;
         document.getElementById('xpNext').textContent = this.xpToNext;
         document.getElementById('health').textContent = Math.max(0, Math.floor(this.player.health));
+        document.getElementById('maxHealth').textContent = this.player.maxHealth;
         document.getElementById('upgradePoints').textContent = this.upgradePoints;
     }
     
@@ -889,7 +922,7 @@ class Game {
         
         // Apply screen shake
         this.ctx.save();
-        if (this.screenShake > 0) {
+        if (this.screenShake > 0 && !this.upgradePanelOpen) {
             const shakeX = (Math.random() - 0.5) * this.screenShake;
             const shakeY = (Math.random() - 0.5) * this.screenShake;
             this.ctx.translate(shakeX, shakeY);
@@ -924,7 +957,10 @@ class Game {
     }
     
     gameOver() {
+        if (!this.running) return;
         this.running = false;
+        this.updateUI();
+        document.getElementById('restartBtn').style.display = 'inline-block';
         
         this.ctx.save();
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -939,7 +975,7 @@ class Game {
         this.ctx.font = '24px Arial';
         this.ctx.fillText(`Wave Reached: ${this.wave}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
         this.ctx.fillText(`Level: ${this.level}`, this.canvas.width / 2, this.canvas.height / 2 + 50);
-        this.ctx.fillText('Refresh to play again', this.canvas.width / 2, this.canvas.height / 2 + 100);
+        this.ctx.fillText('Press "Play Again" to restart', this.canvas.width / 2, this.canvas.height / 2 + 100);
         
         this.ctx.restore();
     }

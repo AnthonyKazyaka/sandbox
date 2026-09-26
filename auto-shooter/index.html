@@ -98,6 +98,22 @@
             font-weight: bold;
         }
         
+        .restart-btn {
+            display: none;
+            margin: 16px auto 0;
+            padding: 10px 24px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #ff6b6b;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .restart-btn:hover {
+            background-color: #ff4444;
+        }
+        
         .controls {
             position: fixed;
             bottom: 10px;
@@ -122,7 +138,7 @@
             <div>Wave: <span id="wave">1</span></div>
             <div>Level: <span id="level">1</span></div>
             <div>XP: <span id="xp">0</span>/<span id="xpNext">10</span></div>
-            <div>Health: <span id="health">100</span>/100</div>
+            <div>Health: <span id="health">100</span>/<span id="maxHealth">100</span></div>
             <div>Upgrade Points: <span id="upgradePoints">0</span></div>
         </div>
         
@@ -130,6 +146,8 @@
             <h2>Choose Your Upgrade</h2>
             <div id="upgradeOptions"></div>
         </div>
+        
+        <button class="restart-btn" id="restartBtn">Play Again</button>
         
         <div class="controls">
             Game starts automatically. The chaos grows with each upgrade!

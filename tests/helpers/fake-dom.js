@@ -49,7 +49,7 @@ export class FakeElement {
   constructor(tag = 'div', id = null) {
     this.tagName = tag.toUpperCase();
     this.id = id;
-    this.textContent = '';
+    this._textContent = '';
     this._innerHTML = '';
     this.value = '';
     this.disabled = false;
@@ -63,6 +63,9 @@ export class FakeElement {
     this.rect = null;
     this._ctx = null;
   }
+  // Like the real DOM, assigned text is always stored as a string.
+  get textContent() { return this._textContent; }
+  set textContent(v) { this._textContent = String(v ?? ''); }
   get innerHTML() { return this._innerHTML; }
   set innerHTML(v) { this._innerHTML = String(v); if (v === '') this.children = []; }
   addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }

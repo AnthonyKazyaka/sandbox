@@ -94,8 +94,7 @@ test('HUD shows the real max health after a Health Boost', () => {
   const { sb, game } = boot();
   sb.frame();
   game.upgradePoints = 2;
-  const boost = game.generateUpgradeOptions().find(o => o.name === 'Health Boost')
-    || sb.eval(`__game.generateUpgradeOptions`).call(game).find(o => o.name === 'Health Boost');
+  const boost = game.generateUpgradeOptions().find(o => o.name === 'Health Boost');
   game.selectUpgrade(boost);
   sb.frame();
   assert.equal(sb.element('maxHealth').textContent, String(game.player.maxHealth));

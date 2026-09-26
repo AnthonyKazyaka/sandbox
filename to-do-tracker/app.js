@@ -25,10 +25,23 @@ class FamilyTracker {
             this.setupEventListeners();
             this.setupTheme();
             this.renderApp();
+            this.handleLaunchParams();
             this.hideLoadingScreen();
         } catch (error) {
             console.error('Failed to initialize app:', error);
             this.showToast('Failed to load application', 'error');
+        }
+    }
+
+    // Support the manifest shortcuts (?view=tasks, ?action=add-task)
+    handleLaunchParams() {
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view');
+        if (view && document.getElementById(`${view}View`)) {
+            this.switchView(view);
+        }
+        if (params.get('action') === 'add-task') {
+            this.openTaskModal();
         }
     }
 
@@ -115,14 +128,32 @@ class FamilyTracker {
         });
     }
 
+    // Due dates are local calendar days stored as 'YYYY-MM-DD'. Never derive
+    // them with toISOString(): that is UTC and shifts the day for most users.
+    toDateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    parseDateKey(key) {
+        const [year, month, day] = key.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    addDaysToKey(key, days) {
+        const date = this.parseDateKey(key);
+        date.setDate(date.getDate() + days);
+        return this.toDateKey(date);
+    }
+
     getTodayDate() {
-        return new Date().toISOString().split('T')[0];
+        return this.toDateKey();
     }
 
     getTomorrowDate() {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
+        return this.addDaysToKey(this.getTodayDate(), 1);
     }
 
     // ==========================================================================
@@ -134,7 +165,7 @@ class FamilyTracker {
             const data = localStorage.getItem('familyTrackerData');
             if (data) {
                 const parsed = JSON.parse(data);
-                this.tasks = parsed.tasks || [];
+                this.tasks = this.migrateTasks(parsed.tasks || []);
                 this.categories = parsed.categories || [];
                 this.familyMembers = parsed.familyMembers || [];
                 this.settings = parsed.settings || {};
@@ -143,6 +174,23 @@ class FamilyTracker {
         } catch (error) {
             console.error('Failed to load data:', error);
         }
+    }
+
+    // Bring tasks saved by older versions up to the current shape
+    migrateTasks(tasks) {
+        tasks.forEach(task => {
+            // Completion time used to be inferred from updatedAt
+            if (task.completed && !task.completedAt) {
+                task.completedAt = task.updatedAt || task.createdAt || null;
+            }
+            if (!task.completed) {
+                task.completedAt = null;
+            }
+            if (task.recurring && !task.recurrence) {
+                task.recurrence = 'weekly';
+            }
+        });
+        return tasks;
     }
 
     async saveData() {
@@ -191,6 +239,10 @@ class FamilyTracker {
         });
 
         // Task form
+        document.getElementById('taskRecurring').addEventListener('change', () => {
+            this.updateRecurrenceVisibility();
+        });
+
         document.getElementById('taskForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveTask();
@@ -494,27 +546,29 @@ class FamilyTracker {
     }
 
     populateFilters() {
-        // Category filter
-        const categoryFilter = document.getElementById('categoryFilter');
-        categoryFilter.innerHTML = '<option value="all">All Categories</option>' +
-            this.categories.map(cat => 
-                `<option value="${cat.id}">${cat.icon} ${this.escapeHtml(cat.name)}</option>`
-            ).join('');
+        // Rebuilding the options must not reset what the user has selected
+        const fillSelect = (id, html) => {
+            const select = document.getElementById(id);
+            const current = select.value;
+            select.innerHTML = html;
+            if ([...select.options].some(option => option.value === current)) {
+                select.value = current;
+            }
+        };
 
-        // Assignee filter
-        const assigneeFilter = document.getElementById('assigneeFilter');
-        assigneeFilter.innerHTML = '<option value="all">All Members</option>' +
-            this.familyMembers.map(member => 
-                `<option value="${member.id}">${member.avatar} ${this.escapeHtml(member.name)}</option>`
-            ).join('');
-
-        // Task assignee dropdown
-        const taskAssignee = document.getElementById('taskAssignee');
-        taskAssignee.innerHTML = this.familyMembers.map(member => 
-            `<option value="${member.id}" ${member.isCurrentUser ? 'selected' : ''}>
-                ${member.avatar} ${this.escapeHtml(member.name)}
-            </option>`
+        const categoryOptions = this.categories.map(cat =>
+            `<option value="${cat.id}">${cat.icon} ${this.escapeHtml(cat.name)}</option>`
         ).join('');
+        const memberOptions = this.familyMembers.map(member =>
+            `<option value="${member.id}">${member.avatar} ${this.escapeHtml(member.name)}</option>`
+        ).join('');
+
+        fillSelect('categoryFilter', '<option value="all">All Categories</option>' + categoryOptions);
+        fillSelect('assigneeFilter', '<option value="all">All Members</option>' + memberOptions);
+
+        // Task form dropdowns use the same ids the tasks store
+        fillSelect('taskCategory', categoryOptions);
+        fillSelect('taskAssignee', memberOptions);
     }
 
     // ==========================================================================
@@ -835,34 +889,24 @@ class FamilyTracker {
     }
 
     getCurrentStreak() {
-        // Calculate consecutive days with at least one completed task
-        const now = new Date();
-        let streak = 0;
-        let currentDate = new Date(now);
-        currentDate.setHours(0, 0, 0, 0);
+        // Consecutive days with at least one completed task. An empty "today"
+        // doesn't break the streak until the day is over.
+        const completedDays = new Set(
+            this.tasks
+                .filter(task => task.completed && task.completedAt)
+                .map(task => this.toDateKey(new Date(task.completedAt)))
+        );
 
-        while (true) {
-            const dayStart = new Date(currentDate);
-            const dayEnd = new Date(currentDate);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            const dayTasks = this.tasks.filter(task => {
-                if (!task.completed) return false;
-                const completedDate = new Date(task.updatedAt);
-                return completedDate >= dayStart && completedDate <= dayEnd;
-            });
-
-            if (dayTasks.length === 0) {
-                break;
-            }
-
-            streak++;
-            currentDate.setDate(currentDate.getDate() - 1);
-            
-            // Prevent infinite loop - max 365 days
-            if (streak >= 365) break;
+        let day = this.getTodayDate();
+        if (!completedDays.has(day)) {
+            day = this.addDaysToKey(day, -1);
         }
 
+        let streak = 0;
+        while (completedDays.has(day)) {
+            streak++;
+            day = this.addDaysToKey(day, -1);
+        }
         return streak;
     }
 
@@ -899,8 +943,8 @@ class FamilyTracker {
 
             // Count tasks completed on this day
             const completedCount = this.tasks.filter(task => {
-                if (!task.completed) return false;
-                const completedDate = new Date(task.updatedAt);
+                if (!task.completed || !task.completedAt) return false;
+                const completedDate = new Date(task.completedAt);
                 return completedDate >= dayStart && completedDate <= dayEnd;
             }).length;
             completed.push(completedCount);
@@ -1144,8 +1188,11 @@ class FamilyTracker {
     // Task Management
     // ==========================================================================
 
-    addTask(taskData) {
-        const task = {
+    buildTask(taskData) {
+        const now = new Date().toISOString();
+        const completed = taskData.completed || false;
+        const recurring = taskData.recurring || false;
+        return {
             id: this.generateId(),
             title: taskData.title,
             description: taskData.description || '',
@@ -1153,34 +1200,85 @@ class FamilyTracker {
             priority: taskData.priority || 'medium',
             assignee: taskData.assignee || this.currentUser.id,
             dueDate: taskData.dueDate || null,
-            completed: taskData.completed || false,
-            recurring: taskData.recurring || false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedBy: taskData.completedBy || (taskData.completed ? (taskData.completedBy || this.currentUser.id) : null)
+            completed,
+            recurring,
+            recurrence: recurring ? (taskData.recurrence || 'weekly') : null,
+            nextOccurrenceId: null,
+            createdAt: now,
+            updatedAt: now,
+            completedAt: completed ? (taskData.completedAt || now) : null,
+            completedBy: taskData.completedBy || (completed ? this.currentUser.id : null)
         };
+    }
+
+    addTask(taskData) {
+        const task = this.buildTask(taskData);
 
         this.tasks.push(task);
         this.saveData();
         this.renderApp();
         
         return task;
-    }    toggleTask(taskId, completedByOverride = null) {
+    }
+
+    toggleTask(taskId, completedByOverride = null) {
         const task = this.tasks.find(t => t.id === taskId);
         if (task) {
             task.completed = !task.completed;
             task.updatedAt = new Date().toISOString();
             if (task.completed) {
+                task.completedAt = task.updatedAt;
                 // Set who completed it (override or current user)
                 task.completedBy = completedByOverride || this.currentUser.id;
+                if (task.recurring && !task.nextOccurrenceId) {
+                    this.scheduleNextOccurrence(task);
+                }
                 this.showToastWithAnimation(`✅ "${task.title}" completed!`, 'success');
             } else {
-                // Clear completedBy if un-completing
+                // Clear completion info if un-completing
+                task.completedAt = null;
                 task.completedBy = null;
             }
             this.saveData();
             this.renderApp();
         }
+    }
+
+    // Due date of the next occurrence strictly after today. Occurrences are
+    // counted from the original date so monthly tasks keep their day
+    // (Jan 31 -> Feb 28 -> Mar 31), and missed occurrences are skipped.
+    getNextOccurrenceDate(fromKey, recurrence) {
+        const today = this.getTodayDate();
+        const start = this.parseDateKey(fromKey);
+        for (let n = 1; n < 10000; n++) {
+            let next;
+            if (recurrence === 'monthly') {
+                const lastDay = new Date(start.getFullYear(), start.getMonth() + n + 1, 0).getDate();
+                next = new Date(start.getFullYear(), start.getMonth() + n, Math.min(start.getDate(), lastDay));
+            } else {
+                const step = recurrence === 'daily' ? 1 : 7;
+                next = new Date(start.getFullYear(), start.getMonth(), start.getDate() + n * step);
+            }
+            const key = this.toDateKey(next);
+            if (key > today) return key;
+        }
+        return this.getTomorrowDate();
+    }
+
+    scheduleNextOccurrence(task) {
+        const next = this.buildTask({
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            priority: task.priority,
+            assignee: task.assignee,
+            recurring: true,
+            recurrence: task.recurrence,
+            dueDate: this.getNextOccurrenceDate(task.dueDate || this.getTodayDate(), task.recurrence)
+        });
+        this.tasks.push(next);
+        task.nextOccurrenceId = next.id;
+        return next;
     }
 
     editTask(taskId) {
@@ -1213,6 +1311,7 @@ class FamilyTracker {
             form.elements.assignee.value = task.assignee;
             form.elements.dueDate.value = task.dueDate || '';
             form.elements.recurring.checked = task.recurring;
+            form.elements.recurrence.value = task.recurrence || 'weekly';
             form.dataset.taskId = task.id;
         } else {
             title.textContent = 'Add New Task';
@@ -1220,6 +1319,7 @@ class FamilyTracker {
             form.elements.assignee.value = this.currentUser.id;
             delete form.dataset.taskId;
         }
+        this.updateRecurrenceVisibility();
 
         this.openModal('taskModal');
     }    saveTask() {
@@ -1234,6 +1334,7 @@ class FamilyTracker {
             dueDate: formData.get('dueDate'),
             recurring: formData.has('recurring')
         };
+        taskData.recurrence = taskData.recurring ? formData.get('recurrence') : null;
 
         if (form.dataset.taskId) {
             // Update existing task
@@ -1241,6 +1342,7 @@ class FamilyTracker {
             if (task) {
                 Object.assign(task, taskData);
                 task.updatedAt = new Date().toISOString();
+                this.saveData();
                 this.showToastWithAnimation('Task updated!', 'success');
             }
         } else {
@@ -1253,18 +1355,23 @@ class FamilyTracker {
         this.renderApp();
     }
 
+    updateRecurrenceVisibility() {
+        const recurring = document.getElementById('taskRecurring').checked;
+        document.getElementById('taskRecurrenceGroup').hidden = !recurring;
+    }
+
     // ==========================================================================
     // Utility Functions
     // ==========================================================================
 
     getTodayTasks() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getTodayDate();
         return this.tasks.filter(task => task.dueDate === today);
     }
 
     isOverdue(task) {
         if (!task.dueDate) return false;
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getTodayDate();
         return task.dueDate < today && !task.completed;
     }
 
@@ -1290,24 +1397,13 @@ class FamilyTracker {
 
     formatDueDate(dateString) {
         if (!dateString) return '';
-        
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
 
-        const dateStr = date.toISOString().split('T')[0];
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-        if (dateStr === todayStr) return 'Today';
-        if (dateStr === tomorrowStr) return 'Tomorrow';
-        if (dateStr === yesterdayStr) return 'Yesterday';
+        const today = this.getTodayDate();
+        if (dateString === today) return 'Today';
+        if (dateString === this.addDaysToKey(today, 1)) return 'Tomorrow';
+        if (dateString === this.addDaysToKey(today, -1)) return 'Yesterday';
         
-        return date.toLocaleDateString();
+        return this.parseDateKey(dateString).toLocaleDateString();
     }
 
     getRecentActivity() {
@@ -1458,7 +1554,7 @@ class FamilyTracker {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `family-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `family-tracker-backup-${this.toDateKey()}.json`;
         a.click();
         
         URL.revokeObjectURL(url);
@@ -1480,7 +1576,7 @@ class FamilyTracker {
                     const data = JSON.parse(e.target.result);
                     
                     if (confirm('This will replace all current data. Continue?')) {
-                        this.tasks = data.tasks || [];
+                        this.tasks = this.migrateTasks(data.tasks || []);
                         this.categories = data.categories || [];
                         this.familyMembers = data.familyMembers || [];
                         this.settings = data.settings || {};

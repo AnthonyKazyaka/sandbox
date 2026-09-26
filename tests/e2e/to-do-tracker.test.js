@@ -137,6 +137,8 @@ test('completing a recurring task schedules the next occurrence (created via the
   await page.selectOption('#taskRecurrence', 'weekly');
   await page.click('#saveTaskBtn');
   const id = await page.evaluate(() => app.tasks.find(t => t.title === 'Water plants').id);
+  assert.equal(await page.evaluate(id => app.getCategoryName(app.tasks.find(t => t.id === id).category), id), '🏠 Household',
+    'the form stores a real category id');
   await page.evaluate(id => app.toggleTask(id), id);
   let series = await page.evaluate(() => app.tasks.filter(t => t.title === 'Water plants')
     .map(t => ({ due: t.dueDate, done: t.completed, recurring: t.recurring, recurrence: t.recurrence })));
@@ -155,7 +157,7 @@ test('completing a recurring task schedules the next occurrence (created via the
   await context.close();
 });
 
-test('recurrence intervals: daily, monthly (clamped to month end), and undated tasks', async () => {
+test('recurrence intervals: daily, monthly (clamped, anchored), undated and overdue tasks', async () => {
   const { context, page } = await openTodo();
   const next = await page.evaluate(() => {
     app.tasks = [];
@@ -166,15 +168,26 @@ test('recurrence intervals: daily, monthly (clamped to month end), and undated t
     };
     return {
       daily: run({ title: 'd', recurrence: 'daily', dueDate: '2026-03-10' }),
+      monthEnd: run({ title: 'me', recurrence: 'monthly', dueDate: '2026-03-31' }),
       monthly: run({ title: 'm', recurrence: 'monthly', dueDate: '2026-01-31' }),
       undated: run({ title: 'u', recurrence: 'weekly' }),
       lateDaily: run({ title: 'late', recurrence: 'daily', dueDate: '2026-03-01' }),
     };
   });
   assert.equal(next.daily, '2026-03-11');
-  assert.equal(next.monthly, '2026-02-28');
+  assert.equal(next.monthEnd, '2026-04-30', 'clamped to the last day of a shorter month');
+  assert.equal(next.monthly, '2026-03-31', 'missed Feb 28 is skipped; the 31st anchor is kept');
   assert.equal(next.undated, '2026-03-17', 'undated tasks repeat from the completion day');
   assert.equal(next.lateDaily, '2026-03-11', 'overdue recurring tasks catch up to the next future date');
+  await context.close();
+});
+
+test('re-rendering keeps the task list filters the user selected', async () => {
+  const { context, page } = await openTodo();
+  await page.evaluate(() => app.switchView('tasks'));
+  await page.selectOption('#categoryFilter', '1');
+  await page.evaluate(() => app.toggleTask(app.addTask({ title: 'x', category: '1' }).id));
+  assert.equal(await page.inputValue('#categoryFilter'), '1');
   await context.close();
 });
 
@@ -207,13 +220,17 @@ test('app shell loads offline after the first visit', async () => {
 test('manifest as parsed by Chromium is scoped to the app and all icons load', async () => {
   const { context, page } = await openTodo();
   const cdp = await context.newCDPSession(page);
-  const { url, errors, parsed } = await cdp.send('Page.getAppManifest');
+  // `parsed` only carries a few resolved fields (scope) in this Chromium, so
+  // other URLs are resolved from the raw manifest the way the browser does.
+  const { url, errors, data, parsed } = await cdp.send('Page.getAppManifest');
+  const raw = JSON.parse(data);
   const appUrl = server.url('to-do-tracker/');
   assert.equal(url, `${appUrl}manifest.json`);
   assert.deepEqual(errors, []);
-  assert.equal(parsed.scope, appUrl, 'scope is the app directory');
-  assert.ok(parsed.startUrl?.startsWith(appUrl), `start_url ${parsed.startUrl} is inside the app`);
-  const iconUrls = [...parsed.icons, ...(parsed.shortcuts || []).flatMap(s => s.icons || [])].map(i => i.url);
+  assert.equal(parsed.scope, appUrl, 'Chromium resolves the scope to the app directory');
+  assert.ok(new URL(raw.start_url, url).href.startsWith(appUrl), `start_url ${raw.start_url} is inside the app`);
+  for (const s of raw.shortcuts || []) assert.ok(new URL(s.url, url).href.startsWith(appUrl), `shortcut ${s.url} is inside the app`);
+  const iconUrls = [...raw.icons, ...(raw.shortcuts || []).flatMap(s => s.icons || [])].map(i => new URL(i.src, url).href);
   assert.ok(iconUrls.length >= 2);
   const statuses = await page.evaluate(urls => Promise.all(urls.map(u => fetch(u).then(r => [u, r.status]))), iconUrls);
   assert.deepEqual(statuses.filter(([, s]) => s !== 200), []);

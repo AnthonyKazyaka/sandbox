@@ -16,7 +16,8 @@ class GameOfLife {
         
         this.isRunning = false;
         this.generation = 0;
-        this.animationId = null;
+        this.timerId = null;
+        this.tickInterval = 200; // ms between generations
         
         this.setupEventListeners();
         this.draw();
@@ -48,9 +49,13 @@ class GameOfLife {
     setupEventListeners() {
         // Canvas click handler
         this.canvas.addEventListener('click', (e) => {
+            // Convert from displayed (CSS) pixels to canvas pixels, since the
+            // canvas may be scaled down to fit narrow screens
             const rect = this.canvas.getBoundingClientRect();
-            const x = Math.floor((e.clientX - rect.left) / this.cellSize);
-            const y = Math.floor((e.clientY - rect.top) / this.cellSize);
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX / this.cellSize);
+            const y = Math.floor((e.clientY - rect.top) * scaleY / this.cellSize);
             
             if (x >= 0 && x < this.gridWidth && y >= 0 && y < this.gridHeight) {
                 this.toggleCell(x, y);
@@ -64,6 +69,10 @@ class GameOfLife {
         document.getElementById('stepBtn').addEventListener('click', () => this.step());
         document.getElementById('clearBtn').addEventListener('click', () => this.clear());
         document.getElementById('randomBtn').addEventListener('click', () => this.randomize());
+        document.getElementById('speedRange').addEventListener('input', (e) => {
+            this.tickInterval = Number(e.target.value);
+            document.getElementById('speedValue').textContent = `${this.tickInterval}ms`;
+        });
     }
     
     toggleCell(x, y) {
@@ -96,9 +105,8 @@ class GameOfLife {
             this.isRunning = false;
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
-            if (this.animationId) {
-                cancelAnimationFrame(this.animationId);
-            }
+            clearTimeout(this.timerId);
+            this.timerId = null;
         }
     }
     
@@ -137,9 +145,9 @@ class GameOfLife {
         if (this.isRunning) {
             this.updateGeneration();
             this.draw();
-            this.animationId = setTimeout(() => {
+            this.timerId = setTimeout(() => {
                 this.animate();
-            }, 200); // Update every 200ms
+            }, this.tickInterval);
         }
     }
     
@@ -228,6 +236,8 @@ class GameOfLife {
         
         // Draw grid lines (optional, light gray)
         this.drawGrid();
+
+        document.getElementById('generation').textContent = this.generation;
     }
     
     drawCell(x, y, cell) {

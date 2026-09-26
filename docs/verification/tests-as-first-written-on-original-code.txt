@@ -1,0 +1,53 @@
+# First version of each test, run before any fix (commit 73cdf31)
+# Command: npm test
+
+not ok - app boots: no uncaught errors and the empty backlog state is rendered
+not ok - search without an API key tells the user to add one in Settings
+not ok - API key saved in Settings is used for RAWG searches
+ok - boots without errors
+not ok - entering and leaving VR updates the button and mode indicator without errors
+not ok - an idle world triggers no voxel rebuilds
+ok - CELLS stat matches the world after changes
+not ok - editing a task persists across a reload
+not ok - "today" follows the user's local calendar (America/New_York at 2026-03-10T21:30:00-04:00)
+not ok - "today" follows the user's local calendar (Asia/Tokyo at 2026-03-11T08:30:00+09:00)
+not ok - completion date is kept when a completed task is edited later
+not ok - streak stays alive until the end of today
+not ok - legacy completed tasks get completedAt migrated from updatedAt
+not ok - completing a recurring task schedules the next occurrence (created via the form)
+not ok - recurrence intervals: daily, monthly (clamped to month end), and undated tasks
+not ok - service worker installs and activates under the GitHub Pages sub-path
+not ok - app shell loads offline after the first visit
+not ok - manifest as parsed by Chromium is scoped to the app and all icons load
+not ok - first frame does not teleport the player (no huge initial delta time)
+not ok - a bullet can reach the player's firing range before it expires
+not ok - movement speed is independent of frame rate
+not ok - returning from a background tab does not make enemies jump
+not ok - the game is winnable: the auto-player clears waves
+not ok - the world pauses while the upgrade panel is open
+not ok - HUD shows the real max health after a Health Boost
+not ok - after game over the player can restart without reloading
+ok - js/config.js is not in the repo (it is gitignored), so it must not be required
+not ok - core/rawg-api.js loads when js/config.js does not exist
+not ok - API key comes from user settings and is used in request URLs
+not ok - searching without a key fails fast with an actionable message (no network call)
+not ok - MCP get_priority_list order and scores match the web calculator (backlog only)
+ok - MCP maxHours and limit filters still apply
+not ok - PriorityCalculator accepts explicit weights without touching storage
+not ok - Stop then Start within one tick does not create a second update loop
+ok - Stop halts the simulation completely
+not ok - clicks map to the right cell when the canvas is scaled by CSS
+not ok - generation counter is shown and speed can be changed
+not ok - dirty is set exactly when a step changes what is rendered
+not ok - a settled world costs nothing to step: active set drains to empty
+not ok - occlusion culling only hides voxels that are really invisible
+not ok - _shuf is an unbiased Fisher–Yates shuffle
+ok - GRID sanity
+not ok - manifest start_url and scope stay inside the app directory
+not ok - every manifest icon (including shortcut icons) exists
+not ok - shortcut URLs are relative
+not ok - icons linked from index.html exist
+not ok - service worker precache list is relative and complete
+# tests 47
+# pass 6
+# fail 41

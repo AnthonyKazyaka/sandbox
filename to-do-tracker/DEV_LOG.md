@@ -5,6 +5,38 @@ This development log tracks the implementation progress, testing results, and ne
 
 ---
 
+## September 26, 2026 - Correctness pass, recurring tasks, working PWA
+
+### ✅ Completed
+- **Edits persist**: editing a task now saves (the update path skipped `saveData()`).
+- **Local dates**: "today", overdue and due-date labels use the local calendar
+  (`toDateKey`/`parseDateKey`); `toISOString()` (UTC) was shifting the day.
+- **Completion tracking**: tasks store `completedAt`; analytics and streaks use it.
+  Older data is migrated from `updatedAt` on load and on import. The streak stays alive until the end of today.
+- **Recurring tasks** (Phase 2): daily, weekly or monthly. Completing a task creates the next
+  occurrence; monthly keeps its day of the month (clamped for short months) and missed dates are skipped.
+- **PWA**:
+  - the service worker uses relative URLs, network-first navigation and an offline fallback
+  - manifest `id`, `start_url` and `scope` are relative
+  - icons are generated from `icons/icon.svg` (`node scripts/generate-todo-icons.mjs`)
+  - manifest shortcuts are handled
+- **Fixes found while testing**:
+  - the form's category menu used ids that matched no category
+  - filters were reset on every render
+  - the Analytics view crashed (missing renderers, wrong family-chart data)
+  - modal, form and toast base styles were missing since `01d60ac`
+
+### 🧪 Testing
+Automated and deterministic (fixed clock and time zone, local CDN stubs), run with `npm test` from the repo root:
+`tests/e2e/to-do-tracker.test.js`, `tests/e2e/smoke.test.js`, `tests/unit/to-do-pwa-assets.test.js`.
+See `../VERIFICATION.md` for criteria and before/after evidence.
+
+### 🔄 Next Steps
+- Escape task ids and member names in HTML templates (imported JSON can inject markup)
+- Edit or stop a recurring series from the UI (currently via each occurrence)
+
+---
+
 ## June 7, 2025 - Initial Implementation & Testing
 
 ### ✅ Completed Today

@@ -7,6 +7,7 @@ import { dataManager, GAME_STATUS } from '../core/data-manager.js';
 import { priorityCalculator } from '../core/priority.js';
 import { rawgApi } from '../core/rawg-api.js';
 import { storage } from '../core/storage.js';
+import { getRawgApiKey, hasRawgApiKey, setRawgApiKey } from '../core/config.js';
 
 class GameBacklogApp {
   constructor() {
@@ -186,6 +187,14 @@ class GameBacklogApp {
     document.getElementById('import-file')?.addEventListener('change', (e) => this.importData(e));
     document.getElementById('clear-cache')?.addEventListener('click', () => this.clearCache());
     document.getElementById('reset-data')?.addEventListener('click', () => this.resetData());
+
+    // RAWG API key
+    document.getElementById('save-rawg-key')?.addEventListener('click', () => {
+      const input = document.getElementById('setting-rawg-key');
+      setRawgApiKey(input.value);
+      input.value = getRawgApiKey();
+      this.showToast(hasRawgApiKey() ? 'RAWG API key saved' : 'RAWG API key removed', 'success');
+    });
   }
 
   // ===================
@@ -460,6 +469,9 @@ class GameBacklogApp {
     const settings = dataManager.getSettings();
     const weights = priorityCalculator.getWeights();
     
+    // RAWG API key
+    document.getElementById('setting-rawg-key').value = getRawgApiKey();
+    
     // Theme
     document.getElementById('setting-theme').value = settings.theme || 'dark';
     
@@ -502,6 +514,12 @@ class GameBacklogApp {
     if (!query) return;
     
     const resultsContainer = document.getElementById('rawg-results');
+
+    if (!hasRawgApiKey()) {
+      resultsContainer.innerHTML = '<p>Game search needs a free RAWG API key. Add it in <strong>Settings → RAWG API Key</strong>, or enter the game details manually below.</p>';
+      return;
+    }
+
     resultsContainer.innerHTML = '<p>Searching...</p>';
     
     try {
@@ -978,9 +996,16 @@ class GameBacklogApp {
   }
 }
 
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize app when DOM is ready. core/config.js uses top-level await, so
+// this module may finish evaluating after DOMContentLoaded has already fired.
+function startApp() {
   window.app = new GameBacklogApp();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 
 export { GameBacklogApp };

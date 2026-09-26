@@ -9,7 +9,8 @@
     <!-- Progressive Web App -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6366f1">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
@@ -308,11 +309,7 @@
                     <div class="form-group">
                         <label for="taskCategory">Category</label>
                         <select id="taskCategory" name="category">
-                            <option value="household">🏠 Household</option>
-                            <option value="personal">👤 Personal</option>
-                            <option value="work">💼 Work</option>
-                            <option value="health">💪 Health</option>
-                            <option value="learning">📚 Learning</option>
+                            <!-- Filled from the saved categories by app.js -->
                         </select>
                     </div>
                     
@@ -347,6 +344,15 @@
                         <span class="checkbox-custom"></span>
                         Recurring Task
                     </label>
+                </div>
+                
+                <div class="form-group" id="taskRecurrenceGroup" hidden>
+                    <label for="taskRecurrence">Repeats</label>
+                    <select id="taskRecurrence" name="recurrence">
+                        <option value="daily">Daily</option>
+                        <option value="weekly" selected>Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
                 </div>
                 
                 <div class="form-actions">
@@ -418,7 +424,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="app.js"></script>
     
     <!-- Service Worker Registration -->

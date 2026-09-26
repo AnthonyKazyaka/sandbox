@@ -6,10 +6,9 @@
 # 1. Get RAWG API key (free)
 https://rawg.io/apidocs
 
-# 2. Configure
+# 2. Configure: open the app, Settings → RAWG API Key, paste the key
+#    (optional local override: cp js/config.example.js js/config.js)
 cd game-backlog-tracker
-cp js/config.example.js js/config.js
-# Edit config.js, add API key
 
 # 3. Start
 python -m http.server 8080
@@ -136,7 +135,7 @@ Settings → Theme → Dark / Light
 ## 🔧 Troubleshooting
 
 ### "No games found" in RAWG search
-- Check API key in config.js
+- Check the API key in Settings → RAWG API Key
 - Check browser console for errors
 - Verify internet connection
 - Try different search terms
@@ -230,7 +229,7 @@ open test-core.html
 ```
 
 ### Common Paths
-- **Config**: `js/config.js`
+- **Config**: `core/config.js` (defaults), Settings → RAWG API Key, optional `js/config.js`
 - **Data (Web)**: Browser localStorage
 - **Data (MCP)**: `~/.game-backlog-tracker.json`
 - **Cache**: Browser localStorage (key: `gameBacklogTracker`)

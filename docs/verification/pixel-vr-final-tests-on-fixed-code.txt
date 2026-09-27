@@ -1,0 +1,47 @@
+# Final pixel-sandbox tests on the FIXED code
+# Command: node --test tests/unit/pixel-sandbox-world.test.js tests/unit/pixel-sandbox-vr-math.test.js tests/e2e/pixel-sandbox.test.js
+
+ok - boots without errors
+ok - entering and leaving VR updates the button and mode indicator without errors
+ok - an idle world triggers no voxel rebuilds
+ok - CELLS stat matches the world after changes
+ok - VR: entering VR puts a tabletop-sized world in front of the player
+ok - VR: pushing the stick forward moves toward where the left controller points (after 0 snap turn(s))
+ok - VR: pushing the stick forward moves toward where the left controller points (after 1 snap turn(s))
+ok - VR: pushing the stick forward moves toward where the left controller points (after 2 snap turn(s))
+ok - VR: pushing the stick forward moves toward where the left controller points (after 4 snap turn(s))
+ok - VR: movement speed does not depend on the headset refresh rate
+ok - VR: turning pivots around the player's head
+ok - VR: two-hand scaling scales around the point between the hands
+ok - VR: pouring and the wrist panel follow handedness, not connection order
+ok - VR: leaving VR restores the desktop view of the world
+ok - VR: pour rate does not depend on the headset refresh rate
+ok - desktop: pouring works from the starting viewpoint
+ok - desktop: one scroll step changes reach once, and in SPOUT mode changes only the rate
+ok - desktop: pour rate does not depend on the monitor refresh rate
+ok - yawOf recovers the heading, ignoring pitch
+ok - spawn: world sits on a table in front of a player facing 0°
+ok - spawn: world sits on a table in front of a player facing 90°
+ok - spawn: world sits on a table in front of a player facing 200°
+ok - spawn: world sits on a table in front of a player facing -45°
+ok - locomotion follows the controller aim after any turn (world scale 0.05)
+ok - locomotion follows the controller aim after any turn (world scale 1)
+ok - locomotion: pointing up flies up, strafe stays level, deadzone ignored, frame-rate independent
+ok - turning keeps the head over the same spot and turns the view the right way
+ok - scaling keeps the point between the hands fixed and clamps the scale
+ok - resetTransform restores the desktop layout
+ok - resolveHands maps by handedness, not connection order
+ok - pacer fires POUR_RATE times per second at any frame rate, immediately on first press
+ok - dirty is set exactly when a step changes what is rendered
+ok - a settled world costs nothing to step: active set drains to empty
+ok - occlusion culling only hides voxels that are really invisible
+ok - _shuf is an unbiased Fisher–Yates shuffle
+ok - GRID sanity
+ok - raycast from the start camera (outside the grid) hits the floor it is aimed at
+ok - raycast from outside respects max distance and misses when the ray never enters the grid
+ok - raycast entering through a side wall reports the voxel on the boundary
+ok - raycast from inside the grid is unchanged
+ok - placing a spout marks the world for re-render
+# tests 41
+# pass 41
+# fail 0

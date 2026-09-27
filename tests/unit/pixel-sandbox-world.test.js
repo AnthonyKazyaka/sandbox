@@ -76,3 +76,43 @@ test('_shuf is an unbiased Fisher–Yates shuffle', () => {
 });
 
 test('GRID sanity', () => { assert.equal(GRID, 32); });
+
+// ---- Desktop raycast (item 5) and setSpout dirty flag (item 10) ----
+import * as THREE from 'three';
+const { ddaRaycast } = await import('../../pixel-sandbox/world.js');
+
+const START_CAMERA = new THREE.Vector3(GRID * 0.5, GRID * 0.6, GRID * 1.5); // VoxelRenderer's desktop camera
+const towards = (from, x, y, z) => new THREE.Vector3(x, y, z).sub(from).normalize();
+
+test('raycast from the start camera (outside the grid) hits the floor it is aimed at', () => {
+  const hit = ddaRaycast(new World(), START_CAMERA, towards(START_CAMERA, 16.5, 1, 16.5), 64);
+  assert.ok(hit, 'ray entering the grid from outside finds the floor');
+  assert.deepEqual({ x: hit.x, y: hit.y, z: hit.z, face: hit.face }, { x: 16, y: 0, z: 16, face: 'y' });
+  assert.ok(Math.abs(hit.dist - START_CAMERA.distanceTo(new THREE.Vector3(16.5, 1, 16.5))) < 1.5, `distance is measured from the camera (${hit.dist.toFixed(1)})`);
+});
+
+test('raycast from outside respects max distance and misses when the ray never enters the grid', () => {
+  assert.equal(ddaRaycast(new World(), START_CAMERA, towards(START_CAMERA, 16.5, 1, 16.5), 30), null, 'floor is ~37 away');
+  assert.equal(ddaRaycast(new World(), START_CAMERA, new THREE.Vector3(0, 0, 1), 64), null, 'pointing away from the grid');
+});
+
+test('raycast entering through a side wall reports the voxel on the boundary', () => {
+  const w = new World();
+  w.set(31, 5, 10, MAT.STONE);
+  const origin = new THREE.Vector3(40, 5.5, 10.5);
+  const hit = ddaRaycast(w, origin, new THREE.Vector3(-1, 0, 0), 64);
+  assert.deepEqual({ x: hit.x, y: hit.y, z: hit.z, face: hit.face }, { x: 31, y: 5, z: 10, face: 'x' });
+  assert.ok(Math.abs(hit.dist - 8) < 1e-9);
+});
+
+test('raycast from inside the grid is unchanged', () => {
+  const hit = ddaRaycast(new World(), new THREE.Vector3(16.5, 10.5, 16.5), new THREE.Vector3(0, -1, 0), 64);
+  assert.deepEqual({ x: hit.x, y: hit.y, z: hit.z, face: hit.face }, { x: 16, y: 0, z: 16, face: 'y' });
+});
+
+test('placing a spout marks the world for re-render', () => {
+  const w = new World();
+  w.dirty = false;
+  w.setSpout(10, 20, 10, MAT.SAND, 3);
+  assert.equal(w.dirty, true);
+});

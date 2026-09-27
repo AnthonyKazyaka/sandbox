@@ -74,6 +74,7 @@ export class World {
     this.spoutMat[i]=emitMat; this.spoutRate[i]=rate;
     this.spouts.add(i);
     this.active.add(i);
+    this.dirty=true;
     this._wake(x,y,z);
   }
 
@@ -224,16 +225,38 @@ export function isOccluded(cells,x,y,z) {
 }
 
 // ─── DDA RAYCAST ─────────────────────────────────────────────────────────────
+// Walks the voxels along a ray and returns the first solid one (or null).
+// A ray that starts outside the grid (e.g. the desktop start camera) first
+// jumps to where it enters the grid; distances are still measured from origin.
 export function ddaRaycast(world,origin,dir,maxDist) {
-  let x=Math.floor(origin.x),y=Math.floor(origin.y),z=Math.floor(origin.z);
+  let ox=origin.x,oy=origin.y,oz=origin.z,t0=0,face='y';
+  const outside=!(ox>=0&&ox<GRID&&oy>=0&&oy<GRID&&oz>=0&&oz<GRID);
+  if(outside){
+    // Slab test against the grid box [0,GRID]^3
+    let tmin=-Infinity,tmax=Infinity;
+    for(const [o,d,axis] of [[ox,dir.x,'x'],[oy,dir.y,'y'],[oz,dir.z,'z']]){
+      if(Math.abs(d)<1e-9){ if(o<0||o>GRID) return null; continue; }
+      let ta=(0-o)/d,tb=(GRID-o)/d;
+      if(ta>tb){const t=ta;ta=tb;tb=t;}
+      if(ta>tmin){tmin=ta;face=axis;}
+      if(tb<tmax)tmax=tb;
+    }
+    if(tmin>tmax||tmax<0||tmin>maxDist) return null;
+    t0=Math.max(tmin,0);
+    ox+=dir.x*t0; oy+=dir.y*t0; oz+=dir.z*t0;
+  }
+  const clampCell=v=>Math.min(GRID-1,Math.max(0,Math.floor(v)));
+  let x=clampCell(ox),y=clampCell(oy),z=clampCell(oz);
+  // The voxel where the ray enters the grid can itself be the hit
+  if(outside&&world.get(x,y,z)!==MAT.EMPTY) return{x,y,z,dist:t0,face};
   const sx=dir.x>0?1:-1,sy=dir.y>0?1:-1,sz=dir.z>0?1:-1;
   const tdx=Math.abs(dir.x)<1e-9?1e30:1/Math.abs(dir.x);
   const tdy=Math.abs(dir.y)<1e-9?1e30:1/Math.abs(dir.y);
   const tdz=Math.abs(dir.z)<1e-9?1e30:1/Math.abs(dir.z);
-  let tx=dir.x>0?(x+1-origin.x)*tdx:(origin.x-x)*tdx;
-  let ty=dir.y>0?(y+1-origin.y)*tdy:(origin.y-y)*tdy;
-  let tz=dir.z>0?(z+1-origin.z)*tdz:(origin.z-z)*tdz;
-  let dist=0,face='y';
+  let tx=t0+(dir.x>0?(x+1-ox)*tdx:(ox-x)*tdx);
+  let ty=t0+(dir.y>0?(y+1-oy)*tdy:(oy-y)*tdy);
+  let tz=t0+(dir.z>0?(z+1-oz)*tdz:(oz-z)*tdz);
+  let dist=t0;
   while(dist<maxDist){
     if(tx<ty&&tx<tz){x+=sx;dist=tx;tx+=tdx;face='x';}
     else if(ty<tz)  {y+=sy;dist=ty;ty+=tdy;face='y';}

@@ -107,9 +107,49 @@ These are recorded because changing a test can hide a problem:
 - **Pixel-sandbox scene:** water is designed to keep wandering, so the dirty-flag property test removes liquids partway through to also cover the idle case.
 - **To-do checkbox:** the test clicks the visible label instead of force-checking a hidden input.
 
+## Pixel-sandbox VR and desktop controls (v0.4.0)
+
+VR can't run in CI, so the checks come in two layers:
+
+1. **Pure geometry** in `pixel-sandbox/vr-math.js`, unit-tested as properties over many poses, turn angles and world scales (`tests/unit/pixel-sandbox-vr-math.test.js`).
+2. **The real `VRPlacer.update()`** driven frame by frame in Chromium (`tests/e2e/pixel-sandbox.test.js`). The animation loop is stopped, and the XR session, head pose and two controllers are stubbed with xr-standard gamepads. The controllers connect **right first**, which some runtimes do.
+
+   The stub mirrors three.js r128 exactly, as confirmed in its source:
+   - `controllers[i]` is updated from `session.inputSources[i]` every frame
+   - controller spaces have `matrixAutoUpdate = false`
+   - the XR camera's matrix is this frame's first-eye pose
+
+| # | Claim | Success criterion | Before (measured on `main` @ 3021be1) | After |
+|---|---|---|---|---|
+| 1 | Entering VR shows the world in front of you | Grid centre 0.6–2 m ahead and centred; floor below eye level; 1–2.5 m wide; all corners in front | World centre **15.8 m behind** the player; 32 m wide | 1.2 m ahead, 0.65 m below the eyes, 1.6 m wide |
+| 2 | Stick-forward flies toward where the left hand points, at a fixed speed | cos(motion, aim) > 0.99 after 0, 1, 2 and 4 snap turns (unit test: every 15° × 3 aims × 2 scales); 3.2 voxels/s; same distance at 72 and 120 Hz | cos **−1.00** (backwards) at 0 turns, −0.71 after 1, 0.00 after 2; 2.88 vs 4.80 voxels/s at 72 vs 120 Hz | cos = 1.000 in every case; 3.20 voxels/s at any rate |
+| 3 | Turning happens in place; two-hand scaling keeps the point between the hands fixed | Head's position in voxel coordinates unchanged by a turn; midpoint between hands unchanged by scaling | Head drifted **0.83 voxels** per turn (player away from the room origin); midpoint drifted **0.63 voxels** | < 1e-6 |
+| 4 | Pouring, erasing, the stream and the wrist panel use the correct hand | With the right controller connected first: material lands where the right hand aims, and the wrist panel is on the left hand | Poured from the **left** hand's aim; panel on the right hand | Correct hands |
+| 4b | Leaving VR restores the desktop view | World transform back to identity after a VR session with turns | World left rotated or scaled on desktop | Identity |
+| 5 | Desktop pouring works from the starting viewpoint | Crosshair on the floor centre + click places a voxel there; raycast from outside the grid hits the entry voxel with the right face and distance | Raycast returned `null` (it stopped as soon as it was outside the grid); reach 22 < 37 needed | Voxel placed; raycast unit tests pass |
+| 10 | Small fixes | `setSpout` marks the world dirty; one scroll step changes reach once (0.03 × deltaY) and in SPOUT mode only the rate; pouring is 30 stamps/s at 60, 72, 120 and 144 Hz | Not dirty; reach changed 2× and also in SPOUT mode; pour rate tied to refresh rate | All pass |
+
+| Run | Tests | Pass | Fail |
+|---|---|---|---|
+| Tests as first written, original code ([log](docs/verification/pixel-vr-tests-as-first-written-on-original-code.txt)) | 28 | 11 | 17 |
+| **Final** pixel tests, original code ([log](docs/verification/pixel-vr-final-tests-on-original-code.txt)) | 29 | 11 | 18 |
+| **Final** pixel tests, fixed code ([log](docs/verification/pixel-vr-final-tests-on-fixed-code.txt)) | 41 | **41** | **0** |
+
+The 11 tests that pass on the original code are the earlier v0.3.1 checks plus two raycast guards (a ray inside the grid, and a ray that misses the grid). The final run on the original counts fewer tests because the `vr-math` file fails to load there (the module doesn't exist).
+
+**Test corrections made during this work:**
+- **Pour-rate tests:** at first these passed on the old code only because nothing was poured at all (0 = 0). They now also require about 30 pours per second.
+- **Stub controllers:** poses are composed into the matrix, as three.js does. The first draft set only `position`, which three.js ignores for XR controllers, so the scaling check produced NaN instead of a measurement.
+- **Raycast target:** the desktop target is the floor's top surface (y = 1). Aiming at the voxel centre (y = 0.5) correctly hits the surface one voxel nearer.
+
+**Still needs a headset:**
+- comfort of the spawn distance and height
+- the 3.2 voxels/s flying speed
+- actual controller ordering on Quest and PC VR
+
 ## Not covered by automation (manual follow-up)
 
-- Real WebXR hardware (setSession is stubbed; only the UI flow around it is tested).
+- Real WebXR hardware: sessions, poses and gamepads are stubbed. The VR logic runs for real, but comfort and feel need a headset.
 - Real Chart.js rendering (a stub records chart creation).
 - iOS Safari PWA behaviour, and live CDN availability.
 - Auto-shooter difficulty balance: the auto-player now rarely takes damage in early waves, which is a tuning question rather than a correctness one.

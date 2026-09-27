@@ -1,0 +1,20 @@
+# Final desktop-controls tests on the ORIGINAL code (main @ 7ee26ca)
+# Command: node --test tests/e2e/pixel-sandbox-desktop.test.js
+
+not ok - every material has a full-size per-voxel colour buffer
+not ok - stone renders grey with per-voxel shading, sand renders yellow (pixel readback)
+  error: 'floor pixel 0,0,0 is neither black nor blown out'
+not ok - clicking the "Click to enter" prompt captures the mouse
+not ok - Space/E fly up, Q/C fly down, Tab cycles the tool mode
+  error: 'KeyE moved 0.00 vertically (expected 5)'
+not ok - held keys are released when the window loses focus or the mouse is released
+not ok - flight is kept within one world-width of the grid
+  error: 'camera at -544.0,764.7,577.9'
+not ok - left-click uses the current tool: pour, spout (one per click), erase
+not ok - a marker shows where the tool will act, and the crosshair stays visible on light blocks
+not ok - with nothing in the way, pouring happens in mid-air at REACH distance
+not ok - number keys follow the physical key, and hints show the user's keyboard layout
+ok - controls boot without page errors
+# tests 11
+# pass 1
+# fail 10

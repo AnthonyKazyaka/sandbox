@@ -147,6 +147,36 @@ The 11 tests that pass on the original code are the earlier v0.3.1 checks plus t
 - the 3.2 voxels/s flying speed
 - actual controller ordering on Quest and PC VR
 
+## Pixel-sandbox desktop controls and rendering (v0.5.0)
+
+This comes from a hands-on review in Chromium with real Playwright keyboard, mouse-button, mouse-move and scroll input (`tests/e2e/pixel-sandbox-desktop.test.js`). Automated Chromium never grants pointer lock, even headed under Xvfb, so only the lock state is emulated (`emulatePointerLock` in `tests/helpers/browser.js`). The game's own lock handler and input listeners run unchanged.
+
+| # | Problem found | Success criterion | Before (measured on `main` @ 7ee26ca) | After |
+|---|---|---|---|---|
+| 1 | Stone rendered black; other materials flat and over-bright | Every voxel mesh and spout visual has a full-size colour buffer. Pixel readback: floor tops are neither black nor saturated, are grey like `#7a7a8a`, and show more than one shade; sand reads yellow | Colour buffers had length **0**: three.js r128 `setColorAt()` sizes them from `count`, which was 0. Floor pixel `(0,0,0)`. See [before](docs/verification/pixel-colours-before.png) | Buffers allocated up front; white base materials; lighting rebalanced. See [after](docs/verification/pixel-colours-and-marker-after.png) |
+| 2 | Clicking "Click to enter" did nothing | Clicking the prompt captures the mouse | Not captured (the prompt swallowed the click and had no handler) | Captured |
+| 3 | Left-click did nothing in ERASE or SPOUT mode; spouts needed a middle button | Left-click pours, places exactly one spout per click, or erases, depending on the tool | ERASE + left-click: nothing; SPOUT + left-click: 0 spouts | Works; right-click still always erases |
+| 4 | Keys stuck after alt-tab | `blur`, a hidden tab, or releasing the mouse clears held keys; no drift after re-entering | W stayed held and the camera drifted on return | Cleared |
+| 5 | No flight bounds | 20 simulated seconds of Shift+S, Shift+Space and Shift+A stays within [−32, 64] on every axis | Reached (−544, 765, 578) | Clamped |
+| 6 | No target indicator; crosshair invisible on light blocks | An outline marks the cell the tool will act on (the empty cell for pour/spout, the block for erase, the mid-air cell); hidden when the mouse is released; crosshair uses `mix-blend-mode: difference` | No marker; white crosshair over a pale block | Marker and contrast-safe crosshair (also shown in VR at the right hand's aim) |
+| 7 | Number keys failed on AZERTY | `Digit1` selects material 1 whatever character it types; hints use the keyboard layout (`navigator.keyboard.getLayoutMap`) | AZERTY "1" (types `&`) did nothing; hints always QWERTY | Works; hints read "Z Q S D", "SPC/E", "A/C" on AZERTY |
+| 8 | No mid-air placement on desktop (VR has it) | With nothing under the crosshair, pour/spout act on the cell REACH voxels along the ray | Nothing placed | Placed; REACH (default 12, scroll to change) now means mid-air distance |
+
+**Key map** (one `KEYS` table in `index.html`): up is **Space or E**, down is **Q or C**, and tool mode is **Tab** (only while the mouse is captured). This follows the Q = down / E = up convention of Unity, Unreal and Blender. E previously cycled the tool mode, next to Q.
+
+| Run | Tests | Pass | Fail |
+|---|---|---|---|
+| Tests as first written, original code ([log](docs/verification/pixel-desktop-tests-as-first-written-on-original-code.txt)) | 11 | 1 | 10 |
+| **Final** tests, original code ([log](docs/verification/pixel-desktop-final-tests-on-original-code.txt)) | 11 | 1 | 10 |
+| **Final** tests, fixed code ([log](docs/verification/pixel-desktop-final-tests-on-fixed-code.txt)) | 11 | **11** | **0** |
+
+The one test passing on the original code is the "boots without page errors" guard.
+
+**Test corrections made during this work:**
+- **Timing:** the flight-bounds and key-direction tests first measured wall-clock movement. Under load, the bounds test once passed on the unbounded original, and Space once moved exactly 1.00 against a "> 1" threshold. Both now hold the real keys but advance `fly.update(0.05)` deterministically.
+- **Mid-air marker:** the check now runs before pouring. Once the cell is filled, the crosshair correctly targets the cell in front of it.
+- **Rejected suspicion:** Space does not re-trigger a focused toolbar button, because clicking back into the game moves focus to the page. No change was needed.
+
 ## Not covered by automation (manual follow-up)
 
 - Real WebXR hardware: sessions, poses and gamepads are stubbed. The VR logic runs for real, but comfort and feel need a headset.

@@ -76,7 +76,9 @@ A modern, intelligent web application for managing and prioritizing your video g
 **Note:** RAWG API key required - get one free at [rawg.io/apidocs](https://rawg.io/apidocs)
 
 ### Pixel Sandbox
-A 3D VR pixel sandbox game.
+A 3D voxel sandbox with falling-sand physics (stone, sand, water, lava, oil, fire). It plays in any WebGL browser with a mouse and keyboard; VR (WebXR) is optional.
+
+**Desktop controls:** click to capture the mouse (ESC releases it). W A S D fly, Space/E up, Q/C down, Shift sprint, 1–6 choose material, Tab switches tool (pour / spout / erase), left-click uses the tool, right-click erases, scroll sets mid-air reach or spout rate. An outline shows the cell the tool will act on.
 
 **Location:** `/pixel-sandbox/`
 [Live version](https://anthonykazyaka.github.io/sandbox/pixel-sandbox/index.html)

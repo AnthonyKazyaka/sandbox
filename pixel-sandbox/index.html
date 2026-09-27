@@ -43,7 +43,7 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 #stats .v{color:#fff;float:right;margin-left:14px}
 #hints{position:absolute;top:14px;left:14px;background:var(--ui-bg);border:1px solid var(--ui-border);border-radius:9px;padding:9px 13px;font-size:9px;line-height:2.1;letter-spacing:.04em;backdrop-filter:blur(8px);opacity:.85}
 .key{display:inline-block;background:rgba(80,160,255,0.13);border:1px solid var(--ui-border);border-radius:3px;padding:0 4px;margin-right:3px;font-size:8px}
-#xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;pointer-events:none}
+#xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;pointer-events:none;mix-blend-mode:difference}
 #xhair::before,#xhair::after{content:'';position:absolute;background:rgba(255,255,255,.85);border-radius:1px}
 #xhair::before{width:18px;height:1px;top:50%;left:0;transform:translateY(-50%)}
 #xhair::after{width:1px;height:18px;left:50%;top:0;transform:translateX(-50%)}
@@ -67,16 +67,16 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 <canvas id="c"></canvas>
 <div id="hud">
   <div id="title">SANDBOX³</div>
-  <div id="version">v0.4.0</div>
+  <div id="version">v0.5.0</div>
   <div id="xhair" class="h"></div>
   <div id="prompt"><span class="big">SANDBOX³</span><span class="sub">Click to enter · ESC to exit</span></div>
   <div id="hints">
     <div style="opacity:.7;font-size:8px;letter-spacing:.12em;margin-bottom:3px">DESKTOP</div>
-    <div><span class="key">W A S D</span> Fly &nbsp;<span class="key">SPC/Q</span> Up/Down</div>
-    <div><span class="key">SHIFT</span> Sprint &nbsp;<span class="key">1-6</span> Material</div>
-    <div><span class="key">LMB</span> Pour &nbsp;<span class="key">RMB</span> Erase</div>
-    <div><span class="key">E</span> Mode &nbsp;<span class="key">SCROLL</span> Rate/Reach</div>
-    <div><span class="key">MMB</span> Confirm spout</div>
+    <div><span class="key" data-keys="KeyW KeyA KeyS KeyD">W A S D</span> Fly &nbsp;<span class="key">SHIFT</span> Sprint</div>
+    <div><span class="key" data-keys="SPC/KeyE">SPC/E</span> Up &nbsp;<span class="key" data-keys="KeyQ/KeyC">Q/C</span> Down</div>
+    <div><span class="key">LMB</span> Use tool &nbsp;<span class="key">RMB</span> Erase</div>
+    <div><span class="key">TAB</span> Tool &nbsp;<span class="key">1-6</span> Material</div>
+    <div><span class="key">SCROLL</span> Reach (mid-air) / spout rate</div>
     <div style="opacity:.7;font-size:8px;letter-spacing:.12em;margin-top:5px">VR CONTROLS</div>
     <div><span class="key">L&#x2713;</span> Fly (hand-aim) &nbsp;<span class="key">R&#x2713;</span> Turn</div>
     <div><span class="key">L-TRIG</span> Material &nbsp;<span class="key">L-CLICK</span> Mode</div>
@@ -121,6 +121,37 @@ import * as THREE from 'three';
 import { GRID, MAT, PLACE_MATS, PLACE_NAMES, MODES, MODE_COLORS, COLORS, MAT_HEX, TICK_MS, World, ddaRaycast, isOccluded } from './world.js';
 import { computeSpawnTransform, applyTransform, resetTransform, locomotionOffset, rotateAboutPivot, scaleAboutPivot, resolveHands, createPacer } from './vr-math.js';
 
+// ─── DESKTOP KEY BINDINGS ────────────────────────────────────────────────────
+// KeyboardEvent.code values (physical keys), so they work on any keyboard
+// layout; the on-screen hints are relabelled for the user's layout.
+const KEYS = {
+  forward:['KeyW'], back:['KeyS'], left:['KeyA'], right:['KeyD'],
+  up:['Space','KeyE'], down:['KeyQ','KeyC'],
+  sprint:['ShiftLeft','ShiftRight'],
+  mode:['Tab'],
+};
+
+// Instanced meshes need their per-instance colour buffer sized for every
+// instance up front: three.js r128 setColorAt() sizes it from the current
+// `count` (0 here), which left stone black and other materials unshaded.
+function withColorBuffer(mesh) {
+  mesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(mesh.instanceMatrix.count*3),3);
+  mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+  return mesh;
+}
+
+// Show key names from the user's layout (e.g. "Z Q S D" on AZERTY) where supported
+async function localizeKeyHints() {
+  try {
+    const map=await navigator.keyboard?.getLayoutMap?.();
+    if(!map) return;
+    const label=code=>code.startsWith('Key')?(map.get(code)||code.slice(3)).toUpperCase():code;
+    document.querySelectorAll('#hints .key[data-keys]').forEach(el=>{
+      el.textContent=el.dataset.keys.split(' ').map(group=>group.split('/').map(label).join('/')).join(' ');
+    });
+  } catch(e) { /* keep the default QWERTY labels */ }
+}
+
 // ─── SPOUT VISUALS ───────────────────────────────────────────────────────────
 class SpoutVisuals {
   constructor(scene) {
@@ -128,11 +159,13 @@ class SpoutVisuals {
     // Cone indicator pointing downward per spout
     this.coneGeo = new THREE.ConeGeometry(0.28, 0.55, 8);
     this.cones   = new THREE.InstancedMesh(this.coneGeo, new THREE.MeshLambertMaterial({transparent:true,opacity:0.88}), 2048);
+    withColorBuffer(this.cones);
     this.cones.count = 0; this.cones.frustumCulled = false;
     scene.add(this.cones);
     // Ring pulsing around spout base
     this.ringGeo = new THREE.TorusGeometry(0.55, 0.06, 8, 24);
     this.rings   = new THREE.InstancedMesh(this.ringGeo, new THREE.MeshLambertMaterial({transparent:true,opacity:0.6}), 2048);
+    withColorBuffer(this.rings);
     this.rings.count = 0; this.rings.frustumCulled = false;
     scene.add(this.rings);
     this.dummy = new THREE.Object3D();
@@ -209,13 +242,14 @@ class VoxelRenderer {
 
     // ── Lighting ──
     // Strong ambient so everything is visible
-    this.scene.add(new THREE.AmbientLight(0xffffff,0.75));
+    // Balanced so a top face shows its material colour at about 1:1
+    this.scene.add(new THREE.AmbientLight(0xffffff,0.3));
     // Hemisphere: warm sky, cool ground
-    this.scene.add(new THREE.HemisphereLight(0xffeedd,0x223344,0.9));
+    this.scene.add(new THREE.HemisphereLight(0xffeedd,0x223344,0.35));
     // Key directional
-    const sun=new THREE.DirectionalLight(0xffffff,1.0); sun.position.set(2,4,2); this.scene.add(sun);
+    const sun=new THREE.DirectionalLight(0xffffff,0.45); sun.position.set(2,4,2); this.scene.add(sun);
     // Soft fill from opposite
-    const fill=new THREE.DirectionalLight(0x8899bb,0.5); fill.position.set(-2,-1,-2); this.scene.add(fill);
+    const fill=new THREE.DirectionalLight(0x8899bb,0.25); fill.position.set(-2,-1,-2); this.scene.add(fill);
     // Dynamic lava glow
     this.lavaLight=new THREE.PointLight(0xff4400,0,GRID*0.9); this.lavaLight.position.set(GRID/2,4,GRID/2); this.sceneGroup.add(this.lavaLight);
     // Dynamic fire glow
@@ -240,13 +274,14 @@ class VoxelRenderer {
     const maxI=GRID*GRID*GRID;
     for(const[midStr,cols]of Object.entries(COLORS)) {
       const mid=parseInt(midStr);
-      const mat=new THREE.MeshLambertMaterial({color:cols[0]});
+      // White base: each voxel's own colour comes from its instance colour
+      const mat=new THREE.MeshLambertMaterial({color:0xffffff});
       if(mid===MAT.WATER){mat.transparent=true;mat.opacity=0.72;}
       if(mid===MAT.OIL)  {mat.transparent=true;mat.opacity=0.88;}
       if(mid===MAT.STEAM){mat.transparent=true;mat.opacity=0.30;}
       if(mid===MAT.SMOKE){mat.transparent=true;mat.opacity=0.42;}
       if(mid===MAT.FIRE) {mat.transparent=true;mat.opacity=0.88;mat.emissive=new THREE.Color(0xff3300);mat.emissiveIntensity=0.5;}
-      const mesh=new THREE.InstancedMesh(cubeGeo,mat,maxI);
+      const mesh=withColorBuffer(new THREE.InstancedMesh(cubeGeo,mat,maxI));
       mesh.count=0; mesh.frustumCulled=false;
       if([MAT.WATER,MAT.OIL,MAT.STEAM,MAT.SMOKE,MAT.FIRE].includes(mid)) mesh.renderOrder=1;
       this.sceneGroup.add(mesh);
@@ -261,6 +296,13 @@ class VoxelRenderer {
     this.colorObjs={};
     for(const[midStr,cols]of Object.entries(COLORS)) this.colorObjs[midStr]=cols.map(c=>new THREE.Color(c));
     this.dummy=new THREE.Object3D();
+
+    // Outline of the cell the current tool acts on (desktop crosshair / VR aim)
+    this.targetMarker=new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04,1.04,1.04)),
+      new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.9,depthTest:false}));
+    this.targetMarker.visible=false; this.targetMarker.renderOrder=3;
+    this.sceneGroup.add(this.targetMarker);
 
     // Spout visuals (cones + rings)
     this.spoutVis=new SpoutVisuals(this.sceneGroup);
@@ -400,6 +442,15 @@ class VoxelRenderer {
     if(fireCount>0) this.fireLight.position.set(fireSumX/fireCount+0.5,fireSumY/fireCount+1,fireSumZ/fireCount+0.5);
   }
 
+  showTarget(cell,hexColor,size=1) {
+    const m=this.targetMarker;
+    m.position.set(cell.x+0.5,cell.y+0.5,cell.z+0.5);
+    m.scale.setScalar(size);
+    m.material.color.set(hexColor);
+    m.visible=true;
+  }
+  hideTarget() { this.targetMarker.visible=false; }
+
   render(dt) { this.rebuild(); this.spoutVis.update(this.world,dt); this.renderer.render(this.scene,this.camera); }
   resize()   { this.camera.aspect=innerWidth/innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth,innerHeight); }
 }
@@ -409,12 +460,15 @@ class FlyCamera {
   constructor(camera,canvas) {
     this.camera=camera; this.canvas=canvas;
     this.locked=false; this.yaw=0; this.pitch=0; this.keys={};
-    this.speed=10; this.reach=GRID*2; // start camera is ~37 voxels from the floor centre
+    this.speed=10;
+    this.reach=12; // distance for mid-air placement when nothing is under the crosshair
     const e=new THREE.Euler().setFromQuaternion(camera.quaternion,'YXZ');
     this.yaw=e.y; this.pitch=e.x;
     canvas.addEventListener('click',()=>this.lock());
+    document.getElementById('prompt').addEventListener('click',()=>this.lock());
     document.addEventListener('pointerlockchange',()=>{
       this.locked=document.pointerLockElement===canvas;
+      if(!this.locked) this.keys={};
       document.getElementById('prompt').classList.toggle('h',this.locked);
       document.getElementById('xhair').classList.toggle('h',!this.locked);
     });
@@ -425,21 +479,30 @@ class FlyCamera {
     });
     document.addEventListener('keydown',e=>{this.keys[e.code]=true;if(e.code==='Space')e.preventDefault();});
     document.addEventListener('keyup',e=>{this.keys[e.code]=false;});
+    // A key released while another window has focus never sends keyup here
+    window.addEventListener('blur',()=>{this.keys={};});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)this.keys={};});
   }
   lock(){this.canvas.requestPointerLock();}
   lookDir(){return new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(this.pitch,this.yaw,0,'YXZ')).normalize();}
+  held(action){return KEYS[action].some(code=>this.keys[code]);}
   update(dt) {
     if(!this.locked)return;
     const fwd=this.lookDir();
     const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
     const up=new THREE.Vector3(0,1,0);
-    const spd=this.speed*dt*((this.keys['ShiftLeft']||this.keys['ShiftRight'])?2.8:1);
-    if(this.keys['KeyW'])this.camera.position.addScaledVector(fwd,spd);
-    if(this.keys['KeyS'])this.camera.position.addScaledVector(fwd,-spd);
-    if(this.keys['KeyA'])this.camera.position.addScaledVector(right,-spd);
-    if(this.keys['KeyD'])this.camera.position.addScaledVector(right,spd);
-    if(this.keys['Space'])this.camera.position.addScaledVector(up,spd);
-    if(this.keys['KeyQ'])this.camera.position.addScaledVector(up,-spd);
+    const pos=this.camera.position;
+    const spd=this.speed*dt*(this.held('sprint')?2.8:1);
+    if(this.held('forward'))pos.addScaledVector(fwd,spd);
+    if(this.held('back'))pos.addScaledVector(fwd,-spd);
+    if(this.held('left'))pos.addScaledVector(right,-spd);
+    if(this.held('right'))pos.addScaledVector(right,spd);
+    if(this.held('up'))pos.addScaledVector(up,spd);
+    if(this.held('down'))pos.addScaledVector(up,-spd);
+    // Stay within one world-width of the grid so the world can't be lost
+    pos.x=Math.min(GRID*2,Math.max(-GRID,pos.x));
+    pos.y=Math.min(GRID*2,Math.max(-GRID,pos.y));
+    pos.z=Math.min(GRID*2,Math.max(-GRID,pos.z));
     this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch,this.yaw,0,'YXZ'));
   }
 }
@@ -466,25 +529,34 @@ class PlacerState {
 
 // ─── DESKTOP PLACER ──────────────────────────────────────────────────────────
 class DesktopPlacer {
-  constructor(world,fly,state) {
-    this.world=world; this.fly=fly; this.state=state;
+  constructor(world,fly,state,voxelRenderer) {
+    this.world=world; this.fly=fly; this.state=state; this.vr=voxelRenderer;
     this.placing=false; this.erasing=false;
-    this.lastHit=null;
+    this.placeTarget=null;   // empty cell the pour/spout tools act on
+    this.eraseTarget=null;   // solid voxel under the crosshair
     this.pourPacer=createPacer();
     this._hint=null;
 
+    // Left button uses the current tool, right button always erases,
+    // middle button also places a spout (for mice that have one)
     document.addEventListener('mousedown',e=>{
       if(!this.fly.locked)return;
-      if(e.button===0)this.placing=true;
+      if(e.button===0){
+        if(this.state.mode==='SPOUT') this._placeSpout();
+        else this.placing=true;
+      }
       if(e.button===2)this.erasing=true;
-      if(e.button===1){e.preventDefault();this._confirmSpout();} // middle click = confirm spout
+      if(e.button===1){e.preventDefault();if(this.state.mode==='SPOUT')this._placeSpout();}
     });
     document.addEventListener('mouseup',e=>{if(e.button===0)this.placing=false;if(e.button===2)this.erasing=false;});
     document.addEventListener('contextmenu',e=>e.preventDefault());
+    document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement){this.placing=false;this.erasing=false;}});
     document.addEventListener('keydown',e=>{
       if(!this.fly.locked)return;
-      if(e.code==='KeyE'){this.state.cycleMode();this._updateModeUI();}
-      const n=parseInt(e.key); if(n>=1&&n<=6){this.state.matIndex=n-1;this._updateMatUI();}
+      if(KEYS.mode.includes(e.code)){e.preventDefault();this.state.cycleMode();this._updateModeUI();}
+      // Physical number keys, so they also work where "1" needs Shift (AZERTY)
+      const digit=/^(?:Digit|Numpad)([1-6])$/.exec(e.code);
+      if(digit){this.state.matIndex=Number(digit[1])-1;this._updateMatUI();}
     });
     document.addEventListener('wheel',e=>{
       if(!this.fly.locked)return;
@@ -497,17 +569,13 @@ class DesktopPlacer {
     },{passive:true});
   }
 
-  _confirmSpout() {
-    if(!this.lastHit||this.state.mode!=='SPOUT')return;
-    const hit=this.lastHit;
-    let cx=hit.x,cy=hit.y,cz=hit.z;
-    if(hit.face==='x')cx-=Math.sign(this.fly.lookDir().x);
-    else if(hit.face==='y')cy-=Math.sign(this.fly.lookDir().y);
-    else cz-=Math.sign(this.fly.lookDir().z);
+  _placeSpout() {
+    const t=this.placeTarget;
+    if(!t)return;
     const r=this.state.brushSize-1;
     for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++) {
       if(dx*dx+dz*dz>r*r+0.5)continue;
-      this.world.setSpout(cx+dx,cy,cz+dz,this.state.mat,this.state.pendingRate);
+      this.world.setSpout(t.x+dx,t.y,t.z+dz,this.state.mat,this.state.pendingRate);
     }
   }
 
@@ -520,7 +588,7 @@ class DesktopPlacer {
     document.getElementById('rate-fill').style.width=(this.state.pendingRate/8*100)+'%';
     document.getElementById('rate-val').textContent=this.state.pendingRate;
     const hitEl=document.getElementById('hit-info');
-    if(mode==='SPOUT') hitEl.textContent='SCROLL=rate  MMB=confirm spout';
+    if(mode==='SPOUT') hitEl.textContent='SCROLL=rate  CLICK=place spout';
     else hitEl.textContent='';
     this._hint=null;
   }
@@ -536,48 +604,58 @@ class DesktopPlacer {
     document.querySelectorAll('.mat-btn').forEach(b=>b.classList.toggle('active',b.dataset.mat===name));
   }
 
+  // Work out where each tool would act for the current crosshair ray:
+  // - erase: the solid voxel under the crosshair (never the floor layer)
+  // - pour/spout: the empty cell in front of the face you're looking at, or,
+  //   when nothing is in the way, the cell REACH voxels along the ray
+  _findTargets(origin,dir) {
+    const w=this.world;
+    const hit=ddaRaycast(w,origin,dir,GRID*4);
+    const usable=c=>c&&w.inBounds(c.x,c.y,c.z)&&c.y>0?c:null;
+    if(hit) {
+      const place={x:hit.x,y:hit.y,z:hit.z};
+      place[hit.face]-=Math.sign(dir[hit.face]);
+      return {erase:usable({x:hit.x,y:hit.y,z:hit.z}),place:usable(place)};
+    }
+    const p=origin.clone().addScaledVector(dir,this.fly.reach);
+    return {erase:null,place:usable({x:Math.floor(p.x),y:Math.floor(p.y),z:Math.floor(p.z)})};
+  }
+
+  _fillSphere(c,r,mat) {
+    for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
+      if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
+      const nx=c.x+dx,ny=c.y+dy,nz=c.z+dz;
+      if(!this.world.inBounds(nx,ny,nz)||ny<=0)continue;
+      if(mat===MAT.EMPTY) this.world.set(nx,ny,nz,MAT.EMPTY);
+      else if(this.world.get(nx,ny,nz)===MAT.EMPTY) this.world.set(nx,ny,nz,mat);
+    }
+  }
+
   update(dt=0) {
-    if(!this.fly.locked){this.lastHit=null;return;}
-    const origin=this.fly.camera.position.clone();
+    if(!this.fly.locked){
+      this.placeTarget=this.eraseTarget=null;
+      this.vr?.hideTarget();
+      return;
+    }
     const dir=this.fly.lookDir();
-    const hit=ddaRaycast(this.world,origin,dir,this.fly.reach);
-    this.lastHit=hit;
+    const {place,erase}=this._findTargets(this.fly.camera.position.clone(),dir);
+    this.placeTarget=place; this.eraseTarget=erase;
 
     const mode=this.state.mode;
-    const mat=this.state.mat;
     const r=this.state.brushSize-1;
+    const target=mode==='ERASE'?erase:place;
 
-    if(mode!=='SPOUT') this._setHint(hit?'':'aim at the world to place');
+    // Show where the current tool will act
+    if(target) this.vr?.showTarget(target,MODE_COLORS[mode],mode==='SPOUT'?1:2*r+1);
+    else this.vr?.hideTarget();
+    if(mode!=='SPOUT') this._setHint(target?'':mode==='ERASE'?'aim at a block to erase':'aim at the world to place');
 
     // Pour at a fixed rate while the button is held, whatever the refresh rate
     if(!this.placing) this.pourPacer.reset();
-    if(mode==='POUR'&&this.placing&&hit&&this.pourPacer.tick(dt)) {
-      let cx=hit.x,cy=hit.y,cz=hit.z;
-      if(hit.face==='x')cx-=Math.sign(dir.x);
-      else if(hit.face==='y')cy-=Math.sign(dir.y);
-      else cz-=Math.sign(dir.z);
-      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
-        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
-        const nx=cx+dx,ny=cy+dy,nz=cz+dz;
-        if(this.world.inBounds(nx,ny,nz)&&ny>0&&this.world.get(nx,ny,nz)===MAT.EMPTY) this.world.set(nx,ny,nz,mat);
-      }
-    }
+    if(mode==='POUR'&&this.placing&&place&&this.pourPacer.tick(dt)) this._fillSphere(place,r,this.state.mat);
 
-    if(mode==='ERASE'&&this.erasing&&hit) {
-      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
-        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
-        const nx=hit.x+dx,ny=hit.y+dy,nz=hit.z+dz;
-        if(this.world.inBounds(nx,ny,nz)&&ny>0) this.world.set(nx,ny,nz,MAT.EMPTY);
-      }
-    }
-
-    if((mode==='POUR')&&this.erasing&&hit) {
-      for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
-        if(dx*dx+dy*dy+dz*dz>r*r+0.5)continue;
-        const nx=hit.x+dx,ny=hit.y+dy,nz=hit.z+dz;
-        if(this.world.inBounds(nx,ny,nz)&&ny>0) this.world.set(nx,ny,nz,MAT.EMPTY);
-      }
-    }
+    // Erase with the right button, or the left button in ERASE mode
+    if((this.erasing||(mode==='ERASE'&&this.placing))&&erase) this._fillSphere(erase,r,MAT.EMPTY);
   }
 }
 
@@ -718,6 +796,7 @@ class VRPlacer {
   // Back to the desktop layout after a VR session
   _leaveVR() {
     resetTransform(this.vr.sceneGroup);
+    this.vr.hideTarget();
     this._presentFrames=0;
     this._spawned=false;
     this.bothGripped=false;
@@ -852,6 +931,12 @@ class VRPlacer {
     // ── Right trigger: place / pour from aim point (forward of the right hand) ──
     const triggerPressure=this.triggerVal[1];
     const aimPt=this.vr.getControllerAimPoint(hands.right, this.state.vrPlacementReach);
+    // Outline the cell the right hand is aiming at
+    const aimVox=aimPt?this.vr.worldToVoxel(aimPt):null;
+    if(aimVox&&this.world.inBounds(aimVox.x,aimVox.y,aimVox.z)&&aimVox.y>0) {
+      const mode=this.state.mode;
+      this.vr.showTarget(aimVox,MODE_COLORS[mode],mode==='SPOUT'?1:2*(this.state.brushSize-1)+1);
+    } else this.vr.hideTarget();
     if(triggerPressure<=0.1) this.pourPacer.reset();
     if(triggerPressure>0.1&&!bothGrip&&aimPt) {
       const vox=this.vr.worldToVoxel(aimPt);
@@ -968,11 +1053,12 @@ class App {
     this.voxelRenderer=new VoxelRenderer(this.world,this.canvas);
     this.fly=new FlyCamera(this.voxelRenderer.camera,this.canvas);
     this.state=new PlacerState();
-    this.desktopPlacer=new DesktopPlacer(this.world,this.fly,this.state);
+    this.desktopPlacer=new DesktopPlacer(this.world,this.fly,this.state,this.voxelRenderer);
     this.vrPlacer=new VRPlacer(this.world,this.voxelRenderer,this.state);
     this.rain=new Rain(this.world,this.state);
 
     this._bindUI();
+    localizeKeyHints();
     this.desktopPlacer._updateModeUI();
     window.addEventListener('resize',()=>this.voxelRenderer.resize());
     initVRButton(this.voxelRenderer.renderer, null);

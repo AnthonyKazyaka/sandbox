@@ -57,3 +57,23 @@ export function trackErrors(page) {
 export function readRepoFile(rel) {
   return fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 }
+
+// Headless and automated Chromium never grant pointer lock (the page stays
+// "unlocked"), so emulate only the lock itself: pointerLockElement reports
+// the canvas after requestPointerLock(), and ESC releases it as a browser
+// would. All keyboard/mouse input still goes through the page's real handlers.
+export async function emulatePointerLock(page) {
+  await page.addInitScript(() => {
+    let locked = null;
+    Object.defineProperty(Document.prototype, 'pointerLockElement', { configurable: true, get: () => locked });
+    Element.prototype.requestPointerLock = function () {
+      locked = this;
+      document.dispatchEvent(new Event('pointerlockchange'));
+    };
+    Document.prototype.exitPointerLock = function () {
+      locked = null;
+      document.dispatchEvent(new Event('pointerlockchange'));
+    };
+    addEventListener('keydown', e => { if (e.code === 'Escape' && locked) document.exitPointerLock(); }, true);
+  });
+}
